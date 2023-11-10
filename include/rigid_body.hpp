@@ -9,14 +9,16 @@ struct RigidBodyParameters {
 };
 
 struct RigidBody {
-    RigidBody(unsigned int index, RigidBodyParameters param);
+    RigidBody(unsigned int index, RigidBodyParameters param)
+        : index(index), parameters(param) {}
 
-    unsigned int index;
-    RigidBodyParameters parameters;
+    const unsigned int index;
+    const RigidBodyParameters parameters;
 
-    Scalar get_energy(const Vec3& x, const Vec3& theta);
-    Eigen::Vector<Scalar, 6> get_force(const PhysicsState& state);
-    Eigen::Matrix<Scalar, 6, 6> get_df_dx(const PhysicsState& state);
+    private:
+        Scalar get_energy(const Vec3& x, const Vec3& theta);
+        Eigen::Vector<Scalar, 6> get_force(const Vec3& x, const Vec3& theta);
+        Eigen::Matrix<Scalar, 6, 6> get_df_dx(const Vec3& x, const Vec3& theta);
 };
 
 #endif // RIGID_BODY_H_

@@ -12,8 +12,9 @@ struct Spring {
     Spring(unsigned int p1, unsigned int p2, SpringParameters param)
         : p1(p1), p2(p2), parameters(param) {};
 
-    unsigned int p1, p2;
-    SpringParameters parameters;
+    const unsigned int p1;
+    const unsigned int p2;
+    const SpringParameters parameters;
 
     void compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const;
 
