@@ -25,14 +25,8 @@ if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/eigen/CMakeLists.txt")
     message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
 endif()
 
-set(SOURCE_FILES
-  src/main.cpp
-  src/mass_spring.cpp
-  src/spring.cpp
-  src/mesh_boundary.cpp
-  src/edge.cpp
-  src/integrators.cpp
-  src/simulation.cpp
+file(GLOB SOURCE_FILES
+  src/*.cpp
 )
 
 # set(CMAKE_BUILD_TYPE Debug)
@@ -41,15 +35,19 @@ set(CMAKE_BUILD_TYPE Release)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/eigen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/)
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/
+  ${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/
+  ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/eigen/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/src/
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
   raylib
+  raylib_imgui
 )

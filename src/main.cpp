@@ -2,6 +2,8 @@
 #include <vector>
 #include <raylib.h>
 #include <rlgl.h>
+#include <rlImGui.h>
+#include <imgui.h>
 
 #include "linear_algebra.hpp"
 #include "physics_render.hpp"
@@ -17,7 +19,7 @@ int main(int argc, char *argv[]) {
     const int screenHeight = 900;
 
     InitWindow(screenWidth, screenHeight, "raylib [core] example - 3d camera mode");
-
+    rlImGuiSetup(false);
     // Define the camera to look into our 3d world
     Camera3D camera = { 0 };
     camera.position = Vector3{ 0.0f, 4.0f, 10.0f };  // Camera position
@@ -73,12 +75,20 @@ int main(int argc, char *argv[]) {
 
             DrawFPS(10, 10);
 
+            rlImGuiBegin();
+            {
+                // show ImGui Content
+                bool open = true;
+                ImGui::ShowDemoWindow(&open);
+            }
+            rlImGuiEnd();
         EndDrawing();
         //----------------------------------------------------------------------------------
     }
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
+    rlImGuiShutdown();
     CloseWindow();        // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
 
