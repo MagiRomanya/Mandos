@@ -1,4 +1,5 @@
 #include "edge.hpp"
+#include "gravity.hpp"
 #include "mesh_boundary.hpp"
 #include "spring.hpp"
 #include "simulable_generator.hpp"
@@ -9,12 +10,12 @@ Scalar distance(const std::vector<Scalar>& vertices, unsigned int i1, unsigned i
     return (p1 - p2).norm();
 }
 
-void generate_mass_spring(Simulation& simulation,
-                          const std::vector<Scalar>& vertices,
-                          const std::vector<unsigned int>& indices,
-                          Scalar node_mass,
-                          Scalar k_tension,
-                          Scalar k_bending)
+SimulableBounds generate_mass_spring(Simulation& simulation,
+                                     const std::vector<Scalar>& vertices,
+                                     const std::vector<unsigned int>& indices,
+                                     Scalar node_mass,
+                                     Scalar k_tension,
+                                     Scalar k_bending)
 {
     assert(vertices.size() % 3 == 0);
     const unsigned int index = simulation.initial_state.x.size();
@@ -61,4 +62,13 @@ void generate_mass_spring(Simulation& simulation,
         param = {k_tension, L0};
         simulation.energies.springs.push_back(Spring(index + 3*e1.opposite, index + 3*e2.opposite, param));
     }
+
+    // Add gravity
+    for (size_t i = 0; i < vertices.size(); i+=3) {
+        GravityParameters param= {.intensity = static_cast<Scalar>(- node_mass)};
+        // Add gravity to the y component
+        simulation.energies.gravities.push_back(Gravity(index+i+1, param));
+    }
+
+    return SimulableBounds{.dof_index = index, .nDoF = n_dof};
 };

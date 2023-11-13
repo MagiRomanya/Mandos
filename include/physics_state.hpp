@@ -16,6 +16,11 @@ struct PhysicsState {
 };
 
 struct EnergyAndDerivatives {
+    EnergyAndDerivatives(unsigned int nDoF) {
+        energy = 0;
+        force.setZero(nDoF);
+        df_dx_triplets.clear();
+    }
     // Container
     Scalar energy;
     Vec force;

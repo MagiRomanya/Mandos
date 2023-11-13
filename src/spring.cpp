@@ -1,23 +1,24 @@
 #include "spring.hpp"
 #include "linear_algebra.hpp"
+#include <iostream>
 
 void Spring::compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
     Vec3 x1 = Vec3(state.x[p1], state.x[p1+1], state.x[p1+2]);
-    Vec3 x2 = Vec3(state.x[p1], state.x[p1+1], state.x[p1+2]);
+    Vec3 x2 = Vec3(state.x[p2], state.x[p2+1], state.x[p2+2]);
     Scalar L = (x1 - x2).norm();
 
-    out.energy = get_energy(x1, x2, L);
+    out.energy += get_energy(x1, x2, L);
     Vec3 force = get_force(x1, x2, L);
     Mat3 df_dx = get_df_dx(x1, x2, L);
 
     for (unsigned int i = 0; i<3; i++) {
-        out.force[p1 + i] = force(i);
-        out.force[p2 + i] = -force(i);
+        out.force[p1 + i] += force(i);
+        out.force[p2 + i] += -force(i);
         for (unsigned int j = 0; j<3; j++) {
             out.df_dx_triplets.push_back(Triplet(p1+i, p1+j, df_dx(i, j)));
             out.df_dx_triplets.push_back(Triplet(p1+i, p2+j, -df_dx(i, j)));
             out.df_dx_triplets.push_back(Triplet(p2+i, p1+j, -df_dx(i, j)));
-            out.df_dx_triplets.push_back(Triplet(p1+i, p1+j, df_dx(i, j)));
+            out.df_dx_triplets.push_back(Triplet(p2+i, p2+j, df_dx(i, j)));
         }
     }
 }

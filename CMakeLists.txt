@@ -31,6 +31,8 @@ set(SOURCE_FILES
   src/spring.cpp
   src/mesh_boundary.cpp
   src/edge.cpp
+  src/integrators.cpp
+  src/simulation.cpp
 )
 
 # set(CMAKE_BUILD_TYPE Debug)

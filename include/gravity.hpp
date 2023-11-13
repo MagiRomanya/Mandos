@@ -1,17 +1,25 @@
 #ifndef GRAVITY_H_
 #define GRAVITY_H_
 
-struct GravityParamters {
+#include "linear_algebra.hpp"
+#include "physics_state.hpp"
 
+struct GravityParameters {
+  Scalar intensity;
 };
 
 struct Gravity {
-  Gravity(unsigned int index, unsigned int dof, GravityParamters params)
-    : index(index), dof(dof),paramters(params) {}
+  Gravity(unsigned int index, GravityParameters params)
+    : index(index), parameters(params) {}
 
-  const GravityParamters paramters;
+  const GravityParameters parameters;
   const unsigned int index;
-  const unsigned int dof;
+
+  void compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
+    out.energy += parameters.intensity * state.x(index);
+    out.force(index) += parameters.intensity;
+    // Higher order derivatives banish
+  }
 };
 
 #endif // GRAVITY_H_

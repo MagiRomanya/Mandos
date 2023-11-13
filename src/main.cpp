@@ -1,11 +1,14 @@
+#include <iostream>
+#include <vector>
+#include <raylib.h>
+#include <rlgl.h>
+
 #include "linear_algebra.hpp"
+#include "physics_render.hpp"
+#include "physics_state.hpp"
 #include "simulation.hpp"
 #include "simulable_generator.hpp"
-#include <iostream>
-#include <memory>
-#include <vector>
-
-#include <raylib.h>
+#include "integrators.hpp"
 
 int main(int argc, char *argv[]) {
     // Initialization
@@ -22,25 +25,37 @@ int main(int argc, char *argv[]) {
     camera.up = Vector3{ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 45.0f;                                // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
+    rlDisableBackfaceCulling();
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
-    Mesh cloth_mesh = GenMeshPlane(10.0, 10.0, 21, 21);
+    Mesh cloth_mesh = GenMeshPlane(10.0, 10.0, 20, 20);
     const unsigned int nDoF = cloth_mesh.vertexCount * 3;
     const unsigned int n_indices = cloth_mesh.triangleCount * 3;
     std::vector<Scalar> vertices(cloth_mesh.vertices, cloth_mesh.vertices + nDoF);
     std::vector<unsigned int> indices(cloth_mesh.indices, cloth_mesh.indices + n_indices);
+    std::cout << "Number of degrees of freedom: " << nDoF << std::endl;
 
     Simulation simulation;
-    generate_mass_spring(simulation, vertices, indices, 1.0, 1.0, 0.01);
+    SimulableBounds cloth_bounds = generate_mass_spring(simulation, vertices, indices, 0.1, 100.0, 1.0);
+    MassSpringRender cloth_renderer = MassSpringRender(cloth_mesh, cloth_bounds.dof_index, cloth_bounds.nDoF, BLUE);
 
+    // froze degrees of freedom
+    simulation.frozen_dof.push_back(0);
+    simulation.frozen_dof.push_back(1);
+    simulation.frozen_dof.push_back(2);
+
+    PhysicsState state = simulation.initial_state;
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Update
         //----------------------------------------------------------------------------------
         UpdateCamera(&camera, CAMERA_ORBITAL);
+        /// Keyboard controls
+        if (IsKeyPressed(KEY_Q)) break;
+        simulation_step(simulation, state);
         //----------------------------------------------------------------------------------
 
         // Draw
@@ -52,6 +67,7 @@ int main(int argc, char *argv[]) {
             BeginMode3D(camera);
 
                 DrawGrid(10, 1.0f);
+                cloth_renderer.draw(state);
 
             EndMode3D();
 
