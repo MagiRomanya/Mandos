@@ -38,6 +38,7 @@ void edit_mode_sidebar() {
                 selected_mesh = i;
         ImGui::EndPopup();
     }
+    static int mesh_current = -1;
     switch (selected_mesh) {
         case 0: // Plane
             static int n_divisions = 20;
@@ -47,6 +48,7 @@ void edit_mode_sidebar() {
                 Mesh plane = GenMeshPlane(10.0f, 10.0f, n_divisions, n_divisions);
                 meshes["plane"+std::to_string(n_planes)] = plane;
                 n_planes++;
+                mesh_current++;
             }
             break;
         case 1: // Sphere
@@ -59,6 +61,7 @@ void edit_mode_sidebar() {
                 Mesh sphere = GenMeshSphere(radius, 20, 20);
                 meshes["sphere"+std::to_string(n_spheres)] = sphere;
                 n_spheres++;
+                mesh_current++;
             }
             break;
         case 2: // Cube
@@ -67,8 +70,9 @@ void edit_mode_sidebar() {
             ImGui::InputFloat3("Sizes", sides);
             if (ImGui::Button("Add")) {
                 Mesh cube = GenMeshCube(sides[0], sides[1], sides[2]);
-                meshes["cube"+std::to_string(n_spheres)] = cube;
-                n_spheres++;
+                meshes["cube"+std::to_string(n_cubes)] = cube;
+                n_cubes++;
+                mesh_current++;
             }
             break;
     }
@@ -77,13 +81,12 @@ void edit_mode_sidebar() {
     for (const auto& pair : meshes) {
         mesh_list[i++] = pair.first.c_str();
     }
-    static int mesh_current = -1;
     ImGui::ListBox("Meshes", &mesh_current, mesh_list, meshes.size(), 4);
 
     if (mesh_current >= 0) {
         if (ImGui::Button("Delete")) {
             meshes.erase(mesh_list[mesh_current]);
-            mesh_current = -1;
+            if (meshes.size() == 0) mesh_current = -1;
         }
         static int e = 0;
         ImGui::RadioButton("Mass Spring", &e, 0); ImGui::SameLine();

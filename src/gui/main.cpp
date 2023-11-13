@@ -34,8 +34,9 @@ int main(int argc, char *argv[]) {
     const int screenWidth = 1600;
     const int screenHeight = 900;
 
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - 3d camera mode");
+    InitWindow(screenWidth, screenHeight, "Mandos GUI");
     rlImGuiSetup(false);
+
     Camera3D camera = create_camera();
 
     GUI_STATE gui_state = EDIT_MODE;
