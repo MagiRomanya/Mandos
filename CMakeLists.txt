@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.13)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -28,6 +28,9 @@ endif()
 file(GLOB SOURCE_FILES
   src/*.cpp
 )
+file(GLOB GUI_SOURCE_FILES
+  src/gui/*.cpp
+)
 
 # set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_BUILD_TYPE Release)
@@ -37,9 +40,13 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/eigen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/)
 
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+add_library(libmandos STATIC ${SOURCE_FILES})
+set_target_properties(libmandos PROPERTIES OUTPUT_NAME mandos)
 
-target_include_directories(${PROJECT_NAME} PUBLIC
+add_executable(${PROJECT_NAME} src/standalone/main.cpp)
+add_executable(mandos_gui ${GUI_SOURCE_FILES})
+
+target_include_directories(libmandos PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/
@@ -47,7 +54,12 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/src/
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC
+target_link_libraries(libmandos PUBLIC
   raylib
   raylib_imgui
 )
+
+target_include_directories(${PROJECT_NAME} PUBLIC)
+target_link_libraries(${PROJECT_NAME} PUBLIC libmandos)
+target_include_directories(mandos_gui PUBLIC)
+target_link_libraries(mandos_gui PUBLIC libmandos)

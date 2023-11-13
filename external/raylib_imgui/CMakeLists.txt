@@ -8,6 +8,7 @@ set(public_headers
 
 file(GLOB SOURCE_FILES
   ../imgui/*.cpp
+  ../imgui/imgui_config.h
   ../imgui/backends/imgui_impl_glfw.cpp
   ../imgui/backends/imgui_impl_opengl3.cpp
   *.cpp

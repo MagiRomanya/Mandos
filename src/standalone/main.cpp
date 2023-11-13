@@ -21,13 +21,13 @@ int main(int argc, char *argv[]) {
     InitWindow(screenWidth, screenHeight, "raylib [core] example - 3d camera mode");
     rlImGuiSetup(false);
     // Define the camera to look into our 3d world
+    rlDisableBackfaceCulling();
     Camera3D camera = { 0 };
     camera.position = Vector3{ 0.0f, 4.0f, 10.0f };  // Camera position
     camera.target = Vector3{ 0.0f, 0.0f, 0.0f };      // Camera looking at point
     camera.up = Vector3{ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 45.0f;                                // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
-    rlDisableBackfaceCulling();
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
@@ -62,6 +62,7 @@ int main(int argc, char *argv[]) {
 
         // Draw
         //----------------------------------------------------------------------------------
+        rlDisableBackfaceCulling();
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
