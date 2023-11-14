@@ -14,7 +14,7 @@ void mesh_boundary(const std::vector<Scalar>& vertices,
 
     std::vector<Edge> edges;
     edges.reserve(2 * vertices.size()); // In the worst case scenario all the mesh will be boudary
-    std::unordered_map<Edge, int> in_vector;
+    std::unordered_map<Edge, int> in_map;
 
     unsigned int externalSize = 0;
     unsigned int internalSize = 0;
@@ -26,39 +26,39 @@ void mesh_boundary(const std::vector<Scalar>& vertices,
         // Edge a, b
         // If the inverse edge has already been added, it adds the current edge next to it
         Edge e = Edge(a, b, c);
-        if (in_vector.count(e.reversed())){
-            int inverse_edge_index = in_vector[e.reversed()];
+        if (in_map.count(e.reversed())){
+            int inverse_edge_index = in_map[e.reversed()];
             edges[inverse_edge_index + 1] = e;
             internalSize+=2;
         }
         else{
-            in_vector[e] = edges.size();
+            in_map[e] = edges.size();
             edges.push_back(e);
             edges.push_back(Edge(-1,-1,-1)); // Add a dummy edge to the list for later removal if it's not overwritten
         }
 
         // Edge c, a
         e = Edge(c, a, b);
-        if (in_vector.count(e.reversed())){
-            int inverse_edge_index = in_vector[e.reversed()];
+        if (in_map.count(e.reversed())){
+            int inverse_edge_index = in_map[e.reversed()];
             edges[inverse_edge_index + 1] = e;
             internalSize+=2;
         }
         else{
-            in_vector[e] = edges.size();
+            in_map[e] = edges.size();
             edges.push_back(e);
             edges.push_back(Edge(-1,-1,-1));
         }
 
         // Edge b, c
         e = Edge(b, c, a);
-        if (in_vector.count(e.reversed())){
-            int inverse_edge_index = in_vector[e.reversed()];
+        if (in_map.count(e.reversed())){
+            int inverse_edge_index = in_map[e.reversed()];
             edges[inverse_edge_index + 1] = e;
             internalSize+=2;
         }
         else{
-            in_vector[e] = edges.size();
+            in_map[e] = edges.size();
             edges.push_back(e);
             edges.push_back(Edge(-1,-1,-1)); // dummy edge
         }

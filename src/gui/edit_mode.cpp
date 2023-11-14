@@ -14,6 +14,7 @@
 #include "rlImGui.h"
 #include "simulable_generator.hpp"
 #include "simulation.hpp"
+#include "utility_functions.hpp"
 #include "render/simulation_visualization.hpp"
 
 struct PhysicsMesh {
@@ -154,8 +155,9 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
             if (ImGui::InputFloat("radius", &radius)) radius = std::clamp(radius, 0.1f, 10.0f);
             ImGui::InputInt2("rings and slices", rings_slices);
             if (ImGui::Button("Add")) {
-                Model model = LoadModel("img/obj/sphere.obj");
-                Mesh sphere = model.meshes[0];
+                // Mesh sphere = LoadMeshTinyOBJ("img/obj/sphere.obj");
+                Model m = LoadModel("img/obj/sphere.ply");
+                Mesh sphere = m.meshes[0];
                 mesh_manager.add_mesh("sphere"+std::to_string(n_spheres), sphere);
                 n_spheres++;
             }
