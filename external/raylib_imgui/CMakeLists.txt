@@ -20,6 +20,7 @@ add_library(raylib_imgui STATIC ${SOURCE_FILES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/../imgui/
+  ${CMAKE_CURRENT_SOURCE_DIR}/../raylib/src/
 )
 set_target_properties(raylib_imgui PROPERTIES
                       PUBLIC_HEADER "${public_headers}")
