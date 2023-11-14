@@ -42,36 +42,29 @@ Mesh LoadMeshTinyOBJ(std::string inputfile) {
     std::vector<float> normals;
     std::vector<float> texcoords;
 
-    // Loop over faces(polygon)
-    size_t index_offset = 0;
-    size_t s = 0;
-    for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
-        size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
+    std::cout << attrib.vertices.size() << std::endl;
+    std::cout << attrib.texcoords.size() << std::endl;
 
-        // Loop over vertices in the face.
-        for (size_t v = 0; v < fv; v++) {
-            // access to vertex
-            tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+    texcoords.resize(attrib.vertices.size() / 3 * 2);
+    normals.resize(attrib.vertices.size());
 
-            tinyobj::real_t vx = attrib.vertices[3*size_t(idx.vertex_index)+0];
-            tinyobj::real_t vy = attrib.vertices[3*size_t(idx.vertex_index)+1];
-            tinyobj::real_t vz = attrib.vertices[3*size_t(idx.vertex_index)+2];
+    for (size_t s = 0; s < shapes.size(); s++) {
+        const tinyobj::shape_t& shape = shapes[s];
+        for (size_t i = 0; i < shape.mesh.indices.size(); i++){
+            size_t index = shape.mesh.indices[i].vertex_index;
+            indices.push_back(index);
 
-            // Check if `normal_index` is zero or positive. negative = no normal data
-            if (idx.normal_index >= 0) {
-                tinyobj::real_t nx = attrib.normals[3*size_t(idx.normal_index)+0];
-                tinyobj::real_t ny = attrib.normals[3*size_t(idx.normal_index)+1];
-                tinyobj::real_t nz = attrib.normals[3*size_t(idx.normal_index)+2];
-            }
+            size_t uv_index = shape.mesh.indices[i].texcoord_index;
+            texcoords[index*2] = attrib.texcoords[2*uv_index];
+            texcoords[index*2+1] = attrib.texcoords[2*uv_index+1];
 
-            // Check if `texcoord_index` is zero or positive. negative = no texcoord data
-            if (idx.texcoord_index >= 0) {
-                tinyobj::real_t tx = attrib.texcoords[2*size_t(idx.texcoord_index)+0];
-                tinyobj::real_t ty = attrib.texcoords[2*size_t(idx.texcoord_index)+1];
-            }
+            size_t normal_index = shape.mesh.indices[i].normal_index;
+            normals[index*3] = attrib.normals[3*normal_index];
+            normals[index*3+1] = attrib.normals[3*normal_index+1];
+            normals[index*3+2] = attrib.normals[3*normal_index+2];
         }
-        index_offset += fv;
     }
+
     vertices = attrib.vertices;
     return LoadMeshFromVectors(indices, vertices, normals, texcoords);
 }

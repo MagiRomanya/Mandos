@@ -32,8 +32,8 @@ file(GLOB GUI_SOURCE_FILES
   src/gui/*.cpp
 )
 
-set(CMAKE_BUILD_TYPE Debug)
-# set(CMAKE_BUILD_TYPE Release)
+# set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/eigen/)
