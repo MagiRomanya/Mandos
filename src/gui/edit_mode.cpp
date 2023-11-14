@@ -226,21 +226,6 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
     ImGui::End();
 }
 
-Camera3D create_camera(unsigned int FPS = 60) {
-    // Define the camera to look into our 3d world
-    Camera3D camera = { 0 };
-    camera.position = Vector3{ 0.0f, 4.0f, 10.0f };  // Camera position
-    camera.target = Vector3{ 0.0f, 0.0f, 0.0f };      // Camera looking at point
-    camera.up = Vector3{ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
-    camera.fovy = 45.0f;                                // Camera field-of-view Y
-    camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
-
-    SetTargetFPS(FPS);               // Set our game to run at 60 frames-per-second
-
-    // Make the window resizable
-    SetWindowState(FLAG_WINDOW_RESIZABLE);
-    return camera;
-}
 
 void edit_mode_loop() {
     Camera3D camera = create_camera();

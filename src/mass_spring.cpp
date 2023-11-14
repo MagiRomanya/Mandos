@@ -22,7 +22,7 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
     const unsigned int n_dof = vertices.size();
 
     // Resize degrees of freedom
-    simulation.initial_state.resize(n_dof);
+    simulation.initial_state.add_size(n_dof);
 
     // Set up mass matrix
     for (size_t i=0; i < n_dof; i++) {

@@ -9,7 +9,7 @@ struct PhysicsState {
     Vec x;
     Vec v; // (x - x_old) / TimeStep
 
-    void resize(unsigned int increment_dof) {
+    void add_size(unsigned int increment_dof) {
         x.conservativeResize(x.size() + increment_dof);
         v.conservativeResize(v.size() + increment_dof);
     }

@@ -21,7 +21,7 @@ class MassSpringRenderer {
         }
 
         void draw(const PhysicsState& state) {
-            Vec mesh_vertices = state.x.segment(dof_index, dof_index + nDoF);
+            Vec mesh_vertices = state.x.segment(dof_index, nDoF);
             UpdateMeshBuffer(mesh, 0, mesh_vertices.data(), mesh_vertices.size()*sizeof(Scalar), 0);
             Material material = LoadMaterialDefault();
             SetMaterialTexture(&material, MATERIAL_MAP_DIFFUSE, texture);

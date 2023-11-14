@@ -8,6 +8,7 @@
 #include "linear_algebra.hpp"
 #include "physics_render.hpp"
 #include "physics_state.hpp"
+#include "render/simulation_visualization.hpp"
 #include "simulation.hpp"
 #include "simulable_generator.hpp"
 #include "integrators.hpp"
@@ -42,47 +43,15 @@ int main(int argc, char *argv[]) {
     Simulation simulation;
     SimulableBounds cloth_bounds = generate_mass_spring(simulation, vertices, indices, 0.1, 100.0, 1.0);
     MassSpringRenderer cloth_renderer = MassSpringRenderer(cloth_mesh, cloth_bounds);
+    PhysicsRenderers renderers;
+    renderers.mass_spring.push_back(cloth_renderer);
 
     // froze degrees of freedom
     simulation.frozen_dof.push_back(0);
     simulation.frozen_dof.push_back(1);
     simulation.frozen_dof.push_back(2);
 
-    PhysicsState state = simulation.initial_state;
-    // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
-    {
-        // Update
-        //----------------------------------------------------------------------------------
-        UpdateCamera(&camera, CAMERA_ORBITAL);
-        /// Keyboard controls
-        if (IsKeyPressed(KEY_Q)) break;
-        simulation_step(simulation, state);
-        //----------------------------------------------------------------------------------
-
-        // Draw
-        //----------------------------------------------------------------------------------
-        rlDisableBackfaceCulling();
-        BeginDrawing();
-
-            ClearBackground(RAYWHITE);
-
-            BeginMode3D(camera);
-
-                DrawGrid(10, 1.0f);
-                cloth_renderer.draw(state);
-
-            EndMode3D();
-
-            DrawFPS(10, 10);
-
-            rlImGuiBegin();
-            {
-            }
-            rlImGuiEnd();
-        EndDrawing();
-        //----------------------------------------------------------------------------------
-    }
+    simulation_visualization_loop(simulation, renderers);
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
