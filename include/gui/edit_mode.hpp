@@ -1,18 +1,18 @@
 #ifndef EDIT_MODE_H_
 #define EDIT_MODE_H_
 
-#include "raylib.h"
-#include "simulable_generator.hpp"
-#include "simulation.hpp"
 #include <string>
 #include <vector>
+#include "physics_render.hpp"
+#include "simulation.hpp"
+
+
+enum GUI_STATE {
+EDIT_MODE,
+SIMULATION_MODE,
+};
 
 void edit_mode_loop();
-
-void edit_mode_render_meshes();
-
-void edit_mode_sidebar();
-
 
 struct MassSpringGUIGenerator {
     float mass, k_tension, k_bending;

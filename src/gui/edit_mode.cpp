@@ -10,6 +10,7 @@
 #include "gui/edit_mode.hpp"
 #include "linear_algebra.hpp"
 #include "physics_render.hpp"
+#include "raymath.h"
 #include "rlImGui.h"
 #include "simulable_generator.hpp"
 #include "simulation.hpp"
@@ -54,14 +55,19 @@ struct PhysicsMesh {
         }
     }
 
+    enum PHYSICS_TYPE {NO_PHYISICS, MASS_SPRING, RIGID_BODY, FEM};
+    PHYSICS_TYPE physics_type = NO_PHYISICS;
     private:
         PhysicsGUIGenerator phyiscs_generator;
-        enum PHYSICS_TYPE {NO_PHYISICS, MASS_SPRING, RIGID_BODY, FEM};
-        PHYSICS_TYPE physics_type = NO_PHYISICS;
 };
 
 struct MeshManager {
     public:
+        ~MeshManager() {
+            UnloadTexture(mass_spring_texture);
+            UnloadTexture(rigid_body_texture);
+            UnloadTexture(fem_texture);
+        }
         void add_mesh(std::string name, Mesh mesh) { mesh_map[name].mesh = mesh; }
         void delete_mesh(std::string name) {
             UnloadMesh(mesh_map[name].mesh);
@@ -73,19 +79,37 @@ struct MeshManager {
         void add_physics_to_mesh(std::string name, MassSpringGUIGenerator generator) {
             mesh_map[name].add_physics(generator);
         }
+
+        void render_meshes() {
+            for (const auto& pair: mesh_map) {
+                switch (pair.second.physics_type) {
+                    case PhysicsMesh::NO_PHYISICS:
+                        DrawModel(LoadModelFromMesh(pair.second.mesh), Vector3{0}, 1, BLUE);
+                        break;
+                    case PhysicsMesh::MASS_SPRING:
+                    {
+                        Material m = LoadMaterialDefault();
+                        SetMaterialTexture(&m, MATERIAL_MAP_ALBEDO, mass_spring_texture);
+                        DrawMesh(pair.second.mesh, m, MatrixIdentity());
+                    }
+                        break;
+                    case PhysicsMesh::RIGID_BODY:
+                        break;
+                    case PhysicsMesh::FEM:
+                        break;
+                }
+            }
+        }
+
     private:
         std::unordered_map<std::string, PhysicsMesh> mesh_map;
+        Texture2D mass_spring_texture = LoadTexture("img/textures/mass-spring.png");
+        Texture2D rigid_body_texture = LoadTexture("img/textures/rigid-body.png");
+        Texture2D fem_texture = LoadTexture("img/textures/fem.png");
 };
 
-MeshManager mesh_manager;
-
-void edit_mode_render_meshes() {
-    for (const auto& pair: mesh_manager.get_mesh_map()) {
-        DrawModel(LoadModelFromMesh(pair.second.mesh), Vector3{0}, 1, BLUE);
-    }
-}
-
-void edit_mode_sidebar() {
+void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulation& out_sim, PhysicsRenderers& out_renderers) {
+    gui_state = EDIT_MODE;
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
     ImGui::SetNextWindowSizeConstraints(ImVec2(200, ImGui::GetIO().DisplaySize.y),
                                         ImVec2(500, ImGui::GetIO().DisplaySize.y));
@@ -130,7 +154,8 @@ void edit_mode_sidebar() {
             if (ImGui::InputFloat("radius", &radius)) radius = std::clamp(radius, 0.1f, 10.0f);
             ImGui::InputInt2("rings and slices", rings_slices);
             if (ImGui::Button("Add")) {
-                Mesh sphere = GenMeshSphere(radius, 20, 20);
+                Model model = LoadModel("img/obj/sphere.obj");
+                Mesh sphere = model.meshes[0];
                 mesh_manager.add_mesh("sphere"+std::to_string(n_spheres), sphere);
                 n_spheres++;
             }
@@ -164,7 +189,7 @@ void edit_mode_sidebar() {
         ImGui::RadioButton("FEM", &e, 2);
         switch (e) {
             case 0: // Mass Spring
-                static float mass = 1;
+                static float mass = 10;
                 static float k_tension = 100;
                 static float k_bending = 1;
                 if (ImGui::InputFloat("mass", &mass)) mass = std::clamp(mass, 0.0f, 1000.0f);
@@ -191,12 +216,10 @@ void edit_mode_sidebar() {
     }
     if (mesh_manager.size() != 0) {
         if (ImGui::Button("Simulate!")) {
-            Simulation simulation;
-            PhysicsRenderers physics_renderers;
             for (const auto& pair : mesh_manager.get_mesh_map()) {
-                pair.second.generate_phyiscs(simulation, physics_renderers);
+                pair.second.generate_phyiscs(out_sim, out_renderers);
+                gui_state = SIMULATION_MODE;
             }
-            simulation_visualization_loop(simulation, physics_renderers);
         }
     }
 
@@ -221,8 +244,12 @@ Camera3D create_camera(unsigned int FPS = 60) {
 
 void edit_mode_loop() {
     Camera3D camera = create_camera();
+    MeshManager mesh_manager;
+    Simulation simulation;
+    PhysicsRenderers physics_renderers;
+    GUI_STATE gui_state = EDIT_MODE;
     // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    while (!WindowShouldClose() && gui_state == EDIT_MODE)
     {
         // Update
         //----------------------------------------------------------------------------------
@@ -239,7 +266,7 @@ void edit_mode_loop() {
             BeginMode3D(camera);
 
                 DrawGrid(30, 1.0f);
-                edit_mode_render_meshes();
+                mesh_manager.render_meshes();
 
             EndMode3D();
 
@@ -247,12 +274,17 @@ void edit_mode_loop() {
 
             rlImGuiBegin();
             {
-                edit_mode_sidebar();
+                edit_mode_sidebar(gui_state, mesh_manager, simulation, physics_renderers);
                 // bool open = true;
                 // ImGui::ShowDemoWindow(&open);
             }
             rlImGuiEnd();
         EndDrawing();
         //----------------------------------------------------------------------------------
+    }
+    if (WindowShouldClose()) return;
+
+    if (gui_state == SIMULATION_MODE) {
+        simulation_visualization_loop(simulation, physics_renderers);
     }
 }
