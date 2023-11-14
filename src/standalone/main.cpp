@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 
     Simulation simulation;
     SimulableBounds cloth_bounds = generate_mass_spring(simulation, vertices, indices, 0.1, 100.0, 1.0);
-    MassSpringRender cloth_renderer = MassSpringRender(cloth_mesh, cloth_bounds.dof_index, cloth_bounds.nDoF, BLUE);
+    MassSpringRenderer cloth_renderer = MassSpringRenderer(cloth_mesh, cloth_bounds);
 
     // froze degrees of freedom
     simulation.frozen_dof.push_back(0);
@@ -78,9 +78,6 @@ int main(int argc, char *argv[]) {
 
             rlImGuiBegin();
             {
-                // show ImGui Content
-                bool open = true;
-                ImGui::ShowDemoWindow(&open);
             }
             rlImGuiEnd();
         EndDrawing();
