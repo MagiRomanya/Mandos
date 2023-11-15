@@ -9,12 +9,12 @@
 // #define TINYOBJLOADER_USE_MAPBOX_EARCUT
 #include "tiny_obj_loader.h"
 
-Mesh LoadMeshFromVectors(std::vector<unsigned short>& indices, std::vector<float>& vertices, std::vector<float>& normals, std::vector<float>& texcoord) {
+Mesh LoadMeshFromVectors(std::vector<unsigned short>& indices, std::vector<float>& vertices, std::vector<float>& normals, std::vector<float>& texcoords) {
     Mesh mesh = {0};
     mesh.vertexCount = vertices.size() / 3;
     mesh.triangleCount = indices.size() / 3;
     mesh.vertices = (float *)std::memcpy(RL_MALLOC(vertices.size() * sizeof(float)), vertices.data(), vertices.size() * sizeof(float));
-    mesh.texcoords = (float *)std::memcpy(RL_MALLOC(texcoord.size() * sizeof(float)), texcoord.data(), texcoord.size() * sizeof(float));
+    mesh.texcoords = (float *)std::memcpy(RL_MALLOC(texcoords.size() * sizeof(float)), texcoords.data(), texcoords.size() * sizeof(float));
     mesh.normals = (float *)std::memcpy(RL_MALLOC(normals.size() * sizeof(float)), normals.data(), normals.size() * sizeof(float));
     mesh.indices = (unsigned short *)std::memcpy(RL_MALLOC(indices.size() * sizeof(unsigned short)), indices.data(), indices.size() * sizeof(unsigned short));
     UploadMesh(&mesh, false);
@@ -45,7 +45,7 @@ Mesh LoadMeshTinyOBJ(std::string inputfile) {
     std::cout << attrib.vertices.size() << std::endl;
     std::cout << attrib.texcoords.size() << std::endl;
 
-    texcoords.resize(attrib.vertices.size() / 3 * 2);
+    texcoords.resize(attrib.vertices.size() / 3 * 2, 0);
     normals.resize(attrib.vertices.size());
 
     for (size_t s = 0; s < shapes.size(); s++) {

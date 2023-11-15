@@ -12,6 +12,7 @@ void integrate_implicit_euler(const Simulation& simulation, PhysicsState* state,
                                 simulation.initial_mass_matrix_triplets.end());
     SparseMat df_dx(nDoF, nDoF), df_dv(nDoF, nDoF);
     df_dx.setFromTriplets(f.df_dx_triplets.begin(), f.df_dx_triplets.end());
+    // df_dv = h * df_dx;
     // df_dv.setFromTriplets(f.df_dv_triplets.begin(), f.df_dv_triplets.end());
     // ----------------------------------------------------------------------------------
 
