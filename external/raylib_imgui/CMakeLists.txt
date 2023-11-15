@@ -22,5 +22,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/../imgui/
   ${CMAKE_CURRENT_SOURCE_DIR}/../raylib/src/
 )
+target_include_directories(${PROJECT_NAME} PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../raylib/src/external/glfw/include
+)
 set_target_properties(raylib_imgui PROPERTIES
                       PUBLIC_HEADER "${public_headers}")
