@@ -10,10 +10,15 @@
 #include "rigid_body.hpp"
 #include "fem_unit.hpp"
 #include "spring.hpp"
+#include "particle.hpp"
+
+struct Simulables {
+    std::vector<Particle> particles;
+    std::vector<RigidBody> rigid_bodies;
+};
 
 struct Energies {
     std::vector<Spring> springs;
-    std::vector<RigidBody> rigid_bodies;
     std::vector<FEM_Unit> fem_units;
     std::vector<Gravity> gravities;
 };

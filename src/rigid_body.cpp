@@ -9,7 +9,7 @@ Mat3 skew(const Vec3& v) {
     return m;
 }
 
-Mat3 compute_rotation_matrix(const Vec3& theta) {
+Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta) {
     const Scalar angle = theta.norm();
     const Vec3 axis = theta / angle;
     // Rodrigues formula https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula#Matrix_notation
@@ -18,7 +18,7 @@ Mat3 compute_rotation_matrix(const Vec3& theta) {
 }
 
 Mat3 RigidBody::compute_inertia_tensor(const Mat3& rotation_matrix) const {
-    return rotation_matrix * parameters.inertia_tensor0 * rotation_matrix.transpose();
+    return rotation_matrix * inertia_tensor0 * rotation_matrix.transpose();
 }
 
 Scalar RigidBody::get_energy(const Vec3& x, const Vec3& theta) const {
@@ -57,7 +57,7 @@ void RigidBody::compute_energy_and_derivatives(const PhysicsState& state, Energy
 
     // Compute rotation matrix and Inerta tensor
     // ---------------------------------------------------------------
-    const Mat3 rotation_matrix = compute_rotation_matrix(theta);
+    const Mat3 rotation_matrix = compute_rotation_matrix_rodrigues(theta);
     const Mat3 inertia_tensor = compute_inertia_tensor(rotation_matrix);
 
     // Compute the energy derivatives
@@ -84,7 +84,7 @@ Vec3 RigidBody::get_COM_position(const PhysicsState& state) const {
     return state.x.segment(index, 3);
 }
 
-Mat3 RigidBody::get_rotation_matrix(const PhysicsState& state) const {
+Mat3 RigidBody::compute_rotation_matrix(const PhysicsState& state) const {
     Vec3 theta = state.x.segment(index+3, 3);
-    return compute_rotation_matrix(theta);
+    return compute_rotation_matrix_rodrigues(theta);
 }
