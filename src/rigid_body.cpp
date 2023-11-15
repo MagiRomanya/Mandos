@@ -36,7 +36,7 @@ Eigen::Vector<Scalar, 6> RigidBody::get_force(const Vec3& x, const Vec3& theta, 
 
 Eigen::Matrix<Scalar, 6, 6> RigidBody::get_df_dx(const Vec3& x, const Vec3& theta) {
     // TODO
-    Eigen::Vector<Scalar, 6> df_dx;
+    Eigen::Matrix<Scalar, 6, 6> df_dx;
 
     return df_dx;
 }
