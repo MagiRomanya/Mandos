@@ -3,14 +3,21 @@
 #include <iostream>
 
 void Spring::compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
-    Vec3 x1 = Vec3(state.x[p1], state.x[p1+1], state.x[p1+2]);
-    Vec3 x2 = Vec3(state.x[p2], state.x[p2+1], state.x[p2+2]);
+    // Get the relevant sate
+    // ---------------------------------------------------------------
+    Vec3 x1 = state.x.segment(p1, 3);
+    Vec3 x2 = state.x.segment(p2, 3);
     Scalar L = (x1 - x2).norm();
 
-    out.energy += get_energy(x1, x2, L);
+    // Compute the energy derivatives
+    // ---------------------------------------------------------------
+    Scalar energy = get_energy(x1, x2, L);
     Vec3 force = get_force(x1, x2, L);
     Mat3 df_dx = get_df_dx(x1, x2, L);
 
+    // Add the energy derivatives to the global structure
+    // ---------------------------------------------------------------
+    out.energy += energy;
     for (unsigned int i = 0; i<3; i++) {
         out.force[p1 + i] += force(i);
         out.force[p2 + i] += -force(i);
@@ -48,18 +55,25 @@ Mat3 Spring::get_df_dx(const Vec3& x1, const Vec3& x2, Scalar L) const {
 }
 
 void DampedSpring::compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
-    Vec3 x1 = Vec3(state.x[p1], state.x[p1+1], state.x[p1+2]);
-    Vec3 x2 = Vec3(state.x[p2], state.x[p2+1], state.x[p2+2]);
-    Vec3 v1 = Vec3(state.v[p1], state.v[p1+1], state.v[p1+2]);
-    Vec3 v2 = Vec3(state.v[p2], state.v[p2+1], state.v[p2+2]);
+    // Get the relevant sate
+    // ---------------------------------------------------------------
+    Vec3 x1 = state.x.segment(p1, 3);
+    Vec3 x2 = state.x.segment(p2, 3);
+    Vec3 v1 = state.v.segment(p1, 3);
+    Vec3 v2 = state.v.segment(p2, 3);
 
     Scalar L = (x1 - x2).norm();
 
-    out.energy += get_energy(x1, x2, L);
+    // Compute the energy derivatives
+    // ---------------------------------------------------------------
+    Scalar energy = get_energy(x1, x2, L);
     Vec3 force = get_force(x1, x2, v1, v2, L);
     Mat3 df_dx = get_df_dx(x1, x2, L);
     // Mat3 df_dv = get_df_dv(x1, x2, v1, v2, L);
 
+    // Add the energy derivatives to the global structure
+    // ---------------------------------------------------------------
+    out.energy += energy;
     for (unsigned int i = 0; i<3; i++) {
         out.force[p1 + i] += force(i);
         out.force[p2 + i] += -force(i); // Newton's 3d law

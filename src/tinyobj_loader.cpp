@@ -42,9 +42,6 @@ Mesh LoadMeshTinyOBJ(std::string inputfile) {
     std::vector<float> normals;
     std::vector<float> texcoords;
 
-    std::cout << attrib.vertices.size() << std::endl;
-    std::cout << attrib.texcoords.size() << std::endl;
-
     texcoords.resize(attrib.vertices.size() / 3 * 2, 0);
     normals.resize(attrib.vertices.size());
 
@@ -54,6 +51,10 @@ Mesh LoadMeshTinyOBJ(std::string inputfile) {
             size_t index = shape.mesh.indices[i].vertex_index;
             indices.push_back(index);
 
+            // Align the vertex attributes with the vertices, so that vertex indeces will
+            // also point to the correct vertex attributes.
+            // NOTE This is not perfect as it assigns one and only one attribute to each vertex,
+            // which can translate to not ideal normals and texture coordinates.
             size_t uv_index = shape.mesh.indices[i].texcoord_index;
             texcoords[index*2] = attrib.texcoords[2*uv_index];
             texcoords[index*2+1] = attrib.texcoords[2*uv_index+1];
