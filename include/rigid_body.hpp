@@ -20,10 +20,9 @@ struct RigidBody {
     Mat3 get_rotation_matrix(const PhysicsState& state) const;
 
     private:
-        Scalar get_energy(const Vec3& x, const Vec3& theta);
-        Eigen::Vector<Scalar, 6> get_force(const Vec3& x, const Vec3& theta, const Vec3& omega, const Mat3& inertia_tensor);
-        Eigen::Matrix<Scalar, 6, 6> get_df_dx(const Vec3& x, const Vec3& theta);
-
+        Scalar get_energy(const Vec3& x, const Vec3& theta) const;
+        Eigen::Vector<Scalar, 6> get_force(const Vec3& x, const Vec3& theta, const Vec3& omega, const Mat3& inertia_tensor) const;
+        Eigen::Matrix<Scalar, 6, 6> get_df_dx(const Vec3& x, const Vec3& theta) const;
         Mat3 compute_inertia_tensor(const Mat3& rotation_matrix) const;
 };
 

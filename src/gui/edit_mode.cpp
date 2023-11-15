@@ -50,14 +50,21 @@ struct PhysicsMesh {
             }
                 break;
             case RIGID_BODY:
+            {
+                // TODO
+            }
                 break;
             case FEM:
+            {
+                // TODO
+            }
                 break;
         }
     }
 
     enum PHYSICS_TYPE {NO_PHYISICS, MASS_SPRING, RIGID_BODY, FEM};
     PHYSICS_TYPE physics_type = NO_PHYISICS;
+
     private:
         PhysicsGUIGenerator phyiscs_generator;
 };
@@ -137,6 +144,7 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
     static int selected_mesh = -1;
     switch (selected_mesh_generator) {
         case 0: // Plane
+        {
             static int n_divisions = 20;
             static float plane_dimensions[] = {10.0f, 10.0f};
             static int n_planes = 0;
@@ -147,20 +155,21 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
                 mesh_manager.add_mesh("plane"+std::to_string(n_planes), plane);
                 n_planes++;
             }
+        }
             break;
         case 1: // Sphere
+        {
             static int n_spheres = 0;
-            static float radius = 1;
-            static int rings_slices[] = {20, 20};
-            if (ImGui::InputFloat("radius", &radius)) radius = std::clamp(radius, 0.1f, 10.0f);
-            ImGui::InputInt2("rings and slices", rings_slices);
             if (ImGui::Button("Add")) {
                 Mesh sphere = LoadMeshTinyOBJ("img/obj/sphere.obj");
                 mesh_manager.add_mesh("sphere"+std::to_string(n_spheres), sphere);
                 n_spheres++;
             }
+        }
             break;
         case 2: // Cube
+        {
+
             static int n_cubes = 0;
             static float sides[] = {1,1,1};
             ImGui::InputFloat3("Sizes", sides);
@@ -169,6 +178,7 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
                 mesh_manager.add_mesh("cube"+std::to_string(n_cubes), cube);
                 n_cubes++;
             }
+        }
             break;
     }
     const char* mesh_list[20];
@@ -189,6 +199,7 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
         ImGui::RadioButton("FEM", &e, 2);
         switch (e) {
             case 0: // Mass Spring
+            {
                 static float mass = 10;
                 static float k_tension = 100;
                 static float k_bending = 1;
@@ -199,6 +210,7 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
                     MassSpringGUIGenerator generator = {mass, k_tension, k_bending};
                     mesh_manager.add_physics_to_mesh(mesh_list[selected_mesh], generator);
                 }
+            }
                 break;
             case 1: // Rigid Body
                 ImGui::Text("TODO!");
@@ -249,10 +261,10 @@ void edit_mode_loop() {
             ClearBackground(RAYWHITE);
 
             BeginMode3D(camera);
-
+            {
                 DrawGrid(30, 1.0f);
                 mesh_manager.render_meshes();
-
+            }
             EndMode3D();
 
             DrawFPS(GetScreenWidth()*0.95, 10);

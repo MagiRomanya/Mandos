@@ -5,15 +5,15 @@
 void Spring::compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
     // Get the relevant sate
     // ---------------------------------------------------------------
-    Vec3 x1 = state.x.segment(p1, 3);
-    Vec3 x2 = state.x.segment(p2, 3);
-    Scalar L = (x1 - x2).norm();
+    const Vec3 x1 = state.x.segment(p1, 3);
+    const Vec3 x2 = state.x.segment(p2, 3);
+    const Scalar L = (x1 - x2).norm();
 
     // Compute the energy derivatives
     // ---------------------------------------------------------------
-    Scalar energy = get_energy(x1, x2, L);
-    Vec3 force = get_force(x1, x2, L);
-    Mat3 df_dx = get_df_dx(x1, x2, L);
+    const Scalar energy = get_energy(x1, x2, L);
+    const Vec3 force = get_force(x1, x2, L);
+    const Mat3 df_dx = get_df_dx(x1, x2, L);
 
     // Add the energy derivatives to the global structure
     // ---------------------------------------------------------------
@@ -42,11 +42,11 @@ Vec3 Spring::get_force(const Vec3& x1, const Vec3& x2, Scalar L) const {
 
 Mat3 Spring::get_df_dx(const Vec3& x1, const Vec3& x2, Scalar L) const {
     // u is the normalized vector between particles 1 and 2
-    Vec3 u = (x1 - x2) / L;
+    const Vec3 u = (x1 - x2) / L;
     // Initialize the derivative matrix
     Mat3 df_dx = (L - parameters.L0) * Mat3::Identity();
     // The u · u.transpose() matrix
-    Mat3 uut = u * u.transpose();
+    const Mat3 uut = u * u.transpose();
 
     // Calculate the final derivative matrix
     df_dx = - parameters.k / L * (df_dx + parameters.L0 * uut);
@@ -57,18 +57,18 @@ Mat3 Spring::get_df_dx(const Vec3& x1, const Vec3& x2, Scalar L) const {
 void DampedSpring::compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
     // Get the relevant sate
     // ---------------------------------------------------------------
-    Vec3 x1 = state.x.segment(p1, 3);
-    Vec3 x2 = state.x.segment(p2, 3);
-    Vec3 v1 = state.v.segment(p1, 3);
-    Vec3 v2 = state.v.segment(p2, 3);
+    const Vec3 x1 = state.x.segment(p1, 3);
+    const Vec3 x2 = state.x.segment(p2, 3);
+    const Vec3 v1 = state.v.segment(p1, 3);
+    const Vec3 v2 = state.v.segment(p2, 3);
 
-    Scalar L = (x1 - x2).norm();
+    const Scalar L = (x1 - x2).norm();
 
     // Compute the energy derivatives
     // ---------------------------------------------------------------
-    Scalar energy = get_energy(x1, x2, L);
-    Vec3 force = get_force(x1, x2, v1, v2, L);
-    Mat3 df_dx = get_df_dx(x1, x2, L);
+    const Scalar energy = get_energy(x1, x2, L);
+    const Vec3 force = get_force(x1, x2, v1, v2, L);
+    const Mat3 df_dx = get_df_dx(x1, x2, L);
     // Mat3 df_dv = get_df_dv(x1, x2, v1, v2, L);
 
     // Add the energy derivatives to the global structure
@@ -99,7 +99,7 @@ Scalar DampedSpring::get_energy(const Vec3& x1, const Vec3& x2, Scalar L) const 
 
 Vec3 DampedSpring::get_force(const Vec3& x1, const Vec3& x2, const Vec3& v1, const Vec3& v2, Scalar L) const {
     /* Computes the damped spring force */
-    Vec3 u = (x1 - x2) / L;
+    const Vec3 u = (x1 - x2) / L;
     Vec3 f = -parameters.k * (L - parameters.L0) * u;
     // Damping
     f += -parameters.damping * u * u.transpose() * (v1 - v2);
@@ -108,11 +108,11 @@ Vec3 DampedSpring::get_force(const Vec3& x1, const Vec3& x2, const Vec3& v1, con
 
 Mat3 DampedSpring::get_df_dx(const Vec3& x1, const Vec3& x2, Scalar L) const {
     // u is the normalized vector between particles 1 and 2
-    Vec3 u = (x1 - x2) / L;
+    const Vec3 u = (x1 - x2) / L;
     // Initialize the derivative matrix
     Mat3 df_dx = (L - parameters.L0) * Mat3::Identity();
     // The u · u.transpose() matrix
-    Mat3 uut = u * u.transpose();
+    const Mat3 uut = u * u.transpose();
 
     // Calculate the final derivative matrix
     df_dx = - parameters.k / L * (df_dx + parameters.L0 * uut);
@@ -123,6 +123,6 @@ Mat3 DampedSpring::get_df_dx(const Vec3& x1, const Vec3& x2, Scalar L) const {
 
 Mat3 DampedSpring::get_df_dv(const Vec3& x1, const Vec3& x2, const Vec3& v1, const Vec3& v2, Scalar L) const {
     // u is the normalized vector between particles 1 and 2
-    Vec3 u = (x1 - x2) / L;
+    const Vec3 u = (x1 - x2) / L;
     return - parameters.damping * u * u.transpose();
 }
