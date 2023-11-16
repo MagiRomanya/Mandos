@@ -6,6 +6,7 @@
 #include <cassert>
 
 #include "gravity.hpp"
+#include "linear_algebra.hpp"
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
 #include "fem_unit.hpp"
@@ -24,14 +25,16 @@ struct Energies {
 };
 
 struct Simulation {
+    Simulables simulables;
     Energies energies;
     Scalar TimeStep = 0.1;
     PhysicsState initial_state;
-    std::vector<Triplet> initial_mass_matrix_triplets;
     std::vector<unsigned int> frozen_dof;
 };
 
 void compute_energy_and_derivatives(const Energies& energies, const PhysicsState& state, EnergyAndDerivatives& out);
+
+std::vector<Triplet> compute_global_mass_matrix(const Simulables& simulables, const PhysicsState& state);
 
 void simulation_step(const Simulation& simulation, PhysicsState& state);
 

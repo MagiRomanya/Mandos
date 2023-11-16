@@ -1,5 +1,8 @@
 #include <Eigen/IterativeLinearSolvers>
+#include <vector>
 #include "integrators.hpp"
+#include "linear_algebra.hpp"
+#include "simulation.hpp"
 
 void integrate_implicit_euler(const Simulation& simulation, PhysicsState* state, const EnergyAndDerivatives& f) {
     const Scalar h = simulation.TimeStep;
@@ -8,8 +11,8 @@ void integrate_implicit_euler(const Simulation& simulation, PhysicsState* state,
     // Sparse Matrix creation
     // ----------------------------------------------------------------------------------
     SparseMat mass_matrix(nDoF, nDoF);
-    mass_matrix.setFromTriplets(simulation.initial_mass_matrix_triplets.begin(),
-                                simulation.initial_mass_matrix_triplets.end());
+    const std::vector<Triplet> mass_matrix_triplets = compute_global_mass_matrix(simulation.simulables, *state);
+    mass_matrix.setFromTriplets(mass_matrix_triplets.begin(), mass_matrix_triplets.end());
     SparseMat df_dx(nDoF, nDoF), df_dv(nDoF, nDoF);
     df_dx.setFromTriplets(f.df_dx_triplets.begin(), f.df_dx_triplets.end());
     // df_dv = h * df_dx;

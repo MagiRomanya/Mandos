@@ -24,9 +24,9 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
     // Resize degrees of freedom
     simulation.initial_state.add_size(n_dof);
 
-    // Set up mass matrix
-    for (size_t i=0; i < n_dof; i++) {
-        simulation.initial_mass_matrix_triplets.push_back(Triplet(index+i,index+i, node_mass));
+    // Generate the particle simulables
+    for (unsigned int i = 0; i < n_dof; i+=3) {
+        simulation.simulables.particles.emplace_back(node_mass, index + i);
     }
 
     // Initial positions
@@ -59,7 +59,7 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
 
         // Bend spring
         L0 = distance(vertices, e1.opposite, e2.opposite);
-        param = {k_tension, L0};
+        param = {k_bending, L0};
         simulation.energies.springs.push_back(Spring(index + 3*e1.opposite, index + 3*e2.opposite, param));
     }
 

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 
+#include "physics_state.hpp"
 #include "rigid_body.hpp"
 #include "linear_algebra.hpp"
 #include "utility_functions.hpp"
@@ -131,8 +132,30 @@ Scalar compute_mesh_surface_area(const std::vector<unsigned int>& indices, const
     return surface_area;
 }
 
-Mat3 compute_initial_inertia_tensor(Scalar mass, const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices, RB_MASS_DISTRIBUTION mass_distribution) {
+Mat3 compute_initial_inertia_tensor(Scalar rb_total_mass, const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices, RB_MASS_DISTRIBUTION mass_distribution) {
     Mat3 inertia_tensor = Mat3::Zero();
+    switch (mass_distribution) {
+        case PARTICLES:
+            {
+                const Scalar PARTICLE_MASS = rb_total_mass * 3.0 / vertices.size();
+                for (unsigned int i = 0; i < vertices.size(); i+=3) {
+                    const Vec3 r = Vec3(vertices[i], vertices[i+1], vertices[i+2]);
+                    const Mat3 r_star = skew(r);
+                    inertia_tensor += - PARTICLE_MASS * r_star * r_star;
+                }
+            }
+            break;
+        case SHELL:
+            {
+
+            }
+            break;
+        case UNIFORM_VOLUME:
+            {
+
+            }
+            break;
+    }
     return inertia_tensor;
 }
 
@@ -179,4 +202,8 @@ Vec3 compute_COM_position(const std::vector<unsigned int>& indices, const std::v
         }
     }
     return COM_position;
+}
+
+Mat3 RigidBody::compute_inertia_tensor(const PhysicsState& state) const {
+    return compute_inertia_tensor(compute_rotation_matrix(state));
 }
