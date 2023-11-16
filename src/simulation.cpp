@@ -7,19 +7,18 @@
 #include <vector>
 
 void compute_energy_and_derivatives(const Energies& energies, const PhysicsState& state, EnergyAndDerivatives& out) {
+
+    // Springs
+    // ---------------------------------------------------------------------
     for (size_t i = 0; i < energies.springs.size(); i++) {
         energies.springs[i].compute_energy_and_derivatives(state, out);
     }
 
+    // Gravity
+    // ---------------------------------------------------------------------
     for (size_t i = 0; i < energies.gravities.size(); i++) {
         energies.gravities[i].compute_energy_and_derivatives(state, out);
     }
-
-    // for (size_t i = 0; i < energies.rigid_bodies.size(); i++) {
-    //     energies.rigid_bodies[i].compute_energy_and_derivatives(state, out);
-    // }
-    //
-    // ...
 }
 
 void simulation_step(const Simulation& simulation, PhysicsState& state) {
@@ -60,7 +59,6 @@ std::vector<Triplet> compute_global_mass_matrix(const Simulables& simulables, co
                 mass_matrix_triplets.emplace_back(rb.index+a, rb.index+b, inertia_tensor(a, b));
             }
         }
-        // mass_matrix_triplets.emplace_back(p.index, p.index, p.mass);
     }
     return mass_matrix_triplets;
 }

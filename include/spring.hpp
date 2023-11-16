@@ -2,6 +2,7 @@
 #define SPRING_H_
 
 #include "linear_algebra.hpp"
+#include "particle.hpp"
 #include "physics_state.hpp"
 
 struct SpringParameters {
@@ -12,12 +13,12 @@ struct SpringParameters {
     Mat3 get_df_dx(const Vec3& x1, const Vec3& x2, Scalar L) const;
 };
 
-struct Spring {
-    Spring(unsigned int p1, unsigned int p2, SpringParameters param)
+struct ParticleSpring {
+    ParticleSpring(const Particle p1, const Particle p2, SpringParameters param)
         : p1(p1), p2(p2), parameters(param) {};
 
-    const unsigned int p1;
-    const unsigned int p2;
+    const Particle p1;
+    const Particle p2;
     const SpringParameters parameters;
 
     void compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const;

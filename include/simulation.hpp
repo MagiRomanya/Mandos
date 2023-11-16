@@ -19,7 +19,7 @@ struct Simulables {
 };
 
 struct Energies {
-    std::vector<Spring> springs;
+    std::vector<ParticleSpring> springs;
     std::vector<FEM_Unit> fem_units;
     std::vector<Gravity> gravities;
 };
