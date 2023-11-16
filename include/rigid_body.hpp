@@ -1,8 +1,15 @@
 #ifndef RIGID_BODY_H_
 #define RIGID_BODY_H_
 
+#include <vector>
+
 #include "linear_algebra.hpp"
 #include "physics_state.hpp"
+
+enum RB_MASS_DISTRIBUTION { PARTICLES, SHELL, UNIFORM_VOLUME };
+
+Mat3 compute_initial_inertia_tensor(Scalar mass, const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices, RB_MASS_DISTRIBUTION mass_distribution);
+Vec3 compute_COM_position(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices, RB_MASS_DISTRIBUTION mass_distribution);
 
 struct RigidBody {
     RigidBody(unsigned int index, Scalar mass, Mat3 inertia_tensor0)

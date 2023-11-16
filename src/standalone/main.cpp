@@ -12,6 +12,7 @@
 #include "simulation.hpp"
 #include "simulable_generator.hpp"
 #include "integrators.hpp"
+#include "utility_functions.hpp"
 
 int main(int argc, char *argv[]) {
     // Initialization
@@ -51,7 +52,18 @@ int main(int argc, char *argv[]) {
     simulation.frozen_dof.push_back(1);
     simulation.frozen_dof.push_back(2);
 
-    simulation_visualization_loop(simulation, renderers);
+    {
+        // Test volume equation
+        Mesh mesh = LoadMeshTinyOBJ("img/obj/sphere.obj");
+        const unsigned int n_vertices = mesh.vertexCount * 3;
+        const unsigned int n_indices = mesh.triangleCount * 3;
+        const std::vector<Scalar> vertices(mesh.vertices, mesh.vertices + n_vertices);
+        const std::vector<unsigned int> indices(mesh.indices, mesh.indices + n_indices);
+        const Scalar volume = compute_mesh_volume(indices, vertices);
+        std::cout << "Sphere volume " << volume << std::endl;
+    }
+
+    // simulation_visualization_loop(simulation, renderers);
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
