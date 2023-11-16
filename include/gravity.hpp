@@ -10,7 +10,7 @@ struct GravityParameters {
 
 struct Gravity {
   Gravity(unsigned int index, GravityParameters params)
-    : index(index), parameters(params) {}
+    : parameters(params), index(index) {}
 
   const GravityParameters parameters;
   const unsigned int index;

@@ -2,13 +2,12 @@
 #include <vector>
 #include <raylib.h>
 #include <rlgl.h>
-#include <rlImGui.h>
-#include <imgui.h>
 
 #include "linear_algebra.hpp"
 #include "physics_render.hpp"
 #include "physics_state.hpp"
 #include "render/simulation_visualization.hpp"
+#include "rigid_body.hpp"
 #include "simulation.hpp"
 #include "simulable_generator.hpp"
 #include "integrators.hpp"
@@ -20,16 +19,9 @@ int main(int argc, char *argv[]) {
     const int screenWidth = 1600;
     const int screenHeight = 900;
 
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - 3d camera mode");
-    rlImGuiSetup(false);
+    InitWindow(screenWidth, screenHeight, "Mandos simulator");
     // Define the camera to look into our 3d world
-    rlDisableBackfaceCulling();
-    Camera3D camera = { 0 };
-    camera.position = Vector3{ 0.0f, 4.0f, 10.0f };  // Camera position
-    camera.target = Vector3{ 0.0f, 0.0f, 0.0f };      // Camera looking at point
-    camera.up = Vector3{ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
-    camera.fovy = 45.0f;                                // Camera field-of-view Y
-    camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
+    Camera3D camera = create_camera();
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
@@ -39,18 +31,64 @@ int main(int argc, char *argv[]) {
     const unsigned int n_indices = cloth_mesh.triangleCount * 3;
     std::vector<Scalar> vertices(cloth_mesh.vertices, cloth_mesh.vertices + nDoF);
     std::vector<unsigned int> indices(cloth_mesh.indices, cloth_mesh.indices + n_indices);
-    std::cout << "Number of degrees of freedom: " << nDoF << std::endl;
+    // std::cout << "Number of degrees of freedom: " << nDoF << std::endl;
 
     Simulation simulation;
-    SimulableBounds cloth_bounds = generate_mass_spring(simulation, vertices, indices, 0.1, 100.0, 1.0);
-    MassSpringRenderer cloth_renderer = MassSpringRenderer(cloth_mesh, cloth_bounds);
-    PhysicsRenderers renderers;
-    renderers.mass_spring.push_back(cloth_renderer);
+    const Scalar RB_MASS = 1.0;
+    const Mat3 inertia_tensor = compute_initial_inertia_tensor(RB_MASS, indices, vertices, PARTICLES);
+    simulation.initial_state.add_size(6);
+    RigidBody rb(0, RB_MASS, inertia_tensor);
+    // Initial conditions
+    simulation.initial_state.x.setZero();
+    simulation.initial_state.v.setZero();
+    simulation.initial_state.v(4) = 0.1; // add y direction angular velocity
 
-    // froze degrees of freedom
-    simulation.frozen_dof.push_back(0);
-    simulation.frozen_dof.push_back(1);
-    simulation.frozen_dof.push_back(2);
+    PhysicsState state = simulation.initial_state;
+
+    while (!WindowShouldClose())    // Detect window close button or ESC key
+    {
+        // Update
+        //----------------------------------------------------------------------------------
+        UpdateCamera(&camera, CAMERA_ORBITAL);
+        /// Keyboard controls
+        if (IsKeyPressed(KEY_Q)) break;
+        simulation_step(simulation, state);
+        //----------------------------------------------------------------------------------
+
+        // Draw
+        //----------------------------------------------------------------------------------
+        rlDisableBackfaceCulling();
+        BeginDrawing();
+
+            ClearBackground(RAYWHITE);
+
+            BeginMode3D(camera);
+            {
+                DrawGrid(30, 1.0f);
+                Mat3 rotation = rb.compute_rotation_matrix(state);
+                Matrix rb_transform = { rotation(0,0), rotation(0,1), rotation(0,2), 0.0f,
+                                        rotation(1,0), rotation(1,1), rotation(1,2), 0.0f,
+                                        rotation(2,0), rotation(2,1), rotation(2,2), 0.0f,
+                                        0.0f,          0.0f,          0.0f,          1.0f };
+                DrawMesh(cloth_mesh, LoadMaterialDefault(), rb_transform);
+            }
+            EndMode3D();
+
+            DrawFPS(10, 10);
+
+        EndDrawing();
+        //----------------------------------------------------------------------------------
+    }
+
+    // SimulableBounds cloth_bounds = generate_mass_spring(simulation, vertices, indices, 0.1, 100.0, 1.0);
+    // MassSpringRenderer cloth_renderer = MassSpringRenderer(cloth_mesh, cloth_bounds);
+    // PhysicsRenderers renderers;
+    // renderers.mass_spring.push_back(cloth_renderer);
+
+    // // froze degrees of freedom
+    // simulation.frozen_dof.push_back(0);
+    // simulation.frozen_dof.push_back(1);
+    // simulation.frozen_dof.push_back(2);
 
     {
         // Test volume equation
@@ -67,7 +105,6 @@ int main(int argc, char *argv[]) {
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
-    rlImGuiShutdown();
     CloseWindow();        // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
 

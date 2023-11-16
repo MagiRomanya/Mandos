@@ -45,12 +45,13 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
 
     const unsigned int n_flex = internalEdges.size() / 2.0 + externalEdges.size();
     const unsigned int n_bend = internalEdges.size() / 2.0;
+    simulation.energies.particle_springs.reserve(simulation.energies.particle_springs.size() + n_flex + n_bend);
 
     for (size_t i = 0; i < externalEdges.size(); i++) {
         Edge &e = externalEdges[i];
         Scalar L0 = distance(vertices, e.a, e.b);
         SpringParameters param = {k_tension, L0};
-        simulation.energies.springs.push_back(ParticleSpring(particles[particle_index + e.a], particles[particle_index + e.b], param));
+        simulation.energies.particle_springs.push_back(ParticleSpring(particles[particle_index + e.a], particles[particle_index + e.b], param));
     }
 
     for (size_t i = 0; i < internalEdges.size(); i += 2) {
@@ -59,12 +60,12 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
         Scalar L0 = distance(vertices, e1.a, e1.b);
         // Normal spring
         SpringParameters param = {k_tension, L0};
-        simulation.energies.springs.push_back(ParticleSpring(particles[particle_index + e1.a], particles[particle_index + e1.b], param));
+        simulation.energies.particle_springs.push_back(ParticleSpring(particles[particle_index + e1.a], particles[particle_index + e1.b], param));
 
         // Bend spring
         L0 = distance(vertices, e1.opposite, e2.opposite);
         param = {k_bending, L0};
-        simulation.energies.springs.push_back(ParticleSpring(particles[particle_index + e1.opposite], particles[particle_index + e2.opposite], param));
+        simulation.energies.particle_springs.push_back(ParticleSpring(particles[particle_index + e1.opposite], particles[particle_index + e2.opposite], param));
     }
 
     // Add gravity

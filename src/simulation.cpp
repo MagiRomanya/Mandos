@@ -10,8 +10,8 @@ void compute_energy_and_derivatives(const Energies& energies, const PhysicsState
 
     // Springs
     // ---------------------------------------------------------------------
-    for (size_t i = 0; i < energies.springs.size(); i++) {
-        energies.springs[i].compute_energy_and_derivatives(state, out);
+    for (size_t i = 0; i < energies.particle_springs.size(); i++) {
+        energies.particle_springs[i].compute_energy_and_derivatives(state, out);
     }
 
     // Gravity
