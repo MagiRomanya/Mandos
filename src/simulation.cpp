@@ -4,6 +4,7 @@
 #include "particle.hpp"
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
+#include <iostream>
 #include <vector>
 
 void compute_energy_and_derivatives(const Energies& energies, const PhysicsState& state, EnergyAndDerivatives& out) {
@@ -29,8 +30,13 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     compute_energy_and_derivatives(simulation.energies, state, f);
 
     // Integration step
-    integrate_implicit_euler(simulation, &state, f);
+    Vec new_velocity;
+    integrate_implicit_euler(simulation, state, f, new_velocity);
     out = f;
+    std::cout << "force " << f.force << std::endl;
+
+    // Update simulables
+    update_simulation_state(simulation.TimeStep,simulation.simulables, new_velocity, state);
 }
 
 void simulation_step(const Simulation& simulation, PhysicsState& state) {
@@ -41,7 +47,14 @@ void simulation_step(const Simulation& simulation, PhysicsState& state) {
     compute_energy_and_derivatives(simulation.energies, state, f);
 
     // Integration step
-    integrate_implicit_euler(simulation, &state, f);
+    Vec new_velocity;
+    // integrate_implicit_euler(simulation, state, f, new_velocity);
+    integrate_simplectic_euler(simulation, state, f, new_velocity);
+    std::cout << "energy " << f.energy << std::endl;
+    // std::cout << "force " << f.force << std::endl;
+
+    // Update simulables
+    update_simulation_state(simulation.TimeStep,simulation.simulables, new_velocity, state);
 }
 
 std::vector<Triplet> compute_global_mass_matrix(const Simulables& simulables, const PhysicsState& state) {
@@ -82,5 +95,14 @@ void compute_simulables_energy_and_derivatives(const Simulables& simulables, con
     }
     for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
         simulables.rigid_bodies[i].compute_energy_and_derivatives(state, out);
+    }
+}
+
+void update_simulation_state(Scalar TimeStep, const Simulables& simulables, const Vec& new_velocities, PhysicsState& state) {
+    for (unsigned int i = 0; i < simulables.particles.size(); i++) {
+        simulables.particles[i].update_state(TimeStep, new_velocities, state);
+    }
+    for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
+        simulables.rigid_bodies[i].update_state(TimeStep, new_velocities, state);
     }
 }

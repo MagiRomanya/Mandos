@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
 
     InitWindow(screenWidth, screenHeight, "Mandos GUI");
     rlImGuiSetup(false);
-    // ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     edit_mode_loop();
 
     // De-Initialization

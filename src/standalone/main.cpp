@@ -2,13 +2,17 @@
 #include <vector>
 #include <raylib.h>
 #include <rlgl.h>
+#include <Eigen/LU>
+
 
 #include "linear_algebra.hpp"
 #include "physics_state.hpp"
+#include "raymath.h"
 #include "render/simulation_visualization.hpp"
 #include "rigid_body.hpp"
 #include "simulation.hpp"
 #include "utility_functions.hpp"
+#include "render/draw_vector.hpp"
 
 int main(int argc, char *argv[]) {
     // Initialization
@@ -18,12 +22,22 @@ int main(int argc, char *argv[]) {
 
     InitWindow(screenWidth, screenHeight, "Mandos simulator");
     // Define the camera to look into our 3d world
-    Camera3D camera = create_camera();
+    Camera3D camera = { 0 };
+    camera.position = Vector3{ 0.0f, 10.f, 10.0f };  // Camera position
+    camera.target = Vector3{ 0.0f, 0.0f, 0.0f };      // Camera looking at point
+    camera.up = Vector3{ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
+    camera.fovy = 45.0f;                                // Camera field-of-view Y
+    camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
 
-    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
+    // Make the window resizable
+    SetWindowState(FLAG_WINDOW_RESIZABLE);
+
+    SetTargetFPS(200);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
-    Mesh cloth_mesh = GenMeshPlane(8.0, 4.0, 20, 20);
+    Mesh cloth_mesh = GenMeshPlane(8.0, 1.0, 20, 20);
+    Mesh vector_mesh = LoadMeshTinyOBJ("img/obj/vector.obj");
+    // Mesh cloth_mesh = LoadMeshTinyOBJ("img/obj/hammer.obj");
     const unsigned int nDoF = cloth_mesh.vertexCount * 3;
     const unsigned int n_indices = cloth_mesh.triangleCount * 3;
     std::vector<Scalar> vertices(cloth_mesh.vertices, cloth_mesh.vertices + nDoF);
@@ -31,7 +45,7 @@ int main(int argc, char *argv[]) {
     // std::cout << "Number of degrees of freedom: " << nDoF << std::endl;
 
     Simulation simulation;
-    const Scalar RB_MASS = 10.0;
+    const Scalar RB_MASS = 1.0;
     const Mat3 inertia_tensor = compute_initial_inertia_tensor(RB_MASS, indices, vertices, PARTICLES);
     simulation.initial_state.add_size(6);
     RigidBody rb(0, RB_MASS, inertia_tensor);
@@ -39,8 +53,8 @@ int main(int argc, char *argv[]) {
     // Initial conditions
     simulation.initial_state.x.setZero();
     simulation.initial_state.v.setZero();
-    simulation.initial_state.v(5) = 0.5; // add y direction angular velocity
-    simulation.initial_state.v(4) = 0.01; // add y direction angular velocity
+    simulation.initial_state.v(5) = 1; // add y direction angular velocity
+    simulation.initial_state.v(4) = 0.001; // add y direction angular velocity
 
     PhysicsState state = simulation.initial_state;
 
@@ -70,11 +84,22 @@ int main(int argc, char *argv[]) {
             {
                 DrawGrid(30, 1.0f);
                 Mat3 rotation = rb.compute_rotation_matrix(state);
+                // std::cout << rotation.determinant() << std::endl;
+                // std::cout << rotation.transpose() * rotation << std::endl;
                 Matrix rb_transform = { rotation(0,0), rotation(0,1), rotation(0,2), 0.0f,
                                         rotation(1,0), rotation(1,1), rotation(1,2), 0.0f,
                                         rotation(2,0), rotation(2,1), rotation(2,2), 0.0f,
                                         0.0f,          0.0f,          0.0f,          1.0f };
+
+                Matrix vector_transform = MatrixMultiply(MatrixRotateX(3.14159 / 2), rb_transform);
                 DrawMesh(cloth_mesh, material, rb_transform);
+                DrawMesh(vector_mesh, material, vector_transform);
+
+                const Vec3 omega = state.v.tail(3);
+                DrawVector(Vec3::Zero(), omega, RED);
+                // DrawVector(Vec3::Zero(), Vec3(1,0,0), RED);
+                // DrawVector(Vec3::Zero(), Vec3(0,1,0), GREEN);
+                // DrawVector(Vec3::Zero(), Vec3(0,0,1), BLUE);
             }
             EndMode3D();
 

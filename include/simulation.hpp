@@ -27,7 +27,7 @@ struct Energies {
 struct Simulation {
     Simulables simulables;
     Energies energies;
-    Scalar TimeStep = 0.1;
+    Scalar TimeStep = 0.01;
     PhysicsState initial_state;
     std::vector<unsigned int> frozen_dof;
 };
@@ -42,5 +42,6 @@ void simulation_step(const Simulation& simulation, PhysicsState& state);
 
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out);
 
+void update_simulation_state(Scalar TimeStep, const Simulables& simulables, const Vec& new_velocities, PhysicsState& state);
 
 #endif // SIMULABLE_H_

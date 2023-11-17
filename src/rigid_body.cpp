@@ -1,4 +1,6 @@
+#include <iostream>
 #include <vector>
+#include <Eigen/Geometry>
 
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
@@ -27,6 +29,20 @@ Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta) {
     return Mat3::Identity() + sin(angle) * K + (1. -cos(angle)) * K * K;
 }
 
+Vec3 update_axis_angle(Scalar DeltaTime, const Vec3& theta, const Vec3& omega) {
+    // return theta + DeltaTime * omega;
+    // const Scalar angle = theta.norm();
+    // std::cout << "Angle " << angle << std::endl;
+    // std::cout << "Omega " << omega << std::endl;
+
+    const Mat3 rot0 = compute_rotation_matrix_rodrigues(theta);
+    const Mat3 rot = (Mat3::Identity() + DeltaTime * skew(omega)) * rot0;
+    const Eigen::AngleAxis<Scalar> angle_axis(rot);
+    const Vec3 new_axis = angle_axis.axis();
+    const Scalar new_angle = angle_axis.angle();
+    return new_angle * new_axis;
+}
+
 Mat3 RigidBody::compute_inertia_tensor(const Mat3& rotation_matrix) const {
     return rotation_matrix * inertia_tensor0 * rotation_matrix.transpose();
 }
@@ -38,6 +54,7 @@ Scalar RigidBody::get_kinetic_energy(const Vec3& v, const Vec3& omega, const Mat
 }
 
 Vec3 RigidBody::get_coriolis_torque(const Vec3& omega, const Mat3& inertia_tensor) const {
+    // return Vec3::Zero();
     const Vec3 coriolis_torque = - skew(omega) * inertia_tensor * omega;
     return coriolis_torque;
 }
@@ -66,8 +83,7 @@ void RigidBody::compute_energy_and_derivatives(const PhysicsState& state, Energy
     out.energy += kinetic_energy;
     for (unsigned int i = 0; i<3; i++) {
         out.force[index + 3 + i] += coriolis_torque(i);  // torque
-        // TODO: add force derivatives
-        // for (unsigned int j = 0; j<3; j++) {
+        // TODO: add force derivatives for (unsigned int j = 0; j<3; j++) {
         //     out.df_dx_triplets.push_back(Triplet(index+i, index+j, df_dx(i, j)));
         // }
     }
@@ -194,4 +210,16 @@ Vec3 compute_COM_position(const std::vector<unsigned int>& indices, const std::v
 
 Mat3 RigidBody::compute_inertia_tensor(const PhysicsState& state) const {
     return compute_inertia_tensor(compute_rotation_matrix(state));
+}
+
+void RigidBody::update_state(Scalar TimeStep, const Vec& new_velocities, PhysicsState& state) const {
+    // Update velocities
+    state.v.segment(index, 6) = new_velocities.segment(index, 6);
+    // Update COM position
+    state.x.segment(index, 3) += TimeStep * new_velocities.segment(index, 3);
+    // Update axis-angle rotation
+    const Vec3 theta = state.x.segment(index+3,3);
+    const Vec3 omega = new_velocities.segment(index+3,3);
+    const Vec3 axis_angle = update_axis_angle(TimeStep, theta, omega);
+    state.x.segment(index+3, 3) = axis_angle;
 }

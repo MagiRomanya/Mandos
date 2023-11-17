@@ -17,6 +17,11 @@ struct Particle {
         const Scalar KE = get_kinetic_energy(state);
         out.energy += KE;
     }
+
+    inline void update_state(Scalar TimeStep, const Vec& new_velocities, PhysicsState& state) const {
+        state.v.segment(index, 3) = new_velocities.segment(index, 3);
+        state.x.segment(index, 3) += TimeStep * new_velocities.segment(index, 3);
+    }
 };
 
 #endif // PARTICLE_H_

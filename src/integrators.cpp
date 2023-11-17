@@ -1,17 +1,18 @@
 #include <Eigen/IterativeLinearSolvers>
+#include <iostream>
 #include <vector>
 #include "integrators.hpp"
 #include "linear_algebra.hpp"
 #include "simulation.hpp"
 
-void integrate_implicit_euler(const Simulation& simulation, PhysicsState* state, const EnergyAndDerivatives& f) {
+void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, Vec& v_out) {
     const Scalar h = simulation.TimeStep;
-    const unsigned int nDoF = state->x.size();
+    const unsigned int nDoF = state.x.size();
 
     // Sparse Matrix creation
     // ----------------------------------------------------------------------------------
     SparseMat mass_matrix(nDoF, nDoF);
-    const std::vector<Triplet> mass_matrix_triplets = compute_global_mass_matrix(simulation.simulables, *state);
+    const std::vector<Triplet> mass_matrix_triplets = compute_global_mass_matrix(simulation.simulables, state);
     mass_matrix.setFromTriplets(mass_matrix_triplets.begin(), mass_matrix_triplets.end());
     SparseMat df_dx(nDoF, nDoF), df_dv(nDoF, nDoF);
     df_dx.setFromTriplets(f.df_dx_triplets.begin(), f.df_dx_triplets.end());
@@ -21,7 +22,7 @@ void integrate_implicit_euler(const Simulation& simulation, PhysicsState* state,
 
     // Construct the system of equations
     // ----------------------------------------------------------------------------------
-    Vec equation_vector = h * (f.force + h * df_dx * state->v);
+    Vec equation_vector = h * (f.force + h * df_dx * state.v);
     SparseMat equation_matrix = mass_matrix - h * df_dv - h * h * df_dx;
     handle_frozen_dof(simulation.frozen_dof, &equation_vector, &equation_matrix);
     // ----------------------------------------------------------------------------------
@@ -33,11 +34,7 @@ void integrate_implicit_euler(const Simulation& simulation, PhysicsState* state,
     cg.compute(equation_matrix);
     const Vec delta_v = cg.solve(equation_vector);
     // ----------------------------------------------------------------------------------
-
-    // Update the state with the result
-    // ----------------------------------------------------------------------------------
-    state->v += delta_v;
-    state->x += state->v * h;
+    v_out = state.v + delta_v;
 }
 
 struct FrozenDoFPredicate {
@@ -73,4 +70,35 @@ void handle_frozen_dof(const std::vector<unsigned int>& frozen_dof, Vec* vec) {
     for (unsigned int i = 0; i < frozen_dof.size(); i++) {
         (*vec)[frozen_dof[i]] = 0.0;
     }
+}
+
+void integrate_simplectic_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, Vec& v_out) {
+    const Scalar h = simulation.TimeStep;
+    const unsigned int nDoF = state.x.size();
+
+    // Sparse Matrix creation
+    // ----------------------------------------------------------------------------------
+    SparseMat mass_matrix(nDoF, nDoF);
+    const std::vector<Triplet> mass_matrix_triplets = compute_global_mass_matrix(simulation.simulables, state);
+    mass_matrix.setFromTriplets(mass_matrix_triplets.begin(), mass_matrix_triplets.end());
+    // ----------------------------------------------------------------------------------
+
+    // Construct the system of equations
+    // ----------------------------------------------------------------------------------
+    Vec equation_vector = f.force;
+    SparseMat equation_matrix = mass_matrix;
+    handle_frozen_dof(simulation.frozen_dof, &equation_vector, &equation_matrix);
+    // ----------------------------------------------------------------------------------
+
+    // Solving the system of equations
+    // ----------------------------------------------------------------------------------
+    // Gradient conjugate solving method class
+    Eigen::ConjugateGradient<Eigen::SparseMatrix<Scalar>> cg;
+    cg.compute(equation_matrix);
+    const Vec acceleration = cg.solve(equation_vector);
+    // ----------------------------------------------------------------------------------
+
+    // Update the state with the result
+    // ----------------------------------------------------------------------------------
+    v_out = state.v + acceleration * h;
 }

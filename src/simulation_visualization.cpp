@@ -27,7 +27,7 @@ void simulation_visualization_loop(Simulation& simulation, PhysicsRenderers& phy
 
     PhysicsState state = simulation.initial_state;
 
-    bool simulation_pause = true;
+    bool simulation_pause = false;
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Update

@@ -24,6 +24,7 @@ struct RigidBody {
     Mat3 compute_rotation_matrix(const PhysicsState& state) const;
     Mat3 compute_inertia_tensor(const Mat3& rotation_matrix) const;
     Mat3 compute_inertia_tensor(const PhysicsState& state) const;
+    void update_state(Scalar TimeStep, const Vec& new_velocities, PhysicsState& state) const;
 
     private:
         Scalar get_kinetic_energy(const Vec3& v, const Vec3& omega, const Mat3& inertia_tensor) const;
