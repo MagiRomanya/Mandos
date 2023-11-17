@@ -7,7 +7,7 @@
 #include <rlgl.h>
 #include <vector>
 
-#include "gui/edit_mode.hpp"
+#include "editor/edit_mode.hpp"
 #include "linear_algebra.hpp"
 #include "physics_render.hpp"
 #include "raymath.h"

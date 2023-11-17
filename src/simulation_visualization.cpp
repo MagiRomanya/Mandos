@@ -1,4 +1,6 @@
 #include "render/simulation_visualization.hpp"
+#include "imgui.h"
+#include "physics_state.hpp"
 #include "raylib.h"
 #include <iostream>
 
@@ -25,6 +27,7 @@ void simulation_visualization_loop(Simulation& simulation, PhysicsRenderers& phy
 
     PhysicsState state = simulation.initial_state;
 
+    bool simulation_pause = true;
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Update
@@ -32,7 +35,10 @@ void simulation_visualization_loop(Simulation& simulation, PhysicsRenderers& phy
         UpdateCamera(&camera, CAMERA_ORBITAL);
         /// Keyboard controls
         if (IsKeyPressed(KEY_Q)) break;
-        simulation_step(simulation, state);
+
+        EnergyAndDerivatives f(0);
+        if (!simulation_pause)
+            simulation_step(simulation, state, f);
         //----------------------------------------------------------------------------------
 
         // Draw
@@ -54,8 +60,23 @@ void simulation_visualization_loop(Simulation& simulation, PhysicsRenderers& phy
             rlImGuiBegin();
             {
                 // show ImGui Content
-                // bool open = true;
-                // ImGui::ShowDemoWindow(&open);
+                const float screen_width = ImGui::GetIO().DisplaySize.x;
+                const float screen_hieght = ImGui::GetIO().DisplaySize.y;
+    ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x - 200, 0), ImGuiCond_Always);
+
+    // Set the window size
+    ImGui::SetNextWindowSize(ImVec2(200, screen_hieght), ImGuiCond_Always);
+
+    // Begin the window
+    ImGui::Begin("Right-aligned Window", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+                // ImGui::SetNextWindowSizeConstraints(ImVec2(200, screen_hieght),
+                //                                     ImVec2(500, screen_hieght));
+
+                // Create side window
+                // ImGui::Begin("Simulation manager", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+
+                ImGui::End();
+                ImGui::ShowDemoWindow();
             }
             rlImGuiEnd();
         EndDrawing();

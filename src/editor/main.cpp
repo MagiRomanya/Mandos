@@ -5,7 +5,7 @@
 #include <imgui.h>
 #include <raymath.h>
 
-#include "gui/edit_mode.hpp"
+#include "editor/edit_mode.hpp"
 
 int main(int argc, char *argv[]) {
     // Initialization
@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
 
     InitWindow(screenWidth, screenHeight, "Mandos GUI");
     rlImGuiSetup(false);
-
+    // ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_
     edit_mode_loop();
 
     // De-Initialization

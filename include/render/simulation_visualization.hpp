@@ -6,7 +6,6 @@
 #include <imgui.h>
 
 #include "physics_render.hpp"
-#include "physics_state.hpp"
 #include "simulation.hpp"
 
 Camera3D create_camera(unsigned int FPS = 60);

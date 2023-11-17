@@ -40,5 +40,7 @@ std::vector<Triplet> compute_global_mass_matrix(const Simulables& simulables, co
 
 void simulation_step(const Simulation& simulation, PhysicsState& state);
 
+void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out);
+
 
 #endif // SIMULABLE_H_

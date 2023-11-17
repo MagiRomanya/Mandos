@@ -15,9 +15,12 @@ Mat3 skew(const Vec3& v) {
 
 Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta) {
     const Scalar angle = theta.norm();
+
     // Prevent angle = 0, axis not well defined case
+    // Using small angle approximation instead
     const Scalar THRESHOLD = 1e-1;
     if (angle < THRESHOLD) return Mat3::Identity() + skew(theta);
+
     const Vec3 axis = theta / angle;
     // Rodrigues formula https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula#Matrix_notation
     const Mat3 K = skew(axis);

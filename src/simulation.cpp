@@ -4,7 +4,6 @@
 #include "particle.hpp"
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
-#include <iostream>
 #include <vector>
 
 void compute_energy_and_derivatives(const Energies& energies, const PhysicsState& state, EnergyAndDerivatives& out) {
@@ -22,6 +21,18 @@ void compute_energy_and_derivatives(const Energies& energies, const PhysicsState
     }
 }
 
+void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out) {
+    // Energy and derivatives computation
+    const unsigned int nDoF = simulation.initial_state.x.size();
+    EnergyAndDerivatives f(nDoF);
+    compute_simulables_energy_and_derivatives(simulation.simulables, state, f);
+    compute_energy_and_derivatives(simulation.energies, state, f);
+
+    // Integration step
+    integrate_implicit_euler(simulation, &state, f);
+    out = f;
+}
+
 void simulation_step(const Simulation& simulation, PhysicsState& state) {
     // Energy and derivatives computation
     const unsigned int nDoF = simulation.initial_state.x.size();
@@ -31,9 +42,6 @@ void simulation_step(const Simulation& simulation, PhysicsState& state) {
 
     // Integration step
     integrate_implicit_euler(simulation, &state, f);
-    std::cout << "Total energy " << f.energy << std::endl;
-    // std::cout << "Total force " << f.force << std::endl;
-    // std::cout << "State x " << state.x << std::endl;
 }
 
 std::vector<Triplet> compute_global_mass_matrix(const Simulables& simulables, const PhysicsState& state) {

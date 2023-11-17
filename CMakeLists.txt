@@ -28,8 +28,8 @@ endif()
 file(GLOB SOURCE_FILES
   src/*.cpp
 )
-file(GLOB GUI_SOURCE_FILES
-  src/gui/*.cpp
+file(GLOB EDITOR_SOURCE_FILES
+  src/editor/*.cpp
 )
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/)
@@ -37,14 +37,14 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/eigen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/)
 
-set(CMAKE_BUILD_TYPE Debug)
-# set(CMAKE_BUILD_TYPE Release)
+# set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
 
 add_library(libmandos STATIC ${SOURCE_FILES})
 set_target_properties(libmandos PROPERTIES OUTPUT_NAME mandos)
 
 add_executable(${PROJECT_NAME} src/standalone/main.cpp)
-add_executable(mandos_gui ${GUI_SOURCE_FILES})
+add_executable(mandos_gui ${EDITOR_SOURCE_FILES})
 
 target_include_directories(libmandos PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/
