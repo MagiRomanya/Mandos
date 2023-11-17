@@ -9,10 +9,14 @@ struct Particle {
     const unsigned int index;
     const Scalar mass;
 
-    Vec3 get_position(const PhysicsState& state) const { return state.x.segment(index, 3); }
-    Vec3 get_velocity(const PhysicsState& state) const { return state.v.segment(index, 3); }
+    inline Vec3 get_position(const PhysicsState& state) const { return state.x.segment(index, 3); }
+    inline Vec3 get_velocity(const PhysicsState& state) const { return state.v.segment(index, 3); }
+    inline Scalar get_kinetic_energy(const PhysicsState& state) const { return 0.5 * mass * get_velocity(state).squaredNorm(); }
 
-    // Scalar get_kinetic_energy(const PhysicsState& state) const { return 0.5 * mass * get_velocity(state).squaredNorm(); }
+    inline void compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
+        const Scalar KE = get_kinetic_energy(state);
+        out.energy += KE;
+    }
 };
 
 #endif // PARTICLE_H_

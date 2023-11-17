@@ -4,6 +4,7 @@
 #include "particle.hpp"
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
+#include <iostream>
 #include <vector>
 
 void compute_energy_and_derivatives(const Energies& energies, const PhysicsState& state, EnergyAndDerivatives& out) {
@@ -25,10 +26,14 @@ void simulation_step(const Simulation& simulation, PhysicsState& state) {
     // Energy and derivatives computation
     const unsigned int nDoF = simulation.initial_state.x.size();
     EnergyAndDerivatives f(nDoF);
+    compute_simulables_energy_and_derivatives(simulation.simulables, state, f);
     compute_energy_and_derivatives(simulation.energies, state, f);
 
     // Integration step
     integrate_implicit_euler(simulation, &state, f);
+    std::cout << "Total energy " << f.energy << std::endl;
+    // std::cout << "Total force " << f.force << std::endl;
+    // std::cout << "State x " << state.x << std::endl;
 }
 
 std::vector<Triplet> compute_global_mass_matrix(const Simulables& simulables, const PhysicsState& state) {
@@ -56,9 +61,18 @@ std::vector<Triplet> compute_global_mass_matrix(const Simulables& simulables, co
         const Mat3 inertia_tensor = rb.compute_inertia_tensor(state);
         for (unsigned int a = 0; a< 3; a++) {
             for (unsigned int b = 0; b< 3; b++) {
-                mass_matrix_triplets.emplace_back(rb.index+a, rb.index+b, inertia_tensor(a, b));
+                mass_matrix_triplets.emplace_back(rb.index+3+a, rb.index+3+b, inertia_tensor(a, b));
             }
         }
     }
     return mass_matrix_triplets;
+}
+
+void compute_simulables_energy_and_derivatives(const Simulables& simulables, const PhysicsState& state, EnergyAndDerivatives& out) {
+    for (unsigned int i = 0; i < simulables.particles.size(); i++) {
+        simulables.particles[i].compute_energy_and_derivatives(state, out);
+    }
+    for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
+        simulables.rigid_bodies[i].compute_energy_and_derivatives(state, out);
+    }
 }

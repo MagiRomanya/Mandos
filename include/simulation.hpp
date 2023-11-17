@@ -32,6 +32,8 @@ struct Simulation {
     std::vector<unsigned int> frozen_dof;
 };
 
+void compute_simulables_energy_and_derivatives(const Simulables& simulables, const PhysicsState& state, EnergyAndDerivatives& out);
+
 void compute_energy_and_derivatives(const Energies& energies, const PhysicsState& state, EnergyAndDerivatives& out);
 
 std::vector<Triplet> compute_global_mass_matrix(const Simulables& simulables, const PhysicsState& state);

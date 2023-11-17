@@ -26,9 +26,8 @@ struct RigidBody {
     Mat3 compute_inertia_tensor(const PhysicsState& state) const;
 
     private:
-        Scalar get_energy(const Vec3& x, const Vec3& theta) const;
-        Eigen::Vector<Scalar, 6> get_force(const Vec3& x, const Vec3& theta, const Vec3& omega, const Mat3& inertia_tensor) const;
-        Eigen::Matrix<Scalar, 6, 6> get_df_dx(const Vec3& x, const Vec3& theta) const;
+        Scalar get_kinetic_energy(const Vec3& v, const Vec3& omega, const Mat3& inertia_tensor) const;
+        Vec3 get_coriolis_torque(const Vec3& omega, const Mat3& inertia_tensor) const;
 };
 
 #endif // RIGID_BODY_H_
