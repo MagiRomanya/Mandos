@@ -16,7 +16,8 @@ Mat3 skew(const Vec3& v) {
 }
 
 Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta) {
-    const Scalar angle = theta.norm();
+    Scalar angle = theta.norm();
+    angle = std::fmod(angle, 2 * M_PI);
 
     // Prevent angle = 0, axis not well defined case
     // Using small angle approximation instead
@@ -27,20 +28,6 @@ Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta) {
     // Rodrigues formula https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula#Matrix_notation
     const Mat3 K = skew(axis);
     return Mat3::Identity() + sin(angle) * K + (1. -cos(angle)) * K * K;
-}
-
-Vec3 update_axis_angle(Scalar DeltaTime, const Vec3& theta, const Vec3& omega) {
-    // return theta + DeltaTime * omega;
-    // const Scalar angle = theta.norm();
-    // std::cout << "Angle " << angle << std::endl;
-    // std::cout << "Omega " << omega << std::endl;
-
-    const Mat3 rot0 = compute_rotation_matrix_rodrigues(theta);
-    const Mat3 rot = (Mat3::Identity() + DeltaTime * skew(omega)) * rot0;
-    const Eigen::AngleAxis<Scalar> angle_axis(rot);
-    const Vec3 new_axis = angle_axis.axis();
-    const Scalar new_angle = angle_axis.angle();
-    return new_angle * new_axis;
 }
 
 Mat3 RigidBody::compute_inertia_tensor(const Mat3& rotation_matrix) const {
@@ -211,6 +198,28 @@ Vec3 compute_COM_position(const std::vector<unsigned int>& indices, const std::v
 Mat3 RigidBody::compute_inertia_tensor(const PhysicsState& state) const {
     return compute_inertia_tensor(compute_rotation_matrix(state));
 }
+
+Vec3 update_axis_angle(Scalar DeltaTime, const Vec3& theta, const Vec3& omega) {
+    // const Scalar angle = theta.norm();
+    // if (angle < 1e-4) return theta + DeltaTime * omega;
+    // const Vec3 axis = theta / angle;
+    // const Scalar delta_angle = DeltaTime * omega.norm();
+    // const Vec3 delta_axis = DeltaTime * theta / angle;
+    // std::cout << "Angle " << angle << std::endl;
+    // std::cout << "Omega " << omega << std::endl;
+    // const Eigen::AngleAxis<Scalar> initial_rot(angle, axis);
+    // const Eigen::AngleAxis<Scalar> delta_rot(delta_angle, delta_axis);
+    // const auto quaternion_rot = delta_rot * initial_rot;
+    // const Eigen::AngleAxis<Scalar> angle_axis(quaternion_rot);
+
+    const Mat3 rot0 = compute_rotation_matrix_rodrigues(theta);
+    const Mat3 rot = (Mat3::Identity() + DeltaTime * skew(omega)) * rot0;
+    const Eigen::AngleAxis<Scalar> angle_axis(rot);
+    const Vec3 new_axis = angle_axis.axis();
+    const Scalar new_angle = angle_axis.angle();
+    return new_angle * new_axis;
+}
+
 
 void RigidBody::update_state(Scalar TimeStep, const Vec& new_velocities, PhysicsState& state) const {
     // Update velocities
