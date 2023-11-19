@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
 
                 const Vec3 theta = state.x.tail(3);
                 const Vec3 omega = state.v.tail(3);
-                DrawVector(Vec3::Zero(), theta, BLUE);
+                DrawVector(Vec3::Zero(), theta, BLUE, theta.norm());
                 DrawVector(Vec3::Zero(), omega, RED);
                 // DrawVector(Vec3::Zero(), Vec3(1,0,0), RED);
                 // DrawVector(Vec3::Zero(), Vec3(0,1,0), GREEN);

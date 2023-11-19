@@ -6,7 +6,7 @@
 #include "utility_functions.hpp"
 #include <iostream>
 
-inline void DrawVector(Vec3 position, Vec3 vector, Color color) {
+inline void DrawVector(Vec3 position, Vec3 vector, Color color, Scalar scale = 1) {
   const Vec3 v = (vector - position).normalized();
   const Vec3 up = Vec3(0.0, 1.0, 0.0);
   Vec3 rotation_axis = - skew(v) * up;
@@ -18,9 +18,9 @@ inline void DrawVector(Vec3 position, Vec3 vector, Color color) {
   std::cout << "Angle " << angle << std::endl;
   std::cout << "Axis " << rotation_axis << std::endl;
   std::cout << rot << std::endl;
-  Matrix transform = {rot(0,0), rot(0,1), rot(0,2), position.x(),
-                      rot(1,0), rot(1,1), rot(1,2), position.y(),
-                      rot(2,0), rot(2,1), rot(2,2), position.z(),
+  Matrix transform = {scale*rot(0,0), scale*rot(0,1), scale*rot(0,2), position.x(),
+                      scale*rot(1,0), scale*rot(1,1), scale*rot(1,2), position.y(),
+                      scale*rot(2,0), scale*rot(2,1), scale*rot(2,2), position.z(),
                            0.0,      0.0,      0.0,          1.0};
   // render
   const Mesh vector_mesh = LoadMeshTinyOBJ("img/obj/vector.obj");

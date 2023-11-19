@@ -200,21 +200,29 @@ Mat3 RigidBody::compute_inertia_tensor(const PhysicsState& state) const {
 }
 
 Vec3 update_axis_angle(Scalar DeltaTime, const Vec3& theta, const Vec3& omega) {
-    // const Scalar angle = theta.norm();
-    // if (angle < 1e-4) return theta + DeltaTime * omega;
-    // const Vec3 axis = theta / angle;
-    // const Scalar delta_angle = DeltaTime * omega.norm();
-    // const Vec3 delta_axis = DeltaTime * theta / angle;
-    // std::cout << "Angle " << angle << std::endl;
-    // std::cout << "Omega " << omega << std::endl;
-    // const Eigen::AngleAxis<Scalar> initial_rot(angle, axis);
-    // const Eigen::AngleAxis<Scalar> delta_rot(delta_angle, delta_axis);
-    // const auto quaternion_rot = delta_rot * initial_rot;
-    // const Eigen::AngleAxis<Scalar> angle_axis(quaternion_rot);
+#define AXIS_ANGLE_QUAT
+// #define AXIS_ANGLE_MAT
+#ifdef AXIS_ANGLE_QUAT
+#ifdef AXIS_ANGLE_MAT
+#error "Both QUAT and MAT are defined at the same time!"
+#endif
+    const Scalar angle = theta.norm();
+    if (angle < 1e-4) return theta + DeltaTime * omega;
+    const Vec3 axis = theta / angle;
+    typedef Eigen::Quaternion<Scalar> Quat;
+    const Quat q = Quat(Eigen::AngleAxis<Scalar>(angle, axis));
+    const Quat q_omega = Quat(0, 0.5 * omega);
+    const Quat q_dot = q_omega * q;
+    const Quat q_new = Quat(q.w() + DeltaTime * q_dot.w(), q.vec() + DeltaTime * q_dot.vec());
+    const Eigen::AngleAxis<Scalar> angle_axis(q_new);
+#endif
 
+#ifdef AXIS_ANGLE_MAT
     const Mat3 rot0 = compute_rotation_matrix_rodrigues(theta);
     const Mat3 rot = (Mat3::Identity() + DeltaTime * skew(omega)) * rot0;
     const Eigen::AngleAxis<Scalar> angle_axis(rot);
+#endif
+
     const Vec3 new_axis = angle_axis.axis();
     const Scalar new_angle = angle_axis.angle();
     return new_angle * new_axis;
