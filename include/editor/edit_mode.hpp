@@ -3,8 +3,6 @@
 
 #include <string>
 #include <vector>
-#include "physics_render.hpp"
-#include "simulation.hpp"
 
 
 enum GUI_STATE {

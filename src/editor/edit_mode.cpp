@@ -7,11 +7,11 @@
 #include <rlgl.h>
 #include <vector>
 
+#include "raylib_imgui.hpp"
 #include "editor/edit_mode.hpp"
 #include "linear_algebra.hpp"
 #include "physics_render.hpp"
 #include "raymath.h"
-#include "rlImGui.h"
 #include "simulable_generator.hpp"
 #include "simulation.hpp"
 #include "utility_functions.hpp"
@@ -118,12 +118,10 @@ struct MeshManager {
 
 void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulation& out_sim, PhysicsRenderers& out_renderers) {
     gui_state = EDIT_MODE;
-    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(200, ImGui::GetIO().DisplaySize.y),
-                                        ImVec2(500, ImGui::GetIO().DisplaySize.y));
+    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);                // edit_mode_sidebar(gui_state, mesh_manager, simulation, physics_renderers);
 
     // Create side window
-    ImGui::Begin("Edit scene", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+    ImGui::Begin("Edit scene", NULL, ImGuiWindowFlags_None);
     ImGui::SeparatorText("Meshes");
 
     static int selected_mesh_generator = -1;
@@ -257,7 +255,7 @@ void edit_mode_loop() {
         //----------------------------------------------------------------------------------
         rlDisableBackfaceCulling();
         BeginDrawing();
-
+        {
             ClearBackground(RAYWHITE);
 
             BeginMode3D(camera);
@@ -268,14 +266,12 @@ void edit_mode_loop() {
             EndMode3D();
 
             DrawFPS(GetScreenWidth()*0.95, 10);
-
-            rlImGuiBegin();
+            ImGuiBeginDrawing();
             {
                 edit_mode_sidebar(gui_state, mesh_manager, simulation, physics_renderers);
-                // bool open = true;
-                // ImGui::ShowDemoWindow(&open);
             }
-            rlImGuiEnd();
+            ImGuiEndDrawing();
+        }
         EndDrawing();
         //----------------------------------------------------------------------------------
     }

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <Eigen/Geometry>
-#include <math.h>
+#include <cmath>
 
 #include "physics_state.hpp"
 #include "rigid_body.hpp"

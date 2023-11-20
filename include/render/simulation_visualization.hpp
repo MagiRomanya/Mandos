@@ -1,10 +1,7 @@
 #ifndef SIMULATION_VISUALIZATION_H_
 #define SIMULATION_VISUALIZATION_H_
 
-#include <rlImGui.h>
-#include <rlgl.h>
 #include <imgui.h>
-
 #include "physics_render.hpp"
 #include "simulation.hpp"
 

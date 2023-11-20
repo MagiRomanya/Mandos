@@ -1,9 +1,7 @@
 project(raylib_imgui)
 
 set(public_headers
-    imgui_impl_raylib.h
-    rlImGui.h
-    rlImGuiColors.h
+  raylib_imgui.hpp
     )
 
 file(GLOB SOURCE_FILES

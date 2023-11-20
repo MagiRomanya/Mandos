@@ -1,9 +1,9 @@
 #ifndef PHYSICS_RENDER_H_
 #define PHYSICS_RENDER_H_
 
-#include "linear_algebra.hpp"
 #include <raylib.h>
 #include <raymath.h>
+#include "linear_algebra.hpp"
 
 #include "physics_state.hpp"
 #include "simulable_generator.hpp"

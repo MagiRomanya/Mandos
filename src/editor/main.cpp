@@ -1,10 +1,10 @@
 #include <iostream>
 #include <raylib.h>
 #include <rlgl.h>
-#include <rlImGui.h>
 #include <imgui.h>
 #include <raymath.h>
 
+#include "raylib_imgui.hpp"
 #include "editor/edit_mode.hpp"
 
 int main(int argc, char *argv[]) {
@@ -14,14 +14,16 @@ int main(int argc, char *argv[]) {
     const int screenHeight = 900;
 
     InitWindow(screenWidth, screenHeight, "Mandos GUI");
-    rlImGuiSetup(false);
-    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    ImGui_initialize();
+    auto io = ImGui::GetIO();
+
     edit_mode_loop();
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
-    rlImGuiShutdown();
-    CloseWindow();        // Close window and OpenGL context
+    ImGuiDeinitialize();
+
+    CloseWindow();        // Close glfwWindow and OpenGL context
     //--------------------------------------------------------------------------------------
 
     return 0;

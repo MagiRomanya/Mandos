@@ -4,6 +4,7 @@
 #include "linear_algebra.hpp"
 #include "particle.hpp"
 #include "physics_state.hpp"
+#include <raylib.h>
 
 struct SpringParameters {
     Scalar k, L0;
