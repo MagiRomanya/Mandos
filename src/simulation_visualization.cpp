@@ -2,10 +2,12 @@
 #include <raylib.h>
 #include <rlgl.h>
 #include <iostream>
+#include <vector>
 
 #include "raylib_imgui.hpp"
 #include "render/simulation_visualization.hpp"
 #include "physics_state.hpp"
+#include "clock.hpp"
 
 Camera3D create_camera(unsigned int FPS) {
     // Define the camera to look into our 3d world
@@ -23,6 +25,8 @@ Camera3D create_camera(unsigned int FPS) {
     return camera;
 }
 
+enum SIMULATION_FLOW_STATE { SIMULATION_PAUSE, SIMULATION_STEP, SIMULATION_RUN };
+
 void simulation_visualization_loop(Simulation& simulation, PhysicsRenderers& phy_renderers) {
     Camera3D camera = create_camera();
 
@@ -30,18 +34,41 @@ void simulation_visualization_loop(Simulation& simulation, PhysicsRenderers& phy
 
     PhysicsState state = simulation.initial_state;
 
-    bool simulation_pause = true;
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    SIMULATION_FLOW_STATE simulation_flow_state = SIMULATION_PAUSE;
+    unsigned int n_simulation_steps = 0;
+
+    EnergyAndDerivatives f(0);
+    bool exit_simulation_enviroment = false;
+    double simulation_time = 0;
+    while (!WindowShouldClose() && !exit_simulation_enviroment)    // Detect window close button or ESC key
     {
         // Update
         //----------------------------------------------------------------------------------
-        UpdateCamera(&camera, CAMERA_ORBITAL);
+        // UpdateCamera(&camera, CAMERA_ORBITAL);
+
         /// Keyboard controls
         if (IsKeyPressed(KEY_Q)) break;
 
-        EnergyAndDerivatives f(0);
-        if (!simulation_pause)
-            simulation_step(simulation, state, f);
+        // SIMULATION FLOW
+        switch (simulation_flow_state) {
+        case SIMULATION_PAUSE:
+            break;
+        case SIMULATION_RUN:
+            {
+                Clock clock(simulation_time);
+                simulation_step(simulation, state, f);
+                n_simulation_steps++;
+            }
+            break;
+        case SIMULATION_STEP:
+            {
+                Clock clock(simulation_time);
+                simulation_step(simulation, state, f);
+                n_simulation_steps++;
+                simulation_flow_state = SIMULATION_PAUSE;
+            }
+            break;
+        }
         //----------------------------------------------------------------------------------
 
         // Draw
@@ -63,15 +90,54 @@ void simulation_visualization_loop(Simulation& simulation, PhysicsRenderers& phy
             ImGuiBeginDrawing();
             {
                 // show ImGui Content
-                const float screen_width = ImGui::GetIO().DisplaySize.x;
-                const float screen_hieght = ImGui::GetIO().DisplaySize.y;
-
                 // Create side window
-                ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);                // edit_mode_sidebar(gui_state, mesh_manager, simulation, physics_renderers);
+                ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
                 ImGui::Begin("Simulation manager", NULL, ImGuiWindowFlags_None);
 
+                ImGui::SeparatorText("Simulation control");
+                ImGui::Text("Simulation steps = %u", n_simulation_steps);
+                {
+                    static bool simulation_run = false;
+                    if (ImGui::Button("Step")) {
+                        simulation_flow_state = SIMULATION_STEP;
+                        simulation_run = false;
+                    }
+                    if (ImGui::Checkbox("Simulation run", &simulation_run)) {
+                        if (simulation_run) simulation_flow_state = SIMULATION_RUN;
+                        else simulation_flow_state = SIMULATION_PAUSE;
+                    }
+                }
+
+                if (ImGui::Button("Reset to initial state")) {
+                    state = simulation.initial_state;
+                    n_simulation_steps = 0;
+                }
+
+                ImGui::SeparatorText("Analytics");
+                static std::vector<float> energy_list;
+                static std::vector<float> simulation_time_list;
+
+                if (ImGui::Button("Discard all data")) {
+                    energy_list.clear();
+                    simulation_time_list.clear();
+                }
+                if ((simulation_flow_state == SIMULATION_RUN) or
+                    (simulation_flow_state == SIMULATION_STEP)) {
+                    const float energy = f.energy;
+                    energy_list.push_back(energy);
+                    simulation_time_list.push_back(simulation_time);
+                }
+                ImGui::PlotLines("Total energy", energy_list.data(), energy_list.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(0.0, 80.0));
+                if (ImGui::Button("Discard energy data")) energy_list.clear();
+
+                ImGui::PlotLines("Step time cost (ms)", simulation_time_list.data(), simulation_time_list.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(0.0, 80.0));
+                if (ImGui::Button("Discard time cost data")) simulation_time_list.clear();
+
+                if (ImGui::Button("Exit")) {
+                    exit_simulation_enviroment = true;
+                }
                 ImGui::End();
-                ImGui::ShowDemoWindow();
+
             }
             ImGuiEndDrawing();
 ;        }

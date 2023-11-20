@@ -19,6 +19,7 @@ struct EnergyAndDerivatives {
     EnergyAndDerivatives(unsigned int nDoF) {
         energy = 0;
         force.setZero(nDoF);
+        df_dx.setZero();
         df_dx_triplets.clear();
     }
     // Container

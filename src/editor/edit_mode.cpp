@@ -92,7 +92,7 @@ struct MeshManager {
             for (const auto& pair: mesh_map) {
                 switch (pair.second.physics_type) {
                     case PhysicsMesh::NO_PHYISICS:
-                        DrawModel(LoadModelFromMesh(pair.second.mesh), Vector3{0}, 1, BLUE);
+                        DrawModel(LoadModelFromMesh(pair.second.mesh), Vector3{0,0,0}, 1, BLUE);
                         break;
                     case PhysicsMesh::MASS_SPRING:
                     {
@@ -218,13 +218,9 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
                 break;
         }
     }
-
-    if (ImGui::TreeNode("Tree Node"))
-    {
-        ImGui::Text("Tree node content");
-        ImGui::TreePop();
-    }
     if (mesh_manager.size() != 0) {
+        ImGui::SeparatorText("Simulation settings");
+        ImGui::InputFloat("Delta Time", &out_sim.TimeStep);
         if (ImGui::Button("Simulate!")) {
             for (const auto& pair : mesh_manager.get_mesh_map()) {
                 pair.second.generate_phyiscs(out_sim, out_renderers);

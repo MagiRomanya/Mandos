@@ -14,8 +14,7 @@ struct Particle {
     inline Scalar get_kinetic_energy(const PhysicsState& state) const { return 0.5 * mass * get_velocity(state).squaredNorm(); }
 
     inline void compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
-        const Scalar KE = get_kinetic_energy(state);
-        out.energy += KE;
+        out.energy += get_kinetic_energy(state);
     }
 
     inline void update_state(Scalar TimeStep, const Vec& new_velocities, PhysicsState& state) const {

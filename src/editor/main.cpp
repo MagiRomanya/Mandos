@@ -15,9 +15,11 @@ int main(int argc, char *argv[]) {
 
     InitWindow(screenWidth, screenHeight, "Mandos GUI");
     ImGui_initialize();
-    auto io = ImGui::GetIO();
 
-    edit_mode_loop();
+    while (!WindowShouldClose()) {
+        edit_mode_loop();
+    }
+
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
