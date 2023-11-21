@@ -15,6 +15,9 @@
 #include "render/draw_vector.hpp"
 
 int main(int argc, char *argv[]) {
+    FEM_ElementParameters delete_this_variable(1,1,Vec4::Zero(), Eigen::Matrix<Scalar,4,3>::Zero());
+    FEM_Element3D elemenr(Particle(1,1), Particle(1,1), Particle(1,1), Particle(1,1), delete_this_variable);
+
     // Initialization
     //--------------------------------------------------------------------------------------
     const int screenWidth = 1600;

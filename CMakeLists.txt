@@ -37,8 +37,8 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/eigen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/)
 
-# set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_BUILD_TYPE Release)
 
 add_library(libmandos STATIC ${SOURCE_FILES})
 set_target_properties(libmandos PROPERTIES OUTPUT_NAME mandos)
