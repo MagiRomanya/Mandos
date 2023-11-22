@@ -24,5 +24,5 @@ SimulableBounds generate_RigidBody_tennis_racket_effect(Simulation& simulation) 
   simulation.initial_state.v(index + 5) = 1; // add y direction angular velocity
   simulation.initial_state.v(index + 4) = 0.001; // add z direction angular velocity
 
-  return SimulableBounds{index, nDoF}
+  return SimulableBounds{index, nDoF};
 }
