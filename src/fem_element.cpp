@@ -6,6 +6,9 @@
 // epsilon == strain tensor
 // sigma == stress tensor
 
+// Given a square DxD matrix mat, return a vector of D² components
+// A  B
+// C  D  ->  vec = A, B, C, D
 template<unsigned int D>
 Eigen::Vector<Scalar, D*D> vectorize_matrix(const Eigen::Matrix<Scalar,D,D>& mat) {
   Eigen::Vector<Scalar, D*D> result = Eigen::Vector<Scalar, D*D>::Zero();
@@ -17,12 +20,17 @@ Eigen::Vector<Scalar, D*D> vectorize_matrix(const Eigen::Matrix<Scalar,D,D>& mat
   return result;
 }
 
+// Given a NxM matrix, return a 3Nx3M matrix where each matrix component m_i_j becomes now m_i_j*I
+// where I is the 3x3 identity matrix
+// A  B            A* I, B*I
+// C  D  ->  mat = C* I, D*I
 template<unsigned int N, unsigned int M>
 Eigen::Matrix<Scalar, 3*N, 3*M> block_matrix(const Eigen::Matrix<Scalar,N,M>& mat) {
   Eigen::Matrix<Scalar, 3*N, 3*M> result = Eigen::Matrix<Scalar, 3*N, 3*M>::Zero();
   for (unsigned int i = 0; i< N; i++) {
     for (unsigned int j = 0; j< M; j++) {
-      // result.block(3,3,i*3,j*3) = mat(i, j) * Mat3::Identity();
+      // Wierd syntax we have to use because of templates
+      // It just means result.block...
       result.template block<3,3>(i*3, j*3) = mat(i, j) * Mat3::Identity();
     }
   }
@@ -35,11 +43,14 @@ FEM_ElementParameters::FEM_ElementParameters(Scalar mu, Scalar lambda, Eigen::Ma
   : mu(mu), lambda(lambda), dvecF_dx(block_matrix<3,4>(ds_dx.transpose())) {}
 
 Mat3 FEM_ElementParameters::compute_deformation_tensor(const Vec3& x1, const Vec3& x2, const Vec3& x3, const Vec3& x4) const {
+  // X_vec is a 12 component column vector organized as X_vec = x1, x2, x3, x4
   Eigen::Vector<Scalar, 12> X_vec = Eigen::Vector<Scalar, 12>::Zero();
   X_vec.segment<3>(3*0) = x1;
   X_vec.segment<3>(3*1) = x2;
   X_vec.segment<3>(3*2) = x3;
   X_vec.segment<3>(3*3) = x4;
+  // F_vec is a column-wise vectorized representation of the F tensor
+  // Meaning F_vec = F11, F21, F31, F12, F22, F32, F13, F32, F33
   const Eigen::Vector<Scalar, 9> F_vec = dvecF_dx * X_vec;
   Mat3 F;
   F << F_vec(0), F_vec(3), F_vec(6),
@@ -53,7 +64,7 @@ Mat3 compute_strain_tensor_from_deformation_tensor(const Mat3& F) {
 }
 
 Mat3 FEM_ElementParameters::compute_stress_tensor(const Mat3& epsilon) const {
-  // return mu * ((F + F.transpose()) - 2 * I) + lambda *(F-I).trace() * I;
+  // Homogenious material Hook's Law https://en.wikipedia.org/wiki/Lam%C3%A9_parameters
   return 2 * mu * epsilon + lambda * epsilon.trace() * Mat3::Identity();
 }
 
@@ -148,8 +159,12 @@ Eigen::Matrix<Scalar,4,3> compute_shape_function_derivative(const Vec3& x1, cons
             0, 1, 0,
             0, 0, 1;
 
+  // Here the B matrix is defined as the matrix to transform the coordinate system from the tetrahedron iso-parametric coordinates
+  // p' = Bp + x1
+  // Where p is a point defined in the iso-paramteric cordinate system and p' is in the same reference frame as x1,x2,etc.
   Mat3 B;
   B << x2-x1, x3-x1, x4-x1;
+
   return ds_dp * B.inverse();
 }
 

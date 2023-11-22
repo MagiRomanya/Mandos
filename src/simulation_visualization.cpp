@@ -4,10 +4,13 @@
 #include <iostream>
 #include <vector>
 
+#include "linear_algebra.hpp"
 #include "raylib_imgui.hpp"
 #include "render/simulation_visualization.hpp"
 #include "physics_state.hpp"
 #include "clock.hpp"
+#include "rigid_body.hpp"
+#include "spring.hpp"
 
 Camera3D create_camera(unsigned int FPS) {
     // Define the camera to look into our 3d world
@@ -143,5 +146,57 @@ void simulation_visualization_loop(Simulation& simulation, PhysicsRenderers& phy
 ;        }
         EndDrawing();
         //----------------------------------------------------------------------------------
+    }
+}
+
+void simulation_render_simulables_and_energies(const Simulation& simulation, const PhysicsState& state) {
+    simulation_render_energies(simulation.energies, state);
+    simulation_render_simulables(simulation.simulables, state);
+}
+
+void simulation_render_simulables(const Simulables& simulables, const PhysicsState& state) {
+    // DRAW PARTICLES
+    //----------------------------------------------------------------------------------
+    Color colors[] = {LIGHTGRAY, GRAY, DARKGRAY, YELLOW, GOLD, ORANGE, PINK, RED, MAROON, GREEN, LIME, DARKGREEN, SKYBLUE, BLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN};
+    for (unsigned int i = 0; i < simulables.particles.size(); i++) {
+        const Particle& p = simulables.particles[i];
+        const Vec3 x = p.get_position(state);
+        DrawSphere(Vector3{x.x(), x.y(), x.z()}, 0.05, colors[i % IM_ARRAYSIZE(colors)]);
+    }
+
+    // DRAW RIGID BODIES
+    //----------------------------------------------------------------------------------
+    for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
+        const RigidBody& rb = simulables.rigid_bodies[i];
+        const Vec3 x = rb.get_COM_position(state);
+        const Mat3 rot = rb.compute_rotation_matrix(state);
+        std::cout << "DRAW RIGID BODIES NOT IMPLEMENTED YET" << std::endl;
+    }
+}
+void simulation_render_energies(const Energies& energies, const PhysicsState& state) {
+    // DRAW SPRINGS
+    //----------------------------------------------------------------------------------
+    for (unsigned int i = 0; i < energies.particle_springs.size(); i++) {
+        const ParticleSpring& s = energies.particle_springs[i];
+        const Vec3& x1 = s.p1.get_position(state);
+        const Vec3& x2 = s.p2.get_position(state);
+        DrawLine3D(Vector3{x1.x(),x1.y(),x1.z()}, Vector3{x2.x(),x2.y(),x2.z()}, RED);
+    }
+    // DRAW FEM TETRAHEDRONS
+    //----------------------------------------------------------------------------------
+    for (unsigned int i = 0; i < energies.fem_elements_3d.size(); i++) {
+        const FEM_Element3D& e = energies.fem_elements_3d[i];
+        const Vec3& x1 = e.p1.get_position(state);
+        const Vec3& x2 = e.p2.get_position(state);
+        const Vec3& x3 = e.p3.get_position(state);
+        const Vec3& x4 = e.p4.get_position(state);
+        DrawLine3D(Vector3{x1.x(), x1.y(), x1.z()}, Vector3{x2.x(), x2.y(), x2.z()}, BLUE);
+        DrawLine3D(Vector3{x1.x(), x1.y(), x1.z()}, Vector3{x3.x(), x3.y(), x3.z()}, BLUE);
+        DrawLine3D(Vector3{x1.x(), x1.y(), x1.z()}, Vector3{x4.x(), x4.y(), x4.z()}, BLUE);
+        DrawLine3D(Vector3{x4.x(), x4.y(), x4.z()}, Vector3{x2.x(), x2.y(), x2.z()}, BLUE);
+        DrawLine3D(Vector3{x4.x(), x4.y(), x4.z()}, Vector3{x3.x(), x3.y(), x3.z()}, BLUE);
+        DrawLine3D(Vector3{x2.x(), x2.y(), x2.z()}, Vector3{x3.x(), x3.y(), x3.z()}, BLUE);
+        const Vec3 com = (x1 +x2 +x3 +x4) / 4;
+        DrawSphere(Vector3{com.x(), com.y(),com.z()}, 0.04, PINK);
     }
 }

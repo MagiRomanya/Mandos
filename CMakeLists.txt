@@ -27,6 +27,7 @@ endif()
 
 file(GLOB SOURCE_FILES
   src/*.cpp
+  src/simulation_generators/*.cpp
 )
 file(GLOB EDITOR_SOURCE_FILES
   src/editor/*.cpp

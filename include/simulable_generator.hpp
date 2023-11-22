@@ -3,7 +3,6 @@
 
 #include "simulation.hpp"
 #include "linear_algebra.hpp"
-#include "physics_state.hpp"
 
 struct SimulableBounds {
     unsigned int dof_index, nDoF;
@@ -15,5 +14,9 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
                                      Scalar node_mass,
                                      Scalar k_tension,
                                      Scalar k_bending);
+
+SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus);
+
+SimulableBounds generate_RigidBody_tennis_racket_effect(Simulation& simulation);
 
 #endif // SIMULABLE_GENERATOR_H_

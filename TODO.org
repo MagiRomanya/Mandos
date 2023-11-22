@@ -2,8 +2,11 @@
 
 * TODO Add rigid body to the Simulation editor :GUI:
 * TODO Add a way for the editor to manage frozen DoF :GUI:
-* TODO Add a way to select the integrator :GUI:
+* DONE Add a way to select the integrator :GUI:
+CLOSED: [2023-11-22 Wed 15:57]
 * TODO Manage simulation and render meshes separately :RENDER:
+* DONE Set a mode to render simulation by simulables and meshes :RENDER:
+CLOSED: [2023-11-22 Wed 16:49]
 * TODO Implement FEM :SIMULATION:
 ** DONE Implement energy derivatives
 ** DONE Test FEM energy derivatives with a simple tetrahedron :SIMULATION:TESTING:
