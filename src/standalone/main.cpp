@@ -2,21 +2,54 @@
 #include <vector>
 #include <raylib.h>
 #include <rlgl.h>
-#include <Eigen/LU>
 
 
+#include "fem_unit.hpp"
 #include "linear_algebra.hpp"
+#include "particle.hpp"
 #include "physics_state.hpp"
-#include "raymath.h"
 #include "render/simulation_visualization.hpp"
-#include "rigid_body.hpp"
 #include "simulation.hpp"
-#include "utility_functions.hpp"
-#include "render/draw_vector.hpp"
 
-int main(int argc, char *argv[]) {
-    FEM_ElementParameters delete_this_variable(1,1,Vec4::Zero(), Eigen::Matrix<Scalar,4,3>::Zero());
-    FEM_Element3D elemenr(Particle(1,1), Particle(1,1), Particle(1,1), Particle(1,1), delete_this_variable);
+int main(void) {
+    // Create tetrahedron
+
+    Simulation simulation;
+    const Scalar particle_mass = 1;
+
+    // Add 3 dimensions per particle to the degrees of freedom
+    const unsigned int index = simulation.initial_state.x.size();
+    simulation.initial_state.add_size(4*3);
+
+    // Create particle simulables
+    simulation.simulables.particles.emplace_back(particle_mass, index+3*0);
+    simulation.simulables.particles.emplace_back(particle_mass, index+3*1);
+    simulation.simulables.particles.emplace_back(particle_mass, index+3*2);
+    simulation.simulables.particles.emplace_back(particle_mass, index+3*3);
+
+    // Initial conditions
+    simulation.initial_state.x.segment<3>(3*0+index) = Vec3(0,0,0);
+    simulation.initial_state.x.segment<3>(3*1+index) = Vec3(1,0,0);
+    simulation.initial_state.x.segment<3>(3*2+index) = Vec3(0,1,0);
+    simulation.initial_state.x.segment<3>(3*3+index) = Vec3(0,0,1);
+    simulation.initial_state.v.setZero();
+    // const Scalar vel = 1;
+    // simulation.initial_state.v.segment<3>(3*2+index) = Vec3(0, vel/2,0);
+    // simulation.initial_state.v.segment<3>(3*0+index) = Vec3(0,-vel/2,0);
+
+    const Scalar young_modulus = 50e3;
+    const Scalar poisson_ratio = 0.2;
+    const Scalar mu = young_modulus / (2*(1 + poisson_ratio));
+    const Scalar lambda = young_modulus * poisson_ratio / ((1+poisson_ratio) * (1-2*poisson_ratio));
+    Eigen::Matrix<Scalar,4,3> ds_dx =  compute_shape_function_derivative(Vec3(0,0,0), Vec3(1,0,0), Vec3(0,1,0), Vec3(0,0,1));
+    FEM_ElementParameters FEM_paramters(mu, lambda, ds_dx);
+    simulation.energies.fem_elements_3d.emplace_back(simulation.simulables.particles[0],
+                                                     simulation.simulables.particles[1],
+                                                     simulation.simulables.particles[2],
+                                                     simulation.simulables.particles[3],
+                                                     FEM_paramters);
+
+    simulation.initial_state.x.segment<3>(3*2+index) = Vec3(0,2,0);
 
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -24,61 +57,30 @@ int main(int argc, char *argv[]) {
     const int screenHeight = 900;
 
     InitWindow(screenWidth, screenHeight, "Mandos simulator");
-    // Define the camera to look into our 3d world
-    Camera3D camera = { 0 };
-    camera.position = Vector3{ 0.0f, 10.f, 10.0f };  // Camera position
-    camera.target = Vector3{ 0.0f, 0.0f, 0.0f };      // Camera looking at point
-    camera.up = Vector3{ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
-    camera.fovy = 45.0f;                                // Camera field-of-view Y
-    camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
-
-    // Make the window resizable
-    SetWindowState(FLAG_WINDOW_RESIZABLE);
+    Camera3D camera = create_camera();
 
     SetTargetFPS(200);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
-    Mesh cloth_mesh = GenMeshPlane(8.0, 1.0, 20, 20);
-    Mesh vector_mesh = LoadMeshTinyOBJ("img/obj/vector.obj");
-    // Mesh cloth_mesh = LoadMeshTinyOBJ("img/obj/hammer.obj");
-    const unsigned int nDoF = cloth_mesh.vertexCount * 3;
-    const unsigned int n_indices = cloth_mesh.triangleCount * 3;
-    std::vector<Scalar> vertices(cloth_mesh.vertices, cloth_mesh.vertices + nDoF);
-    std::vector<unsigned int> indices(cloth_mesh.indices, cloth_mesh.indices + n_indices);
-    // std::cout << "Number of degrees of freedom: " << nDoF << std::endl;
-
-    Simulation simulation;
-    const Scalar RB_MASS = 1.0;
-    const Mat3 inertia_tensor = compute_initial_inertia_tensor(RB_MASS, indices, vertices, PARTICLES);
-    simulation.initial_state.add_size(6);
-    RigidBody rb(0, RB_MASS, inertia_tensor);
-    simulation.simulables.rigid_bodies.push_back(rb);
-    // Initial conditions
-    simulation.initial_state.x.setZero();
-    simulation.initial_state.v.setZero();
-    simulation.initial_state.v(5) = 1; // add y direction angular velocity
-    simulation.initial_state.v(4) = 0.001; // add y direction angular velocity
-
     PhysicsState state = simulation.initial_state;
-
-    Material material = LoadMaterialDefault();
-    Texture2D texture = LoadTexture("img/textures/rigid-body.png");
-    SetMaterialTexture(&material, MATERIAL_MAP_ALBEDO, texture);
-
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Update
         //----------------------------------------------------------------------------------
-        // UpdateCamera(&camera, CAMERA_FREE);
+        UpdateCamera(&camera, CAMERA_ORBITAL);
         /// Keyboard controls
         if (IsKeyPressed(KEY_Q)) break;
 
-        simulation_step(simulation, state);
+        if (true or IsKeyPressed(KEY_G)) {
+            EnergyAndDerivatives f(0);
+            simulation_step(simulation, state, f);
+            std::cout << "Energy " << f.energy << std::endl;
+            // std::cout << "Force " << f.force << std::endl;
+        }
         //----------------------------------------------------------------------------------
 
         // Draw
         //----------------------------------------------------------------------------------
-        rlDisableBackfaceCulling();
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
@@ -86,25 +88,27 @@ int main(int argc, char *argv[]) {
             BeginMode3D(camera);
             {
                 DrawGrid(30, 1.0f);
-                Mat3 rotation = rb.compute_rotation_matrix(state);
-                // std::cout << rotation.determinant() << std::endl;
-                // std::cout << rotation.transpose() * rotation << std::endl;
-                Matrix rb_transform = { rotation(0,0), rotation(0,1), rotation(0,2), 0.0f,
-                                        rotation(1,0), rotation(1,1), rotation(1,2), 0.0f,
-                                        rotation(2,0), rotation(2,1), rotation(2,2), 0.0f,
-                                        0.0f,          0.0f,          0.0f,          1.0f };
-
-                Matrix vector_transform = MatrixMultiply(MatrixRotateX(3.14159 / 2), rb_transform);
-                DrawMesh(cloth_mesh, material, rb_transform);
-                DrawMesh(vector_mesh, material, vector_transform);
-
-                const Vec3 theta = state.x.tail(3);
-                const Vec3 omega = state.v.tail(3);
-                DrawVector(Vec3::Zero(), theta, BLUE, theta.norm()/ 10);
-                DrawVector(Vec3::Zero(), omega, RED);
-                // DrawVector(Vec3::Zero(), Vec3(1,0,0), RED);
-                // DrawVector(Vec3::Zero(), Vec3(0,1,0), GREEN);
-                // DrawVector(Vec3::Zero(), Vec3(0,0,1), BLUE);
+                for (unsigned int i = 0; i < simulation.energies.fem_elements_3d.size(); i++) {
+                    const FEM_Element3D& e = simulation.energies.fem_elements_3d[i];
+                    const Vec3& x1 = e.p1.get_position(state);
+                    const Vec3& x2 = e.p2.get_position(state);
+                    const Vec3& x3 = e.p3.get_position(state);
+                    const Vec3& x4 = e.p4.get_position(state);
+                    DrawLine3D(Vector3{x1.x(), x1.y(), x1.z()}, Vector3{x2.x(), x2.y(), x2.z()}, BLUE);
+                    DrawLine3D(Vector3{x1.x(), x1.y(), x1.z()}, Vector3{x3.x(), x3.y(), x3.z()}, BLUE);
+                    DrawLine3D(Vector3{x1.x(), x1.y(), x1.z()}, Vector3{x4.x(), x4.y(), x4.z()}, BLUE);
+                    DrawLine3D(Vector3{x4.x(), x4.y(), x4.z()}, Vector3{x2.x(), x2.y(), x2.z()}, BLUE);
+                    DrawLine3D(Vector3{x4.x(), x4.y(), x4.z()}, Vector3{x3.x(), x3.y(), x3.z()}, BLUE);
+                    DrawLine3D(Vector3{x2.x(), x2.y(), x2.z()}, Vector3{x3.x(), x3.y(), x3.z()}, BLUE);
+                    const Vec3 com = (x1 +x2 +x3 +x4) / 4;
+                    DrawSphere(Vector3{com.x(), com.y(),com.z()}, 0.04, PINK);
+                }
+                Color colors[] = {RED, BLUE, GREEN, MAGENTA};
+                for (unsigned int i = 0; i < simulation.simulables.particles.size(); i++) {
+                    const Particle& p = simulation.simulables.particles[i];
+                    const Vec3 x = p.get_position(state);
+                    DrawSphere(Vector3{x.x(), x.y(), x.z()}, 0.05, colors[i]);
+                }
             }
             EndMode3D();
 
@@ -113,30 +117,6 @@ int main(int argc, char *argv[]) {
         EndDrawing();
         //----------------------------------------------------------------------------------
     }
-
-    // SimulableBounds cloth_bounds = generate_mass_spring(simulation, vertices, indices, 0.1, 100.0, 1.0);
-    // MassSpringRenderer cloth_renderer = MassSpringRenderer(cloth_mesh, cloth_bounds);
-    // PhysicsRenderers renderers;
-    // renderers.mass_spring.push_back(cloth_renderer);
-
-    // // froze degrees of freedom
-    // simulation.frozen_dof.push_back(0);
-    // simulation.frozen_dof.push_back(1);
-    // simulation.frozen_dof.push_back(2);
-
-    {
-        // Test volume equation
-        Mesh mesh = LoadMeshTinyOBJ("img/obj/sphere.obj");
-        const unsigned int n_vertices = mesh.vertexCount * 3;
-        const unsigned int n_indices = mesh.triangleCount * 3;
-        const std::vector<Scalar> vertices(mesh.vertices, mesh.vertices + n_vertices);
-        const std::vector<unsigned int> indices(mesh.indices, mesh.indices + n_indices);
-        const Scalar volume = compute_mesh_volume(indices, vertices);
-        std::cout << "Sphere volume " << volume << std::endl;
-    }
-
-    // simulation_visualization_loop(simulation, renderers);
-
     // De-Initialization
     //--------------------------------------------------------------------------------------
     CloseWindow();        // Close window and OpenGL context

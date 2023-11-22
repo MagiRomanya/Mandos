@@ -24,10 +24,16 @@ struct Energies {
     std::vector<Gravity> gravities;
 };
 
+
+enum INTEGRATION_RUTINE {SIMPLECTIC_EULER, IMPLICIT_EULER};
+
 struct Simulation {
     Simulables simulables;
     Energies energies;
-    Scalar TimeStep = 0.01;
+    // Integration settings
+    Scalar TimeStep = 0.001;
+    INTEGRATION_RUTINE integration_routine = IMPLICIT_EULER;
+    // Boundary conditions
     PhysicsState initial_state;
     std::vector<unsigned int> frozen_dof;
 };

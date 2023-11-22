@@ -29,5 +29,7 @@ inline void DrawVector(Vec3 position, Vec3 vector, Color color, Scalar scale = 1
   Texture2D texture = LoadTextureFromImage(im_color);
   SetMaterialTexture(&material, MATERIAL_MAP_DIFFUSE, texture);
   DrawMesh(vector_mesh, material, transform);
+  UnloadMesh(vector_mesh);
+  UnloadTexture(texture);
 }
 #endif // DRAW_VECTOR_H__

@@ -1,0 +1,10 @@
+#+title: Mandos Project Pending Tasks
+
+* TODO Add rigid body to the Simulation editor :GUI:
+* TODO Add a way for the editor to manage frozen DoF :GUI:
+* TODO Manage simulation and render meshes separately :RENDER:
+* TODO Implement FEM :SIMULATION:
+** DONE Implement energy derivatives
+** TODO Test FEM energy derivatives with a simple tetrahedron :SIMULATION:TESTING:
+DEADLINE: <2023-11-22 Wed>
+* TODO Implement constraints with lagrange multipliers :SIMULATION:
