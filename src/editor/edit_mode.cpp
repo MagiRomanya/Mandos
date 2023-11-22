@@ -19,6 +19,9 @@
 
 struct PhysicsMesh {
     Mesh mesh;
+    ~PhysicsMesh() {
+        UnloadMesh(mesh);
+    }
     void add_physics(MassSpringGUIGenerator gen) {
         physics_type = MASS_SPRING;
         phyiscs_generator.mass_spring = gen;
@@ -221,6 +224,15 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
     if (mesh_manager.size() != 0) {
         ImGui::SeparatorText("Simulation settings");
         ImGui::InputFloat("Delta Time", &out_sim.TimeStep);
+        static int integrator = 1;
+        ImGui::RadioButton("Simplectic", &integrator, 0); ImGui::SameLine();
+        ImGui::RadioButton("Implicit", &integrator, 1);
+        if (integrator == 0) {
+            out_sim.integration_routine = IMPLICIT_EULER;
+        }
+        else if (integrator == 1) {
+            out_sim.integration_routine = SIMPLECTIC_EULER;
+        }
         if (ImGui::Button("Simulate!")) {
             for (const auto& pair : mesh_manager.get_mesh_map()) {
                 pair.second.generate_phyiscs(out_sim, out_renderers);
@@ -228,7 +240,6 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
             }
         }
     }
-
     ImGui::End();
 }
 

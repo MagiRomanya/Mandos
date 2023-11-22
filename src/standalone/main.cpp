@@ -49,7 +49,8 @@ int main(void) {
                                                      simulation.simulables.particles[3],
                                                      FEM_paramters);
 
-    simulation.initial_state.x.segment<3>(3*2+index) = Vec3(0,2,0);
+    // Displace original position
+    simulation.initial_state.x.segment<3>(3*2+index) = Vec3(0,1.5,0);
 
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -59,7 +60,7 @@ int main(void) {
     InitWindow(screenWidth, screenHeight, "Mandos simulator");
     Camera3D camera = create_camera();
 
-    SetTargetFPS(200);               // Set our game to run at 60 frames-per-second
+    SetTargetFPS(200);
     //--------------------------------------------------------------------------------------
 
     PhysicsState state = simulation.initial_state;
@@ -75,7 +76,6 @@ int main(void) {
             EnergyAndDerivatives f(0);
             simulation_step(simulation, state, f);
             std::cout << "Energy " << f.energy << std::endl;
-            // std::cout << "Force " << f.force << std::endl;
         }
         //----------------------------------------------------------------------------------
 

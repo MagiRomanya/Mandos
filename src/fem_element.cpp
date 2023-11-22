@@ -1,5 +1,4 @@
 #include <Eigen/Dense> // For inverse matrix
-#include <iostream>
 #include "fem_unit.hpp"
 #include "utility_functions.hpp"
 
@@ -102,7 +101,6 @@ void FEM_Element3D::compute_energy_and_derivatives(const PhysicsState& state, En
   // Compute the energy derivatives
   // ---------------------------------------------------------------
   const Scalar volume = abs(parameters.compute_volume(x1, x2, x3, x4));
-  std::cout << "Volume " << volume << std::endl;
   const Scalar energy = volume * parameters.get_energy_density(epsilon);
   const Eigen::Vector<Scalar,12> force = volume * parameters.get_force_density(sigma);
   const Eigen::Matrix<Scalar,12,12> df_dx = volume * parameters.get_df_dx_density();
