@@ -201,7 +201,7 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
         switch (e) {
             case 0: // Mass Spring
             {
-                static float mass = 10;
+                static float mass = 100;
                 static float k_tension = 100;
                 static float k_bending = 1;
                 if (ImGui::InputFloat("mass", &mass)) mass = std::clamp(mass, 0.0f, 1000.0f);
@@ -222,11 +222,12 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
         }
     }
     if (mesh_manager.size() != 0) {
+        static float TimeStep = 0.1;
         ImGui::SeparatorText("Simulation settings");
-        ImGui::InputFloat("Delta Time", &out_sim.TimeStep);
-        static int integrator = 1;
-        ImGui::RadioButton("Simplectic", &integrator, 0); ImGui::SameLine();
-        ImGui::RadioButton("Implicit", &integrator, 1);
+        ImGui::InputFloat("Delta Time", &TimeStep);
+        static int integrator = 0;
+        ImGui::RadioButton("Implicit", &integrator, 0); ImGui::SameLine();
+        ImGui::RadioButton("Simplectic", &integrator, 1);
         if (integrator == 0) {
             out_sim.integration_routine = IMPLICIT_EULER;
         }
@@ -234,6 +235,7 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
             out_sim.integration_routine = SIMPLECTIC_EULER;
         }
         if (ImGui::Button("Simulate!")) {
+            out_sim.TimeStep = TimeStep;
             for (const auto& pair : mesh_manager.get_mesh_map()) {
                 pair.second.generate_phyiscs(out_sim, out_renderers);
                 gui_state = SIMULATION_MODE;

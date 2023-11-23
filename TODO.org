@@ -11,7 +11,9 @@ CLOSED: [2023-11-22 Wed 16:49]
 ** DONE Implement energy derivatives
 ** DONE Test FEM energy derivatives with a simple tetrahedron :SIMULATION:TESTING:
 CLOSED: [2023-11-22 Wed 15:26]
-** TODO Implement TETGEN tetrahedron mesh :GEOMETRY:
-* TODO Implement constraints with Lagrange multipliers :SIMULATION:
+** DONE Implement TETGEN tetrahedron mesh :GEOMETRY:
+CLOSED: [2023-11-23 Thu 16:58]
+** TODO Implement embedded mesh to handle contact and render :GEOMETRY:
 
+* TODO Implement constraints with Lagrange multipliers :SIMULATION:
 * IDEA Implement axis angle rotation to axis angle update
