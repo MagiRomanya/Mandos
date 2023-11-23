@@ -12,6 +12,10 @@
 #endif
 
 Mesh LoadMeshTinyOBJ(std::string inputfile);
+void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& out_vertices, std::vector<unsigned int>& out_indices);
+
+void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices,
+                                 std::vector<unsigned int>& out_tetrahedron_indices, std::vector<float>& out_tetrahedron_vertices);
 
 // Geometry related functions
 Mat3 skew(const Vec3& v);

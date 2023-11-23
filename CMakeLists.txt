@@ -54,11 +54,13 @@ target_include_directories(libmandos PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/external/eigen/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/tinyobj/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/src/
+  ${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/
 )
 
 target_link_libraries(libmandos PUBLIC
   raylib
   raylib_imgui
+  tetgen
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC)

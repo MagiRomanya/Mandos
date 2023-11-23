@@ -69,3 +69,30 @@ Mesh LoadMeshTinyOBJ(std::string inputfile) {
     vertices = attrib.vertices;
     return LoadMeshFromVectors(indices, vertices, normals, texcoords);
 }
+
+void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& out_vertices, std::vector<unsigned int>& out_indices) {
+    tinyobj::ObjReaderConfig reader_config;
+    tinyobj::ObjReader reader;
+    if (!reader.ParseFromFile(inputfile, reader_config)) {
+        if (!reader.Error().empty()) {
+            std::cerr << "TinyObjReader: " << reader.Error();
+        }
+        else {
+            std::cerr << "TinyObjReader: unknown cause"<< std::endl;
+        }
+        exit(1);
+    }
+
+    auto& attrib = reader.GetAttrib();
+    auto& shapes = reader.GetShapes();
+
+    out_vertices = attrib.vertices;
+
+    for (size_t s = 0; s < shapes.size(); s++) {
+        const tinyobj::shape_t& shape = shapes[s];
+        for (size_t i = 0; i < shape.mesh.indices.size(); i++){
+            size_t index = shape.mesh.indices[i].vertex_index;
+            out_indices.push_back(index);
+        }
+    }
+}

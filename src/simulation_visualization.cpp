@@ -157,7 +157,7 @@ void simulation_render_simulables_and_energies(const Simulation& simulation, con
 void simulation_render_simulables(const Simulables& simulables, const PhysicsState& state) {
     // DRAW PARTICLES
     //----------------------------------------------------------------------------------
-    Color colors[] = {LIGHTGRAY, GRAY, DARKGRAY, YELLOW, GOLD, ORANGE, PINK, RED, MAROON, GREEN, LIME, DARKGREEN, SKYBLUE, BLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN};
+    Color colors[] = {LIGHTGRAY, GRAY, DARKGRAY, YELLOW, GOLD, ORANGE, RED, MAROON, GREEN, LIME, DARKGREEN, SKYBLUE, BLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN};
     for (unsigned int i = 0; i < simulables.particles.size(); i++) {
         const Particle& p = simulables.particles[i];
         const Vec3 x = p.get_position(state);
@@ -190,13 +190,12 @@ void simulation_render_energies(const Energies& energies, const PhysicsState& st
         const Vec3& x2 = e.p2.get_position(state);
         const Vec3& x3 = e.p3.get_position(state);
         const Vec3& x4 = e.p4.get_position(state);
+
         DrawLine3D(Vector3{x1.x(), x1.y(), x1.z()}, Vector3{x2.x(), x2.y(), x2.z()}, BLUE);
         DrawLine3D(Vector3{x1.x(), x1.y(), x1.z()}, Vector3{x3.x(), x3.y(), x3.z()}, BLUE);
         DrawLine3D(Vector3{x1.x(), x1.y(), x1.z()}, Vector3{x4.x(), x4.y(), x4.z()}, BLUE);
         DrawLine3D(Vector3{x4.x(), x4.y(), x4.z()}, Vector3{x2.x(), x2.y(), x2.z()}, BLUE);
         DrawLine3D(Vector3{x4.x(), x4.y(), x4.z()}, Vector3{x3.x(), x3.y(), x3.z()}, BLUE);
         DrawLine3D(Vector3{x2.x(), x2.y(), x2.z()}, Vector3{x3.x(), x3.y(), x3.z()}, BLUE);
-        const Vec3 com = (x1 +x2 +x3 +x4) / 4;
-        DrawSphere(Vector3{com.x(), com.y(),com.z()}, 0.04, PINK);
     }
 }
