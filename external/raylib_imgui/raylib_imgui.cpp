@@ -41,6 +41,9 @@ void ImGui_initialize() {
     // rlImGuiSetup(false);
     //
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    // Set font
+    io.Fonts->AddFontFromFileTTF("img/fonts/iosevka-regular.ttc", 20);
 }
 
 void ImGuiBeginDrawing() {

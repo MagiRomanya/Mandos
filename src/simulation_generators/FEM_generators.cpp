@@ -75,7 +75,7 @@ SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Sca
   }
 
   // // Displace original position
-  simulation.initial_state.x[0] *= 2;
+  simulation.initial_state.x[0] += 2;
 
   return SimulableBounds{index, nDoF};
 }

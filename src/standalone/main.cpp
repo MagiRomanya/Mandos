@@ -38,6 +38,7 @@ int main(void) {
     SetTargetFPS(200);
     //--------------------------------------------------------------------------------------
 
+    bool simulation_paused = true;
     PhysicsState state = simulation.initial_state;
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
@@ -47,7 +48,9 @@ int main(void) {
         /// Keyboard controls
         if (IsKeyPressed(KEY_Q)) break;
 
-        if (true or IsKeyPressed(KEY_G)) {
+        if (IsKeyPressed(KEY_H)) simulation_paused = !simulation_paused;
+        if (IsKeyPressed(KEY_R)) state = simulation.initial_state;
+        if (!simulation_paused or IsKeyPressed(KEY_G)) {
             EnergyAndDerivatives f(0);
             simulation_step(simulation, state, f);
             std::cout << "Energy " << f.energy << std::endl;
