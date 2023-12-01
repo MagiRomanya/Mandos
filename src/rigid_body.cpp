@@ -35,54 +35,54 @@ Mat3 RigidBody::compute_inertia_tensor(const Mat3& rotation_matrix) const {
     return rotation_matrix * inertia_tensor0 * rotation_matrix.transpose();
 }
 
-Scalar RigidBody::get_kinetic_energy(const Vec3& v, const Vec3& omega, const Mat3& inertia_tensor) const {
-    const Scalar rectiliniar_energy = 0.5 * mass * v.squaredNorm();
-    const Scalar rotational_energy = 0.5 * omega.transpose() * inertia_tensor * omega;
-    return rectiliniar_energy + rotational_energy;
-}
+// Scalar RigidBody::get_kinetic_energy(const Vec3& v, const Vec3& omega, const Mat3& inertia_tensor) const {
+//     const Scalar rectiliniar_energy = 0.5 * mass * v.squaredNorm();
+//     const Scalar rotational_energy = 0.5 * omega.transpose() * inertia_tensor * omega;
+//     return rectiliniar_energy + rotational_energy;
+// }
 
-Vec3 RigidBody::get_coriolis_torque(const Vec3& omega, const Mat3& inertia_tensor) const {
-    // return Vec3::Zero();
-    const Vec3 coriolis_torque = - skew(omega) * inertia_tensor * omega;
-    return coriolis_torque;
-}
+// Vec3 RigidBody::get_coriolis_torque(const Vec3& omega, const Mat3& inertia_tensor) const {
+//     // return Vec3::Zero();
+//     const Vec3 coriolis_torque = - skew(omega) * inertia_tensor * omega;
+//     return coriolis_torque;
+// }
 
-void RigidBody::compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
-    // Get the relevant sate
-    // ---------------------------------------------------------------
-    const Vec3 x = state.x.segment(index, 3);
-    const Vec3 v = state.v.segment(index, 3);
-    const Vec3 theta = state.x.segment(index + 3, 3);
-    const Vec3 omega = state.v.segment(index + 3, 3);
+// void RigidBody::compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
+//     // Get the relevant sate
+//     // ---------------------------------------------------------------
+//     const Vec3 x = state.x.segment(index, 3);
+//     const Vec3 v = state.v.segment(index, 3);
+//     const Vec3 theta = state.x.segment(index + 3, 3);
+//     const Vec3 omega = state.v.segment(index + 3, 3);
 
-    // Compute rotation matrix and Inerta tensor
-    // ---------------------------------------------------------------
-    const Mat3 rotation_matrix = compute_rotation_matrix_rodrigues(theta);
-    const Mat3 inertia_tensor = compute_inertia_tensor(rotation_matrix);
+//     // Compute rotation matrix and Inerta tensor
+//     // ---------------------------------------------------------------
+//     const Mat3 rotation_matrix = compute_rotation_matrix_rodrigues(theta);
+//     const Mat3 inertia_tensor = compute_inertia_tensor(rotation_matrix);
 
-    // Compute the energy derivatives
-    // ---------------------------------------------------------------
-    const Scalar kinetic_energy = get_kinetic_energy(v, omega, inertia_tensor);
-    const Vec3 coriolis_torque = get_coriolis_torque(omega, inertia_tensor);
+//     // Compute the energy derivatives
+//     // ---------------------------------------------------------------
+//     const Scalar kinetic_energy = get_kinetic_energy(v, omega, inertia_tensor);
+//     const Vec3 coriolis_torque = get_coriolis_torque(omega, inertia_tensor);
 
-    // Add the energy derivatives to the global structure
-    // ---------------------------------------------------------------
+//     // Add the energy derivatives to the global structure
+//     // ---------------------------------------------------------------
 
-    out.energy += kinetic_energy;
-    for (unsigned int i = 0; i<3; i++) {
-        // out.force[index + 3 + i] += coriolis_torque(i);  // torque
-        // TODO: add force derivatives for (unsigned int j = 0; j<3; j++) {
-        //     out.df_dx_triplets.push_back(Triplet(index+i, index+j, df_dx(i, j)));
-        // }
-    }
-}
+//     out.energy += kinetic_energy;
+//     for (unsigned int i = 0; i<3; i++) {
+//         // out.force[index + 3 + i] += coriolis_torque(i);  // torque
+//         // TODO: add force derivatives for (unsigned int j = 0; j<3; j++) {
+//         //     out.df_dx_triplets.push_back(Triplet(index+i, index+j, df_dx(i, j)));
+//         // }
+//     }
+// }
 
 Vec3 RigidBody::get_COM_position(const PhysicsState& state) const {
     return state.x.segment(index, 3);
 }
 
-Mat3 RigidBody::compute_rotation_matrix(const PhysicsState& state) const {
-    Vec3 theta = state.x.segment(index+3, 3);
+Mat3 RigidBody::compute_rotation_matrix(const Vec& x) const {
+    Vec3 theta = x.segment(index+3, 3);
     return compute_rotation_matrix_rodrigues(theta);
 }
 
@@ -124,105 +124,80 @@ Scalar compute_mesh_surface_area(const std::vector<unsigned int>& indices, const
     return surface_area;
 }
 
-Mat3 compute_initial_inertia_tensor(Scalar rb_total_mass, const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices, RB_MASS_DISTRIBUTION mass_distribution) {
+Mat3 compute_initial_inertia_tensor_PARTICLES(Scalar rb_total_mass, const std::vector<Scalar>& vertices) {
     Mat3 inertia_tensor = Mat3::Zero();
-    switch (mass_distribution) {
-        case PARTICLES:
-            {
-                const Scalar PARTICLE_MASS = rb_total_mass * 3.0 / vertices.size();
-                for (unsigned int i = 0; i < vertices.size(); i+=3) {
-                    const Vec3 r = Vec3(vertices[i], vertices[i+1], vertices[i+2]);
-                    const Mat3 r_star = skew(r);
-                    inertia_tensor += - PARTICLE_MASS * r_star * r_star;
-                }
-            }
-            break;
-        case SHELL:
-            {
-
-            }
-            break;
-        case UNIFORM_VOLUME:
-            {
-
-            }
-            break;
+    const Scalar PARTICLE_MASS = rb_total_mass * 3.0 / vertices.size();
+    for (unsigned int i = 0; i < vertices.size(); i+=3) {
+        const Vec3 r = Vec3(vertices[i], vertices[i+1], vertices[i+2]);
+        const Mat3 r_star = skew(r);
+        inertia_tensor += - PARTICLE_MASS * r_star * r_star;
     }
     return inertia_tensor;
 }
 
-Vec3 compute_COM_position(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices, RB_MASS_DISTRIBUTION mass_distribution) {
+Vec3 compute_COM_position_PARTICLES(const std::vector<Scalar>& vertices) {
     Vec3 COM_position = Vec3::Zero();
-    switch (mass_distribution) {
-        case PARTICLES:
-        {
-            for (unsigned int i = 0; i < vertices.size(); i+=3) {
-                const Vec3 r = Vec3(vertices[i], vertices[i+1], vertices[i+2]);
-                COM_position +=r;
-            }
-            // Average the result
-            COM_position *= 3.0 / vertices.size();
-        }
-        break;
-        case SHELL:
-        {
-            Scalar total_surface = 0.0;
-            for (unsigned int t=0; t < indices.size(); t+=3) {
-                const Vec3 v1 = Vec3(vertices[3*indices[t]], vertices[3*indices[t]+1], vertices[3*indices[t]+2]);
-                const Vec3 v2 = Vec3(vertices[3*indices[t+1]], vertices[3*indices[t+1]+1], vertices[3*indices[t+1]+2]);
-                const Vec3 v3 = Vec3(vertices[3*indices[t+2]], vertices[3*indices[t+2]+1], vertices[3*indices[t+2]+2]);
-                const Scalar triangle_area = abs(compute_trinagle_area(v2 - v1, v3 - v1));
-                COM_position += triangle_area * (v1 + v2 + v3) / 3;
-                total_surface += total_surface;
-            }
-            // Average the result
-            COM_position /= total_surface;
-        }
-        case UNIFORM_VOLUME:
-        {
-            const Vec3 origin = compute_COM_position(indices, vertices, PARTICLES);
-            Scalar total_volume = 0.0;
-            for (unsigned int t=0; t < indices.size(); t+=3) {
-                const Vec3 v1 = Vec3(vertices[3*indices[t]], vertices[3*indices[t]+1], vertices[3*indices[t]+2]);
-                const Vec3 v2 = Vec3(vertices[3*indices[t+1]], vertices[3*indices[t+1]+1], vertices[3*indices[t+1]+2]);
-                const Vec3 v3 = Vec3(vertices[3*indices[t+2]], vertices[3*indices[t+2]+1], vertices[3*indices[t+2]+2]);
-                const Scalar tetrahedron_volume = abs(compute_tetrahedron_volume(v1-origin, v2-origin, v3-origin));
-                total_volume += tetrahedron_volume;
-                COM_position += tetrahedron_volume * (v1 + v2 + v3 + origin) / 4;
-            }
-            COM_position /= total_volume;
-        }
+    for (unsigned int i = 0; i < vertices.size(); i+=3) {
+        const Vec3 r = Vec3(vertices[i], vertices[i+1], vertices[i+2]);
+        COM_position +=r;
     }
+    // Average the result
+    COM_position *= 3.0 / vertices.size();
+    return COM_position;
+}
+
+Vec3 compute_COM_position_SHELL(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices) {
+    Vec3 COM_position = Vec3::Zero();
+    Scalar total_surface = 0.0;
+    for (unsigned int t=0; t < indices.size(); t+=3) {
+        const Vec3 v1 = Vec3(vertices[3*indices[t]], vertices[3*indices[t]+1], vertices[3*indices[t]+2]);
+        const Vec3 v2 = Vec3(vertices[3*indices[t+1]], vertices[3*indices[t+1]+1], vertices[3*indices[t+1]+2]);
+        const Vec3 v3 = Vec3(vertices[3*indices[t+2]], vertices[3*indices[t+2]+1], vertices[3*indices[t+2]+2]);
+        const Scalar triangle_area = abs(compute_trinagle_area(v2 - v1, v3 - v1));
+        COM_position += triangle_area * (v1 + v2 + v3) / 3;
+        total_surface += total_surface;
+    }
+    // Average the result
+    COM_position /= total_surface;
+    return COM_position;
+}
+
+Vec3 compute_COM_position_UNIFORM_VOLUME(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices) {
+    Vec3 COM_position = Vec3::Zero();
+    const Vec3 origin = compute_COM_position_PARTICLES(vertices);
+    Scalar total_volume = 0.0;
+    for (unsigned int t=0; t < indices.size(); t+=3) {
+        const Vec3 v1 = Vec3(vertices[3*indices[t]], vertices[3*indices[t]+1], vertices[3*indices[t]+2]);
+        const Vec3 v2 = Vec3(vertices[3*indices[t+1]], vertices[3*indices[t+1]+1], vertices[3*indices[t+1]+2]);
+        const Vec3 v3 = Vec3(vertices[3*indices[t+2]], vertices[3*indices[t+2]+1], vertices[3*indices[t+2]+2]);
+        const Scalar tetrahedron_volume = abs(compute_tetrahedron_volume(v1-origin, v2-origin, v3-origin));
+        total_volume += tetrahedron_volume;
+        COM_position += tetrahedron_volume * (v1 + v2 + v3 + origin) / 4;
+    }
+    COM_position /= total_volume;
     return COM_position;
 }
 
 Mat3 RigidBody::compute_inertia_tensor(const PhysicsState& state) const {
-    return compute_inertia_tensor(compute_rotation_matrix(state));
+    return compute_inertia_tensor(compute_rotation_matrix(state.x));
 }
 
-Vec3 update_axis_angle(Scalar DeltaTime, const Vec3& theta, const Vec3& omega) {
-#define AXIS_ANGLE_QUAT
-// #define AXIS_ANGLE_MAT
-#ifdef AXIS_ANGLE_QUAT
-#ifdef AXIS_ANGLE_MAT
-#error "Both QUAT and MAT are defined at the same time!"
-#endif
+Vec3 update_axis_angle(const Vec3& theta, const Vec3& omega) {
     const Scalar angle = theta.norm();
-    if (angle < 1e-4) return theta + DeltaTime * omega;
+    if (angle < 1e-4) return theta + omega;
     const Vec3 axis = theta / angle;
     typedef Eigen::Quaternion<Scalar> Quat;
     const Quat q = Quat(Eigen::AngleAxis<Scalar>(angle, axis));
     const Quat q_omega = Quat(0, 0.5 * omega);
     const Quat q_dot = q_omega * q;
-    const Quat q_new = Quat(q.w() + DeltaTime * q_dot.w(), q.vec() + DeltaTime * q_dot.vec());
+    const Quat q_new = Quat(q.w() + q_dot.w(), q.vec() + q_dot.vec());
     const Eigen::AngleAxis<Scalar> angle_axis(q_new);
-#endif
 
-#ifdef AXIS_ANGLE_MAT
-    const Mat3 rot0 = compute_rotation_matrix_rodrigues(theta);
-    const Mat3 rot = (Mat3::Identity() + DeltaTime * skew(omega)) * rot0;
-    const Eigen::AngleAxis<Scalar> angle_axis(rot);
-#endif
+// #ifdef AXIS_ANGLE_MAT
+//     const Mat3 rot0 = compute_rotation_matrix_rodrigues(theta);
+//     const Mat3 rot = (Mat3::Identity() + DeltaTime * skew(omega)) * rot0;
+//     const Eigen::AngleAxis<Scalar> angle_axis(rot);
+// #endif
 
     const Vec3 new_axis = angle_axis.axis();
     const Scalar new_angle = angle_axis.angle();
@@ -230,14 +205,13 @@ Vec3 update_axis_angle(Scalar DeltaTime, const Vec3& theta, const Vec3& omega) {
 }
 
 
-void RigidBody::update_state(Scalar TimeStep, const Vec& new_velocities, PhysicsState& state) const {
-    // Update velocities
-    state.v.segment(index, 6) = new_velocities.segment(index, 6);
+void RigidBody::update_state(const Vec& dx, Vec& x) const {
     // Update COM position
-    state.x.segment(index, 3) += TimeStep * new_velocities.segment(index, 3);
+    x.segment(index, 3) += dx.segment(index, 3);
+
     // Update axis-angle rotation
-    const Vec3 theta = state.x.segment(index+3,3);
-    const Vec3 omega = new_velocities.segment(index+3,3);
-    const Vec3 axis_angle = update_axis_angle(TimeStep, theta, omega);
-    state.x.segment(index+3, 3) = axis_angle;
+    const Vec3 theta = x.segment(index+3,3);
+    const Vec3 omega = dx.segment(index+3,3);
+    const Vec3 axis_angle = update_axis_angle(theta, omega);
+    x.segment(index+3, 3) = axis_angle;
 }

@@ -11,7 +11,7 @@ struct SpringParameters {
 
     Scalar get_energy(Scalar L) const;
     Vec3 get_force(const Vec3& x1, const Vec3& x2, const Vec3& v1, const Vec3& v2, Scalar L) const;
-    Mat3 get_df_dx(Scalar TimeStep, const Vec3& x1, const Vec3& x2, const Vec3& v1, const Vec3& v2, Scalar L) const;
+    Mat3 get_df_dx(Scalar TimeStep, const Vec3& x1, const Vec3& x2, Scalar L) const;
 };
 
 struct ParticleSpring {

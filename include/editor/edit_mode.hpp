@@ -13,7 +13,7 @@ SIMULATION_MODE,
 void edit_mode_loop();
 
 struct MassSpringGUIGenerator {
-    float mass, k_tension, k_bending;
+    float mass, k_tension, k_bending, damping;
     std::vector<unsigned int> frozen_nodes = {0,1,2};
 };
 

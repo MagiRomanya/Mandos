@@ -169,7 +169,7 @@ void simulation_render_simulables(const Simulables& simulables, const PhysicsSta
     for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
         const RigidBody& rb = simulables.rigid_bodies[i];
         const Vec3 x = rb.get_COM_position(state);
-        const Mat3 rot = rb.compute_rotation_matrix(state);
+        const Mat3 rot = rb.compute_rotation_matrix(state.x);
         std::cout << "DRAW RIGID BODIES NOT IMPLEMENTED YET" << std::endl;
     }
 }

@@ -120,10 +120,10 @@ void FEM_Element3D::compute_energy_and_derivatives(const PhysicsState& state, En
   // ---------------------------------------------------------------
   out.energy += energy;
 
-  out.jacobian.segment<3>(p1.index) += force.segment<3>(3*0);
-  out.jacobian.segment<3>(p2.index) += force.segment<3>(3*1);
-  out.jacobian.segment<3>(p3.index) += force.segment<3>(3*2);
-  out.jacobian.segment<3>(p4.index) += force.segment<3>(3*3);
+  out.gradient.segment<3>(p1.index) += force.segment<3>(3*0);
+  out.gradient.segment<3>(p2.index) += force.segment<3>(3*1);
+  out.gradient.segment<3>(p3.index) += force.segment<3>(3*2);
+  out.gradient.segment<3>(p4.index) += force.segment<3>(3*3);
 
   for (unsigned int i = 0; i < 3; i++) {
     for (unsigned int j = 0; j < 3; j++) {

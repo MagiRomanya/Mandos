@@ -15,9 +15,8 @@ Scalar distance(const std::vector<Scalar>& vertices, unsigned int i1, unsigned i
 SimulableBounds generate_mass_spring(Simulation& simulation,
                                      const std::vector<Scalar>& vertices,
                                      const std::vector<unsigned int>& indices,
-                                     Scalar node_mass,
-                                     Scalar k_tension,
-                                     Scalar k_bending)
+                                     Scalar node_mass, Scalar k_tension,
+                                     Scalar k_bending, Scalar damping)
 {
     assert(vertices.size() % 3 == 0);
     const unsigned int index = simulation.initial_state.x.size();
@@ -32,11 +31,16 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
     for (unsigned int i = 0; i < n_dof; i+=3) {
         simulation.simulables.particles.emplace_back(node_mass, index + i);
     }
+    // Create the inertia forces
+    for (unsigned int i = particle_index; i < n_dof / 3; i++) {
+        simulation.energies.linear_inertias.emplace_back(simulation.simulables.particles[i]);
+    }
 
-    // Initial positions
+    // Initial conditions ( v = 0)
     for (size_t i=0; i < n_dof; i++) {
         simulation.initial_state.x[index + i] = vertices[i];
-        simulation.initial_state.v[index + i] = 0.0;
+        simulation.initial_state.x_old[index + i] = vertices[i];
+        simulation.initial_state.x_old2[index + i] = vertices[i];
     }
 
     // Set up the springs
@@ -50,7 +54,7 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
     for (size_t i = 0; i < externalEdges.size(); i++) {
         Edge &e = externalEdges[i];
         Scalar L0 = distance(vertices, e.a, e.b);
-        SpringParameters param = {k_tension, L0};
+        SpringParameters param = {k_tension, L0, damping};
         simulation.energies.particle_springs.push_back(ParticleSpring(particles[particle_index + e.a], particles[particle_index + e.b], param));
     }
 
@@ -59,12 +63,12 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
         Edge &e2 = internalEdges[i + 1];
         Scalar L0 = distance(vertices, e1.a, e1.b);
         // Normal spring
-        SpringParameters param = {k_tension, L0};
+        SpringParameters param = {k_tension, L0, damping};
         simulation.energies.particle_springs.push_back(ParticleSpring(particles[particle_index + e1.a], particles[particle_index + e1.b], param));
 
         // Bend spring
         L0 = distance(vertices, e1.opposite, e2.opposite);
-        param = {k_bending, L0};
+        param = {k_bending, L0, damping};
         simulation.energies.particle_springs.push_back(ParticleSpring(particles[particle_index + e1.opposite], particles[particle_index + e2.opposite], param));
     }
 

@@ -8,6 +8,6 @@ void handle_frozen_dof(const std::vector<unsigned int>& frozen_dof, Vec* eq_vec,
 
 void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, Vec& v_out);
 
-void integrate_simplectic_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, Vec& v_out);
+// void integrate_simplectic_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, Vec& v_out);
 
 #endif // INTEGRATORS_H_

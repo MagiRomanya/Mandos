@@ -12,21 +12,17 @@ struct Particle {
 
     inline Vec3 get_position(const PhysicsState& state) const { return state.x.segment(index, 3); }
     inline Vec3 get_position_old(const PhysicsState& state) const { return state.x_old.segment(index, 3); }
-    inline Vec3 get_velocity_old(const PhysicsState& state) const { return state.v_old.segment(index, 3); }
+    inline Vec3 get_position_old2(const PhysicsState& state) const { return state.x_old2.segment(index, 3); }
+
     inline Vec3 get_velocity(const PhysicsState& state, Scalar TimeStep) const {
         return (get_position(state) - get_position_old(state)) / TimeStep;
     }
-
-    // inline Scalar get_kinetic_energy(const PhysicsState& state) const { return 0.5 * mass * get_velocity(state).squaredNorm(); }
-
-    inline void compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
-        std::cout << "TODO"  << std::endl;
-        // out.energy += get_kinetic_energy(state);
+    inline Vec3 get_velocity_old(const PhysicsState& state, Scalar TimeStep) const {
+        return (get_position_old(state) - get_position_old2(state)) / TimeStep;
     }
 
-    inline void update_state(Scalar TimeStep, const Vec& new_velocities, PhysicsState& state) const {
-        state.v.segment(index, 3) = new_velocities.segment(index, 3);
-        state.x.segment(index, 3) += TimeStep * new_velocities.segment(index, 3);
+    inline void update_state(const Vec& dx, Vec& x) const {
+        x.segment<3>(index) += dx.segment<3>(index);
     }
 };
 

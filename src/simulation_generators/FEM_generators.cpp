@@ -19,7 +19,8 @@ SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_m
   simulation.initial_state.x.segment<3>(3*1+index) = Vec3(1,0,0);
   simulation.initial_state.x.segment<3>(3*2+index) = Vec3(0,1,0);
   simulation.initial_state.x.segment<3>(3*3+index) = Vec3(0,0,1);
-  simulation.initial_state.v.setZero();
+  simulation.initial_state.x_old = simulation.initial_state.x;
+  simulation.initial_state.x_old2 = simulation.initial_state.x;
 
   const Scalar mu = young_modulus / (2*(1 + poisson_ratio));
   const Scalar lambda = young_modulus * poisson_ratio / ((1+poisson_ratio) * (1-2*poisson_ratio));
@@ -54,8 +55,9 @@ SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Sca
   // Initial conditions
   for (unsigned int i = 0; i < nDoF; i++) {
     simulation.initial_state.x[index+i] = tet_vertices[i];
+    simulation.initial_state.x_old[index+i] = tet_vertices[i];
+    simulation.initial_state.x_old2[index+i] = tet_vertices[i];
   }
-  simulation.initial_state.v.setZero();
 
   const Scalar mu = young_modulus / (2*(1 + poisson_ratio));
   const Scalar lambda = young_modulus * poisson_ratio / ((1+poisson_ratio) * (1-2*poisson_ratio));

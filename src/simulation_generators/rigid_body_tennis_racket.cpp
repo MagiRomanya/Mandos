@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include "rigid_body.hpp"
 #include "simulable_generator.hpp"
 
 SimulableBounds generate_RigidBody_tennis_racket_effect(Simulation& simulation) {
@@ -12,7 +13,7 @@ SimulableBounds generate_RigidBody_tennis_racket_effect(Simulation& simulation) 
   UnloadMesh(RB_mesh);
 
   const Scalar RB_MASS = 1.0;
-  const Mat3 inertia_tensor = compute_initial_inertia_tensor(RB_MASS, indices, vertices, PARTICLES);
+  const Mat3 inertia_tensor = compute_initial_inertia_tensor_PARTICLES(RB_MASS, vertices);
   const unsigned int index = simulation.initial_state.x.size();
   simulation.initial_state.add_size(6);
   RigidBody rb(index, RB_MASS, inertia_tensor);
@@ -20,9 +21,12 @@ SimulableBounds generate_RigidBody_tennis_racket_effect(Simulation& simulation) 
 
   // Initial conditions
   simulation.initial_state.x.segment<nDoF>(index).setZero();
-  simulation.initial_state.v.segment<nDoF>(index).setZero();
-  simulation.initial_state.v(index + 5) = 1; // add y direction angular velocity
-  simulation.initial_state.v(index + 4) = 0.001; // add z direction angular velocity
+  simulation.initial_state.x_old.segment<nDoF>(index).setZero();
+  simulation.initial_state.x_old2.segment<nDoF>(index).setZero();
+
+  // simulation.initial_state.v.segment<nDoF>(index).setZero();
+  // simulation.initial_state.v(index + 5) = 1; // add y direction angular velocity
+  // simulation.initial_state.v(index + 4) = 0.001; // add z direction angular velocity
 
   return SimulableBounds{index, nDoF};
 }

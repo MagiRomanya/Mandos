@@ -42,7 +42,7 @@ struct PhysicsMesh {
             {
                 /// GENERATE PHYISICS
                 const MassSpringGUIGenerator& g = phyiscs_generator.mass_spring;
-                SimulableBounds bounds = generate_mass_spring(simulation, vertices, indices, g.mass *3 / nDoF, g.k_tension, g.k_bending);
+                SimulableBounds bounds = generate_mass_spring(simulation, vertices, indices, g.mass *3 / nDoF, g.k_tension, g.k_bending, g.damping);
                 // Add the frozen nodes with the propper dof offset
                 for (unsigned int i = 0; i < g.frozen_nodes.size(); i++) {
                     simulation.frozen_dof.push_back(g.frozen_nodes[i] + bounds.dof_index);
@@ -204,11 +204,13 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
                 static float mass = 100;
                 static float k_tension = 100;
                 static float k_bending = 1;
+                static float damping = 1;
                 if (ImGui::InputFloat("mass", &mass)) mass = std::clamp(mass, 0.0f, 1000.0f);
                 if (ImGui::InputFloat("tension stiffness", &k_tension)) k_tension = std::clamp(k_tension, 0.0f, 1000.0f);
                 if (ImGui::InputFloat("bending stiffness", &k_bending)) k_bending = std::clamp(k_bending, 0.0f, 1000.0f);
+                if (ImGui::InputFloat("Damping", &damping)) damping = std::clamp(damping, 0.0f, 1000.0f);
                 if (ImGui::Button("Add mass spring behaviour to mesh")) {
-                    MassSpringGUIGenerator generator = {mass, k_tension, k_bending};
+                    MassSpringGUIGenerator generator = {mass, k_tension, k_bending, damping};
                     mesh_manager.add_physics_to_mesh(mesh_list[selected_mesh], generator);
                 }
             }
@@ -225,15 +227,6 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
         static float TimeStep = 0.1;
         ImGui::SeparatorText("Simulation settings");
         ImGui::InputFloat("Delta Time", &TimeStep);
-        static int integrator = 0;
-        ImGui::RadioButton("Implicit", &integrator, 0); ImGui::SameLine();
-        ImGui::RadioButton("Simplectic", &integrator, 1);
-        if (integrator == 0) {
-            out_sim.integration_routine = IMPLICIT_EULER;
-        }
-        else if (integrator == 1) {
-            out_sim.integration_routine = SIMPLECTIC_EULER;
-        }
         if (ImGui::Button("Simulate!")) {
             out_sim.TimeStep = TimeStep;
             for (const auto& pair : mesh_manager.get_mesh_map()) {
