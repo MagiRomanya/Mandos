@@ -70,7 +70,7 @@ void RigidBody::compute_energy_and_derivatives(const PhysicsState& state, Energy
 
     out.energy += kinetic_energy;
     for (unsigned int i = 0; i<3; i++) {
-        out.force[index + 3 + i] += coriolis_torque(i);  // torque
+        // out.force[index + 3 + i] += coriolis_torque(i);  // torque
         // TODO: add force derivatives for (unsigned int j = 0; j<3; j++) {
         //     out.df_dx_triplets.push_back(Triplet(index+i, index+j, df_dx(i, j)));
         // }

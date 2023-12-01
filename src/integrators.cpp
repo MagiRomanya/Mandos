@@ -15,14 +15,14 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
     const std::vector<Triplet> mass_matrix_triplets = compute_global_mass_matrix(simulation.simulables, state);
     mass_matrix.setFromTriplets(mass_matrix_triplets.begin(), mass_matrix_triplets.end());
     SparseMat df_dx(nDoF, nDoF), df_dv(nDoF, nDoF);
-    df_dx.setFromTriplets(f.df_dx_triplets.begin(), f.df_dx_triplets.end());
+    df_dx.setFromTriplets(f.hessian_triplets.begin(), f.hessian_triplets.end());
     // df_dv = h * df_dx;
     // df_dv.setFromTriplets(f.df_dv_triplets.begin(), f.df_dv_triplets.end());
     // ----------------------------------------------------------------------------------
 
     // Construct the system of equations
     // ----------------------------------------------------------------------------------
-    Vec equation_vector = h * (f.force + h * df_dx * state.v);
+    Vec equation_vector = h * (f.jacobian + h * df_dx * state.v);
     SparseMat equation_matrix = mass_matrix - h * df_dv - h * h * df_dx;
     handle_frozen_dof(simulation.frozen_dof, &equation_vector, &equation_matrix);
     // ----------------------------------------------------------------------------------
@@ -85,7 +85,7 @@ void integrate_simplectic_euler(const Simulation& simulation, const PhysicsState
 
     // Construct the system of equations
     // ----------------------------------------------------------------------------------
-    Vec equation_vector = f.force;
+    Vec equation_vector = f.jacobian;
     SparseMat equation_matrix = mass_matrix;
     handle_frozen_dof(simulation.frozen_dof, &equation_vector, &equation_matrix);
     // ----------------------------------------------------------------------------------

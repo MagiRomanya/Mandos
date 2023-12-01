@@ -6,14 +6,14 @@
 #include "rigid_body.hpp"
 #include <vector>
 
-void compute_energy_and_derivatives(const Energies& energies, const PhysicsState& state, EnergyAndDerivatives& out) {
+void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, EnergyAndDerivatives& out) {
     // This function is responsible of computing the energy and derivatives for each energy in the simulation.
     // Here the energies must place the energy, force and force jacobians to the correct place in the global energy and derivative structure
 
     // Springs
     // ---------------------------------------------------------------------
     for (size_t i = 0; i < energies.particle_springs.size(); i++) {
-        energies.particle_springs[i].compute_energy_and_derivatives(state, out);
+        energies.particle_springs[i].compute_energy_and_derivatives(TimeStep, state, out);
     }
     // Gravity
     // ---------------------------------------------------------------------
@@ -47,7 +47,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     compute_simulables_energy_and_derivatives(simulation.simulables, state, f);
 
     // Compute energy and derivatives from the energies
-    compute_energy_and_derivatives(simulation.energies, state, f);
+    compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, f);
     out = f;
     // Integration step
     Vec new_velocity;

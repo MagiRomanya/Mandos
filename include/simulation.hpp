@@ -31,7 +31,7 @@ struct Simulation {
     Simulables simulables;
     Energies energies;
     // Integration settings
-    Scalar TimeStep = 0.001;
+    Scalar TimeStep = 0.01;
     INTEGRATION_RUTINE integration_routine = IMPLICIT_EULER;
     // Boundary conditions
     PhysicsState initial_state;
@@ -40,7 +40,7 @@ struct Simulation {
 
 void compute_simulables_energy_and_derivatives(const Simulables& simulables, const PhysicsState& state, EnergyAndDerivatives& out);
 
-void compute_energy_and_derivatives(const Energies& energies, const PhysicsState& state, EnergyAndDerivatives& out);
+void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, EnergyAndDerivatives& out);
 
 std::vector<Triplet> compute_global_mass_matrix(const Simulables& simulables, const PhysicsState& state);
 
