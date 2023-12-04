@@ -10,15 +10,10 @@ struct Particle {
     const unsigned int index;
     const Scalar mass;
 
-    inline Vec3 get_position(const PhysicsState& state) const { return state.x.segment(index, 3); }
-    inline Vec3 get_position_old(const PhysicsState& state) const { return state.x_old.segment(index, 3); }
-    inline Vec3 get_position_old2(const PhysicsState& state) const { return state.x_old2.segment(index, 3); }
+    inline Vec3 get_position(const Vec& x) const { return x.segment(index, 3); }
 
     inline Vec3 get_velocity(const PhysicsState& state, Scalar TimeStep) const {
-        return (get_position(state) - get_position_old(state)) / TimeStep;
-    }
-    inline Vec3 get_velocity_old(const PhysicsState& state, Scalar TimeStep) const {
-        return (get_position_old(state) - get_position_old2(state)) / TimeStep;
+        return (get_position(state.x) - get_position(state.x_old)) / TimeStep;
     }
 
     inline void update_state(const Vec& dx, Vec& x) const {

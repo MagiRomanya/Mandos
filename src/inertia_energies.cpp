@@ -1,18 +1,18 @@
 #include "inertia_energies.hpp"
 
-void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& f) const {
+void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
     // Get the relevant sate
     // ---------------------------------------------------------------
-    const Vec3 x = p.get_position(state);
-    const Vec3 x_old = p.get_position_old(state);
-    const Vec3 v_old = p.get_velocity_old(state, TimeStep);
-    const Vec3 x_hat = x_old - TimeStep * v_old;
+    const Vec3 x = p.get_position(state.x);
+    const Vec3 x0 = p.get_position(state0.x);
+    const Vec3 v0 = p.get_velocity(state0, TimeStep);
+    const Vec3 x_guess = x0 - TimeStep * v0;
     const Scalar h2 = TimeStep*TimeStep;
 
     // Compute the energy derivatives
     // ---------------------------------------------------------------
-    const Scalar energy = 1.0 / (2.0*h2) * (x - x_hat).transpose() * Mass * (x - x_hat);
-    const Vec3 gradient = 1.0 / h2 * Mass * (x - x_hat);
+    const Scalar energy = 1.0 / (2.0*h2) * (x - x_guess).transpose() * Mass * (x - x_guess);
+    const Vec3 gradient = 1.0 / h2 * Mass * (x - x_guess);
     const Mat3 hessian = 1.0 / h2 * Mass;
 
     // Add the energy derivatives to the global structure
@@ -26,14 +26,15 @@ void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const Physic
     }
 }
 
-void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& f) const {
+void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
     // Get the relevant sate
     // ---------------------------------------------------------------
     const Mat3 inertia_tensor = rb.inertia_tensor0;
     const Mat3 R = rb.compute_rotation_matrix(state.x);
-    const Mat3 R_old = rb.compute_rotation_matrix(state.x_old);
-    const Mat3 R_old2 = rb.compute_rotation_matrix(state.x_old2);
-    const Mat3 R_guess = (R_old + R_old - R_old2);
+    const Mat3 R0 = rb.compute_rotation_matrix(state0.x);
+    const Mat3 R0old = rb.compute_rotation_matrix(state0.x_old);
+    const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
+
     const Mat3 deltaR = R - R_guess;
     const Mat3 mat = R_guess * inertia_tensor * R.transpose();
     const Mat3 Asim = (mat - mat.transpose());

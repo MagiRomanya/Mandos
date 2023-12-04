@@ -13,6 +13,7 @@ int main(int argc, char *argv[]) {
     const int screenWidth = 1600;
     const int screenHeight = 900;
 
+    // SetConfigFlags(0);  // Disable V-Sync
     InitWindow(screenWidth, screenHeight, "Mandos GUI");
     ImGui_initialize();
 

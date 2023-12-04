@@ -6,18 +6,18 @@
 #include "rigid_body.hpp"
 #include <vector>
 
-void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, EnergyAndDerivatives& out) {
+void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out) {
     // This function is responsible of computing the energy and derivatives for each energy in the simulation.
     // Here the energies must place the energy, gradient and Hessians to the correct place in the global energy and derivative structure
 
     /// Inertial energies
     // Linear
     for (size_t i = 0; i < energies.linear_inertias.size(); i++) {
-        energies.linear_inertias[i].compute_energy_and_derivatives(TimeStep, state, out);
+        energies.linear_inertias[i].compute_energy_and_derivatives(TimeStep, state, state0, out);
     }
     // Rotation
     for (size_t i = 0; i < energies.rotational_inertias.size(); i++) {
-        energies.rotational_inertias[i].compute_energy_and_derivatives(TimeStep, state, out);
+        energies.rotational_inertias[i].compute_energy_and_derivatives(TimeStep, state, state0, out);
     }
 
     /// Potential energies
@@ -41,19 +41,24 @@ void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, c
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out) {
     // Energy and derivatives computation
     const unsigned int nDoF = simulation.initial_state.x.size();
-    EnergyAndDerivatives f(nDoF);
+    EnergyAndDerivatives f(0);
+    const PhysicsState state0 = state;
 
-    // Compute energy and derivatives from the energies
-    compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, f);
+    for (unsigned int i = 0; i < 1; i++) {
+        f = EnergyAndDerivatives(nDoF);
+        // Compute energy and derivatives from the energies
+        compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
+        // Integration step
+        Vec dx;
+        integrate_implicit_euler(simulation, state, f, dx);
+
+        // Update state
+        state.x_old = state0.x;
+        update_simulation_state(simulation.simulables, dx, state.x);
+
+    }
+    // Output energy derivatives
     out = f;
-    // Integration step
-    Vec dx;
-    integrate_implicit_euler(simulation, state, f, dx);
-
-    // Update state
-    state.x_old2 = state.x_old;
-    state.x_old = state.x;
-    update_simulation_state(simulation.simulables, dx, state.x);
 }
 
 void simulation_step(const Simulation& simulation, PhysicsState& state) {

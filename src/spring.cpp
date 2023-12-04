@@ -4,8 +4,8 @@
 void ParticleSpring::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const {
     // Get the relevant sate
     // ---------------------------------------------------------------
-    const Vec3 x1 = p1.get_position(state);
-    const Vec3 x2 = p2.get_position(state);
+    const Vec3 x1 = p1.get_position(state.x);
+    const Vec3 x2 = p2.get_position(state.x);
     const Vec3 v1 = p1.get_velocity(state, TimeStep);
     const Vec3 v2 = p2.get_velocity(state, TimeStep);
     const Scalar L = (x1 - x2).norm();
@@ -20,13 +20,15 @@ void ParticleSpring::compute_energy_and_derivatives(Scalar TimeStep, const Physi
     // ---------------------------------------------------------------
     out.energy += energy;
     for (unsigned int i = 0; i<3; i++) {
-        out.gradient[p1.index + i] += force(i);
-        out.gradient[p2.index + i] += -force(i);
+        // Newton's third law: equal and opposite reaction
+        // Also force = - Grad E & df_dx = - Hess E
+        out.gradient[p1.index + i] -= force(i);
+        out.gradient[p2.index + i] -= -force(i);
         for (unsigned int j = 0; j<3; j++) {
-            out.hessian_triplets.push_back(Triplet(p1.index+i, p1.index+j, df_dx(i, j)));
-            out.hessian_triplets.push_back(Triplet(p1.index+i, p2.index+j, -df_dx(i, j)));
-            out.hessian_triplets.push_back(Triplet(p2.index+i, p1.index+j, -df_dx(i, j)));
-            out.hessian_triplets.push_back(Triplet(p2.index+i, p2.index+j, df_dx(i, j)));
+            out.hessian_triplets.push_back(Triplet(p1.index+i, p1.index+j, -df_dx(i, j)));
+            out.hessian_triplets.push_back(Triplet(p1.index+i, p2.index+j, -(-df_dx(i, j))));
+            out.hessian_triplets.push_back(Triplet(p2.index+i, p1.index+j, -(-df_dx(i, j))));
+            out.hessian_triplets.push_back(Triplet(p2.index+i, p2.index+j, -df_dx(i, j)));
         }
     }
 }
@@ -40,7 +42,7 @@ Vec3 SpringParameters::get_force(const Vec3& x1, const Vec3& x2, const Vec3& v1,
     const Vec3 u = (x1 - x2) / L;
     Vec3 f = -k * (L - L0) * u;
     // damping force
-    f += - damping * u * u.transpose() * (v1 - v2);
+    // f += - damping * u * u.transpose() * (v1 - v2);
     return f;
 }
 
@@ -55,6 +57,6 @@ Mat3 SpringParameters::get_df_dx(Scalar TimeStep, const Vec3& x1, const Vec3& x2
     df_dx = - k / L * (df_dx + L0 * uut);
 
     // Damping jacobian
-    df_dx += - 1/TimeStep * damping * uut;
+    // df_dx += - 1/TimeStep * damping * uut;
     return df_dx; // 3x3 matrix
 }

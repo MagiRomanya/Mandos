@@ -133,7 +133,6 @@ int main(void) {
     // Initial conditions
     simulation.initial_state.x.setZero();
     simulation.initial_state.x_old.setZero();
-    simulation.initial_state.x_old2.setZero();
     // simulation.initial_state.v(5) = 1; // add y direction angular velocity
     // simulation.initial_state.v(4) = 0.001; // add y direction angular velocity
 

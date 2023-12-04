@@ -98,10 +98,10 @@ Scalar FEM_ElementParameters::compute_volume(const Vec3& x1, const Vec3& x2, con
 void FEM_Element3D::compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
   // Get the relevant sate
   // ---------------------------------------------------------------
-  const Vec3& x1 = p1.get_position(state);
-  const Vec3& x2 = p2.get_position(state);
-  const Vec3& x3 = p3.get_position(state);
-  const Vec3& x4 = p4.get_position(state);
+  const Vec3& x1 = p1.get_position(state.x);
+  const Vec3& x2 = p2.get_position(state.x);
+  const Vec3& x3 = p3.get_position(state.x);
+  const Vec3& x4 = p4.get_position(state.x);
 
   // Compute deformation, strain and stress tensors
   // ---------------------------------------------------------------
@@ -120,34 +120,36 @@ void FEM_Element3D::compute_energy_and_derivatives(const PhysicsState& state, En
   // ---------------------------------------------------------------
   out.energy += energy;
 
-  out.gradient.segment<3>(p1.index) += force.segment<3>(3*0);
-  out.gradient.segment<3>(p2.index) += force.segment<3>(3*1);
-  out.gradient.segment<3>(p3.index) += force.segment<3>(3*2);
-  out.gradient.segment<3>(p4.index) += force.segment<3>(3*3);
+  // Grad E = - force
+  out.gradient.segment<3>(p1.index) -= force.segment<3>(3*0);
+  out.gradient.segment<3>(p2.index) -= force.segment<3>(3*1);
+  out.gradient.segment<3>(p3.index) -= force.segment<3>(3*2);
+  out.gradient.segment<3>(p4.index) -= force.segment<3>(3*3);
 
+  // Hess E = - df_dx
   for (unsigned int i = 0; i < 3; i++) {
     for (unsigned int j = 0; j < 3; j++) {
       // REVIEW This matrix triplets may be transposed
       // First row
-      out.hessian_triplets.emplace_back(p1.index+i, p1.index+j, df_dx(3*0+i, 3*0+j));
-      out.hessian_triplets.emplace_back(p1.index+i, p2.index+j, df_dx(3*0+i, 3*1+j));
-      out.hessian_triplets.emplace_back(p1.index+i, p3.index+j, df_dx(3*0+i, 3*2+j));
-      out.hessian_triplets.emplace_back(p1.index+i, p4.index+j, df_dx(3*0+i, 3*3+j));
+      out.hessian_triplets.emplace_back(p1.index+i, p1.index+j, -df_dx(3*0+i, 3*0+j));
+      out.hessian_triplets.emplace_back(p1.index+i, p2.index+j, -df_dx(3*0+i, 3*1+j));
+      out.hessian_triplets.emplace_back(p1.index+i, p3.index+j, -df_dx(3*0+i, 3*2+j));
+      out.hessian_triplets.emplace_back(p1.index+i, p4.index+j, -df_dx(3*0+i, 3*3+j));
       // Second row
-      out.hessian_triplets.emplace_back(p2.index+i, p1.index+j, df_dx(3*1+i, 3*0+j));
-      out.hessian_triplets.emplace_back(p2.index+i, p2.index+j, df_dx(3*1+i, 3*1+j));
-      out.hessian_triplets.emplace_back(p2.index+i, p3.index+j, df_dx(3*1+i, 3*2+j));
-      out.hessian_triplets.emplace_back(p2.index+i, p4.index+j, df_dx(3*1+i, 3*3+j));
+      out.hessian_triplets.emplace_back(p2.index+i, p1.index+j, -df_dx(3*1+i, 3*0+j));
+      out.hessian_triplets.emplace_back(p2.index+i, p2.index+j, -df_dx(3*1+i, 3*1+j));
+      out.hessian_triplets.emplace_back(p2.index+i, p3.index+j, -df_dx(3*1+i, 3*2+j));
+      out.hessian_triplets.emplace_back(p2.index+i, p4.index+j, -df_dx(3*1+i, 3*3+j));
       // Third row
-      out.hessian_triplets.emplace_back(p3.index+i, p1.index+j, df_dx(3*2+i, 3*0+j));
-      out.hessian_triplets.emplace_back(p3.index+i, p2.index+j, df_dx(3*2+i, 3*1+j));
-      out.hessian_triplets.emplace_back(p3.index+i, p3.index+j, df_dx(3*2+i, 3*2+j));
-      out.hessian_triplets.emplace_back(p3.index+i, p4.index+j, df_dx(3*2+i, 3*3+j));
+      out.hessian_triplets.emplace_back(p3.index+i, p1.index+j, -df_dx(3*2+i, 3*0+j));
+      out.hessian_triplets.emplace_back(p3.index+i, p2.index+j, -df_dx(3*2+i, 3*1+j));
+      out.hessian_triplets.emplace_back(p3.index+i, p3.index+j, -df_dx(3*2+i, 3*2+j));
+      out.hessian_triplets.emplace_back(p3.index+i, p4.index+j, -df_dx(3*2+i, 3*3+j));
       // Fourth row
-      out.hessian_triplets.emplace_back(p4.index+i, p1.index+j, df_dx(3*3+i, 3*0+j));
-      out.hessian_triplets.emplace_back(p4.index+i, p2.index+j, df_dx(3*3+i, 3*1+j));
-      out.hessian_triplets.emplace_back(p4.index+i, p3.index+j, df_dx(3*3+i, 3*2+j));
-      out.hessian_triplets.emplace_back(p4.index+i, p4.index+j, df_dx(3*3+i, 3*3+j));
+      out.hessian_triplets.emplace_back(p4.index+i, p1.index+j, -df_dx(3*3+i, 3*0+j));
+      out.hessian_triplets.emplace_back(p4.index+i, p2.index+j, -df_dx(3*3+i, 3*1+j));
+      out.hessian_triplets.emplace_back(p4.index+i, p3.index+j, -df_dx(3*3+i, 3*2+j));
+      out.hessian_triplets.emplace_back(p4.index+i, p4.index+j, -df_dx(3*3+i, 3*3+j));
     }
   }
 }

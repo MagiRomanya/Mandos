@@ -22,7 +22,6 @@ SimulableBounds generate_RigidBody_tennis_racket_effect(Simulation& simulation) 
   // Initial conditions
   simulation.initial_state.x.segment<nDoF>(index).setZero();
   simulation.initial_state.x_old.segment<nDoF>(index).setZero();
-  simulation.initial_state.x_old2.segment<nDoF>(index).setZero();
 
   // simulation.initial_state.v.segment<nDoF>(index).setZero();
   // simulation.initial_state.v(index + 5) = 1; // add y direction angular velocity

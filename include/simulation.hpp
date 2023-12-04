@@ -33,12 +33,13 @@ struct Simulation {
     Energies energies;
     // Integration settings
     Scalar TimeStep = 0.01;
+
     // Boundary conditions
     PhysicsState initial_state;
     std::vector<unsigned int> frozen_dof;
 };
 
-void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, EnergyAndDerivatives& out);
+void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out);
 
 void simulation_step(const Simulation& simulation, PhysicsState& state);
 
