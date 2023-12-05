@@ -6,7 +6,7 @@ void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const Physic
     const Vec3 x = p.get_position(state.x);
     const Vec3 x0 = p.get_position(state0.x);
     const Vec3 v0 = p.get_velocity(state0, TimeStep);
-    const Vec3 x_guess = x0 - TimeStep * v0;
+    const Vec3 x_guess = x0 + TimeStep * v0;
     const Scalar h2 = TimeStep*TimeStep;
 
     // Compute the energy derivatives
