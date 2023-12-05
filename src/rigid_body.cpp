@@ -16,6 +16,22 @@ Mat3 skew(const Vec3& v) {
     return m;
 }
 
+Eigen::Matrix<Scalar,3,4> compute_axis_angle_quaternion_jacobian(const Eigen::Quaternion<Scalar>& q) {
+    Eigen::Matrix<Scalar,3,4> dtheta_dq;
+    const Scalar q_vec_norm = q.vec().norm();
+    const Scalar q_norm2 = q.squaredNorm();
+    const Vec3 q_hat = q.vec() / q_vec_norm;
+    const Scalar q0 = q.w();
+    const Scalar theta = std::atan2(q_vec_norm, q0);
+    const Mat3 qqt = q_hat*q_hat.transpose();
+
+    const Mat3 mat = q0 / q_norm2 * qqt + theta * (Mat3::Identity() - qqt) / q_vec_norm;
+    const Vec3 vec = - q.vec() / q_norm2;
+
+    dtheta_dq << vec, mat;
+    return dtheta_dq;
+};
+
 Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta) {
     Scalar angle = theta.norm();
     angle = std::fmod(angle, 2 * M_PI);
@@ -34,48 +50,6 @@ Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta) {
 Mat3 RigidBody::compute_inertia_tensor(const Mat3& rotation_matrix) const {
     return rotation_matrix * inertia_tensor0 * rotation_matrix.transpose();
 }
-
-// Scalar RigidBody::get_kinetic_energy(const Vec3& v, const Vec3& omega, const Mat3& inertia_tensor) const {
-//     const Scalar rectiliniar_energy = 0.5 * mass * v.squaredNorm();
-//     const Scalar rotational_energy = 0.5 * omega.transpose() * inertia_tensor * omega;
-//     return rectiliniar_energy + rotational_energy;
-// }
-
-// Vec3 RigidBody::get_coriolis_torque(const Vec3& omega, const Mat3& inertia_tensor) const {
-//     // return Vec3::Zero();
-//     const Vec3 coriolis_torque = - skew(omega) * inertia_tensor * omega;
-//     return coriolis_torque;
-// }
-
-// void RigidBody::compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
-//     // Get the relevant sate
-//     // ---------------------------------------------------------------
-//     const Vec3 x = state.x.segment(index, 3);
-//     const Vec3 v = state.v.segment(index, 3);
-//     const Vec3 theta = state.x.segment(index + 3, 3);
-//     const Vec3 omega = state.v.segment(index + 3, 3);
-
-//     // Compute rotation matrix and Inerta tensor
-//     // ---------------------------------------------------------------
-//     const Mat3 rotation_matrix = compute_rotation_matrix_rodrigues(theta);
-//     const Mat3 inertia_tensor = compute_inertia_tensor(rotation_matrix);
-
-//     // Compute the energy derivatives
-//     // ---------------------------------------------------------------
-//     const Scalar kinetic_energy = get_kinetic_energy(v, omega, inertia_tensor);
-//     const Vec3 coriolis_torque = get_coriolis_torque(omega, inertia_tensor);
-
-//     // Add the energy derivatives to the global structure
-//     // ---------------------------------------------------------------
-
-//     out.energy += kinetic_energy;
-//     for (unsigned int i = 0; i<3; i++) {
-//         // out.force[index + 3 + i] += coriolis_torque(i);  // torque
-//         // TODO: add force derivatives for (unsigned int j = 0; j<3; j++) {
-//         //     out.df_dx_triplets.push_back(Triplet(index+i, index+j, df_dx(i, j)));
-//         // }
-//     }
-// }
 
 Vec3 RigidBody::get_COM_position(const PhysicsState& state) const {
     return state.x.segment(index, 3);
@@ -192,12 +166,6 @@ Vec3 update_axis_angle(const Vec3& theta, const Vec3& omega) {
     const Quat q_dot = q_omega * q;
     const Quat q_new = Quat(q.w() + q_dot.w(), q.vec() + q_dot.vec());
     const Eigen::AngleAxis<Scalar> angle_axis(q_new);
-
-// #ifdef AXIS_ANGLE_MAT
-//     const Mat3 rot0 = compute_rotation_matrix_rodrigues(theta);
-//     const Mat3 rot = (Mat3::Identity() + DeltaTime * skew(omega)) * rot0;
-//     const Eigen::AngleAxis<Scalar> angle_axis(rot);
-// #endif
 
     const Vec3 new_axis = angle_axis.axis();
     const Scalar new_angle = angle_axis.angle();

@@ -5,6 +5,7 @@
 #include <rlgl.h>
 
 #include "linear_algebra.hpp"
+#include "particle.hpp"
 #include "physics_state.hpp"
 #include "raymath.h"
 #include "simulation.hpp"
@@ -130,18 +131,25 @@ int main(void) {
     simulation.initial_state.add_size(6);
     RigidBody rb(0, RB_MASS, inertia_tensor);
     simulation.simulables.rigid_bodies.push_back(rb);
+    simulation.energies.linear_inertias.emplace_back(Particle(rb.index, rb.mass));
+    simulation.energies.rotational_inertias.emplace_back(rb);
+
     // Initial conditions
     simulation.initial_state.x.setZero();
     simulation.initial_state.x_old.setZero();
-    // simulation.initial_state.v(5) = 1; // add y direction angular velocity
-    // simulation.initial_state.v(4) = 0.001; // add y direction angular velocity
+    set_angular_velocity(simulation.initial_state, simulation.TimeStep, rb.index+3, Vec3(0,0.01,0.1));
 
     PhysicsState state = simulation.initial_state;
+
+    std::cout << "X" << std::endl;
+    std::cout << state.x << std::endl;
+    std::cout << "X old" << std::endl;
+    std::cout << state.x_old << std::endl;
 
     Material material = LoadMaterialDefault();
     Texture2D texture = LoadTexture("img/textures/rigid-body.png");
     SetMaterialTexture(&material, MATERIAL_MAP_ALBEDO, texture);
-
+    EnergyAndDerivatives f(0);
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Update
@@ -150,7 +158,8 @@ int main(void) {
         /// Keyboard controls
         if (IsKeyPressed(KEY_Q)) break;
 
-        simulation_step(simulation, state);
+        simulation_step(simulation, state, f);
+        std::cout << "Energy "<< f.energy << std::endl;
         //----------------------------------------------------------------------------------
 
         // Draw
