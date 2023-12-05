@@ -152,10 +152,6 @@ Vec3 compute_COM_position_UNIFORM_VOLUME(const std::vector<unsigned int>& indice
     return COM_position;
 }
 
-Mat3 RigidBody::compute_inertia_tensor(const PhysicsState& state) const {
-    return compute_inertia_tensor(compute_rotation_matrix(state.x));
-}
-
 Vec3 update_axis_angle(const Vec3& theta, const Vec3& omega) {
     const Scalar angle = theta.norm();
     if (angle < 1e-4) return theta + omega;
