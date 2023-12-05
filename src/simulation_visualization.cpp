@@ -133,6 +133,11 @@ std::jthread simulation_thread(simulation_update_thread, std::cref(simulation), 
                 }
 
                 if (ImGui::Button("Reset to initial state")) {
+                    if (simulation_flow_state == SIMULATION_RUN) {
+                        simulation_flow_state = SIMULATION_PAUSE;
+                        s_state.simulation_run = false;
+                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    }
                     state = simulation.initial_state;
                     n_simulation_steps = 0;
                 }

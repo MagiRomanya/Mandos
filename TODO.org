@@ -1,12 +1,17 @@
-#+title: Mandos Project Pending Tasks
+#+title: MANDOS Project Pending Tasks
 
 * TODO Add rigid body to the Simulation editor :GUI:
 * TODO Add a way for the editor to manage frozen DoF :GUI:
 * DONE Add a way to select the integrator :GUI:
 CLOSED: [2023-11-22 Wed 15:57]
+* DONE Fix selection state in the GUI
+CLOSED: [2023-12-05 dt. 14:04]
+
 * TODO Manage simulation and render meshes separately :RENDER:
 * DONE Set a mode to render simulation by simulables and meshes :RENDER:
 CLOSED: [2023-11-22 Wed 16:49]
+* TODO Implement an arena to avoid heap allocations in every simulation step :PERFORMANCE:
+
 * TODO Implement FEM :SIMULATION:
 ** DONE Implement energy derivatives
 ** DONE Test FEM energy derivatives with a simple tetrahedron :SIMULATION:TESTING:
@@ -16,5 +21,10 @@ CLOSED: [2023-11-23 Thu 16:58]
 ** TODO Implement embedded mesh to handle contact and render :GEOMETRY:
 
 * TODO Implement constraints with Lagrange multipliers :SIMULATION:
+* TODO Implement inertial energies :SIMULATION:
+** DONE Implement linear inertial energy :TESTING:SIMULATION:
+CLOSED: [2023-12-05 dt. 14:05]
+** TODO Implement rotational inertial energy :TESTING:SIMULATION:
+** TODO Test FEM with the new scheme :TESTING:
 
 * IDEA Implement axis angle rotation to axis angle update
