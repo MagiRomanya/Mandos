@@ -64,6 +64,12 @@ void simulation_update_thread(const Simulation& simulation, PhysicsState& state,
     }
 }
 
+struct SimulationModeUserSelection {
+    bool simulation_run = false;
+    std::vector<float> energy_list;
+    std::vector<float> simulation_time_list;
+};
+
 void simulation_visualization_loop(Simulation& simulation, PhysicsRenderers& phy_renderers) {
     Camera3D camera = create_camera();
 
@@ -75,6 +81,7 @@ void simulation_visualization_loop(Simulation& simulation, PhysicsRenderers& phy
     EnergyAndDerivatives f(0);
     bool exit_simulation_enviroment = false;
     double simulation_time = 0;
+    SimulationModeUserSelection s_state;
 
 std::jthread simulation_thread(simulation_update_thread, std::cref(simulation), std::ref(state), std::ref(f),
                                 std::ref(simulation_flow_state), std::ref(n_simulation_steps), std::ref(simulation_time),
@@ -115,13 +122,12 @@ std::jthread simulation_thread(simulation_update_thread, std::cref(simulation), 
                 ImGui::SeparatorText("Simulation control");
                 ImGui::Text("Simulation steps = %u", n_simulation_steps);
                 {
-                    static bool simulation_run = false;
                     if (ImGui::Button("Step")) {
                         simulation_flow_state = SIMULATION_STEP;
-                        simulation_run = false;
+                        s_state.simulation_run = false;
                     }
-                    if (ImGui::Checkbox("Simulation run", &simulation_run)) {
-                        if (simulation_run) simulation_flow_state = SIMULATION_RUN;
+                    if (ImGui::Checkbox("Simulation run", &s_state.simulation_run)) {
+                        if (s_state.simulation_run) simulation_flow_state = SIMULATION_RUN;
                         else simulation_flow_state = SIMULATION_PAUSE;
                     }
                 }
@@ -132,24 +138,22 @@ std::jthread simulation_thread(simulation_update_thread, std::cref(simulation), 
                 }
 
                 ImGui::SeparatorText("Analytics");
-                static std::vector<float> energy_list;
-                static std::vector<float> simulation_time_list;
 
                 if (ImGui::Button("Discard all data")) {
-                    energy_list.clear();
-                    simulation_time_list.clear();
+                    s_state.energy_list.clear();
+                    s_state.simulation_time_list.clear();
                 }
                 if ((simulation_flow_state == SIMULATION_RUN) or
                     (simulation_flow_state == SIMULATION_STEP)) {
                     const float energy = f.energy;
-                    energy_list.push_back(energy);
-                    simulation_time_list.push_back(simulation_time);
+                    s_state.energy_list.push_back(energy);
+                    s_state.simulation_time_list.push_back(simulation_time);
                 }
-                ImGui::PlotLines("Total energy", energy_list.data(), energy_list.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(0.0, 80.0));
-                if (ImGui::Button("Discard energy data")) energy_list.clear();
+                ImGui::PlotLines("Total energy", s_state.energy_list.data(), s_state.energy_list.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(0.0, 80.0));
+                if (ImGui::Button("Discard energy data")) s_state.energy_list.clear();
 
-                ImGui::PlotLines("Step time cost (ms)", simulation_time_list.data(), simulation_time_list.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(0.0, 80.0));
-                if (ImGui::Button("Discard time cost data")) simulation_time_list.clear();
+                ImGui::PlotLines("Step time cost (ms)", s_state.simulation_time_list.data(), s_state.simulation_time_list.size(), 0, NULL, FLT_MAX, FLT_MAX, ImVec2(0.0, 80.0));
+                if (ImGui::Button("Discard time cost data")) s_state.simulation_time_list.clear();
 
                 if (ImGui::Button("Exit")) {
                     exit_simulation_enviroment = true;

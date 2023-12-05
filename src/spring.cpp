@@ -42,7 +42,7 @@ Vec3 SpringParameters::get_force(const Vec3& x1, const Vec3& x2, const Vec3& v1,
     const Vec3 u = (x1 - x2) / L;
     Vec3 f = -k * (L - L0) * u;
     // damping force
-    // f += - damping * u * u.transpose() * (v1 - v2);
+    f += - damping * u * u.transpose() * (v1 - v2);
     return f;
 }
 
@@ -57,6 +57,6 @@ Mat3 SpringParameters::get_df_dx(Scalar TimeStep, const Vec3& x1, const Vec3& x2
     df_dx = - k / L * (df_dx + L0 * uut);
 
     // Damping jacobian
-    // df_dx += - 1/TimeStep * damping * uut;
+    df_dx += - 1/TimeStep * damping * uut;
     return df_dx; // 3x3 matrix
 }

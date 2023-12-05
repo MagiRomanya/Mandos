@@ -16,7 +16,7 @@ struct Gravity {
   const unsigned int index;
 
   void compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
-    const Scalar default_height = 100;
+    const Scalar default_height = 10;
     out.energy += - parameters.intensity * (state.x(index) + default_height);
 
     out.gradient(index) -= parameters.intensity; // Grad = - force

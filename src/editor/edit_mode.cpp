@@ -119,7 +119,31 @@ struct MeshManager {
         Texture2D fem_texture = LoadTexture("img/textures/fem.png");
 };
 
-void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulation& out_sim, PhysicsRenderers& out_renderers) {
+struct EditModeUserSelectionState {
+    // Mesh
+    int selected_mesh_generator = -1;
+    int selected_mesh = -1;
+
+    // Geometries
+    int n_divisions = 20;
+    float plane_dimensions[2] = {10.0f, 10.0f};
+    int n_planes = 0;
+    int n_spheres = 0;
+    int n_cubes = 0;
+
+    // Simulable selector
+    int simulable = 0;
+
+    // Mass spring
+    float mass = 100;
+    float k_tension = 100;
+    float k_bending = 1;
+    float damping = 1;
+
+    float TimeStep = 0.1;
+};
+
+void edit_mode_sidebar(EditModeUserSelectionState& s_state, GUI_STATE& gui_state, MeshManager& mesh_manager, Simulation& out_sim, PhysicsRenderers& out_renderers) {
     gui_state = EDIT_MODE;
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);                // edit_mode_sidebar(gui_state, mesh_manager, simulation, physics_renderers);
 
@@ -127,58 +151,45 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
     ImGui::Begin("Edit scene", NULL, ImGuiWindowFlags_None);
     ImGui::SeparatorText("Meshes");
 
-    static int selected_mesh_generator = -1;
     const char* mesh_names[] = { "Plane", "Sphere", "Cube"};
 
     if (ImGui::Button("Select a mesh"))
         ImGui::OpenPopup("select_mesh_popup");
     ImGui::SameLine();
-    ImGui::TextUnformatted(selected_mesh_generator == -1 ? "<None>" : mesh_names[selected_mesh_generator]);
+    ImGui::TextUnformatted(s_state.selected_mesh_generator == -1 ? "<None>" : mesh_names[s_state.selected_mesh_generator]);
     if (ImGui::BeginPopup("select_mesh_popup"))
     {
         ImGui::SeparatorText("Available meshes");
         for (int i = 0; i < IM_ARRAYSIZE(mesh_names); i++)
             if (ImGui::Selectable(mesh_names[i]))
-                selected_mesh_generator = i;
+                s_state.selected_mesh_generator = i;
         ImGui::EndPopup();
     }
-    static int selected_mesh = -1;
-    switch (selected_mesh_generator) {
+    switch (s_state.selected_mesh_generator) {
         case 0: // Plane
         {
-            static int n_divisions = 20;
-            static float plane_dimensions[] = {10.0f, 10.0f};
-            static int n_planes = 0;
-            ImGui::InputFloat2("Plane width and height", plane_dimensions);
-            if (ImGui::InputInt("Plane subdivisions", &n_divisions)) n_divisions = std::clamp(n_divisions, 1, 30);
+            ImGui::InputFloat2("Plane width and height", s_state.plane_dimensions);
+            if (ImGui::InputInt("Plane subdivisions", &s_state.n_divisions)) s_state.n_divisions = std::clamp(s_state.n_divisions, 1, 30);
             if (ImGui::Button("Add")) {
-                Mesh plane = GenMeshPlane(10.0f, 10.0f, n_divisions, n_divisions);
-                mesh_manager.add_mesh("plane"+std::to_string(n_planes), plane);
-                n_planes++;
+                Mesh plane = GenMeshPlane(10.0f, 10.0f, s_state.n_divisions, s_state.n_divisions);
+                mesh_manager.add_mesh("plane"+std::to_string(s_state.n_planes), plane);
+                s_state.n_planes++;
             }
         }
             break;
         case 1: // Sphere
         {
-            static int n_spheres = 0;
             if (ImGui::Button("Add")) {
                 Mesh sphere = LoadMeshTinyOBJ("img/obj/sphere.obj");
-                mesh_manager.add_mesh("sphere"+std::to_string(n_spheres), sphere);
-                n_spheres++;
+                mesh_manager.add_mesh("sphere"+std::to_string(s_state.n_spheres), sphere);
+                s_state.n_spheres++;
             }
         }
             break;
         case 2: // Cube
         {
 
-            static int n_cubes = 0;
-            static float sides[] = {1,1,1};
-            ImGui::InputFloat3("Sizes", sides);
-            if (ImGui::Button("Add")) {
-                Mesh cube = GenMeshCube(sides[0], sides[1], sides[2]);
-                mesh_manager.add_mesh("cube"+std::to_string(n_cubes), cube);
-                n_cubes++;
-            }
+            ImGui::Text("TODO cube");
         }
             break;
     }
@@ -187,31 +198,26 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
     for (const auto& pair : mesh_manager.get_mesh_map()) {
         mesh_list[i++] = pair.first.c_str();
     }
-    ImGui::ListBox("Meshes", &selected_mesh, mesh_list, mesh_manager.size(), 4);
+    ImGui::ListBox("Meshes", &s_state.selected_mesh, mesh_list, mesh_manager.size(), 4);
 
-    if (selected_mesh >= 0) {
+    if (s_state.selected_mesh >= 0) {
         if (ImGui::Button("Delete")) {
-            mesh_manager.delete_mesh(mesh_list[selected_mesh]);
-            if (mesh_manager.size() == 0) selected_mesh = -1;
+            mesh_manager.delete_mesh(mesh_list[s_state.selected_mesh]);
+            if (mesh_manager.size() == 0) s_state.selected_mesh = -1;
         }
-        static int e = 0;
-        ImGui::RadioButton("Mass Spring", &e, 0); ImGui::SameLine();
-        ImGui::RadioButton("Rigid Body", &e, 1); ImGui::SameLine();
-        ImGui::RadioButton("FEM", &e, 2);
-        switch (e) {
+        ImGui::RadioButton("Mass Spring", &s_state.simulable, 0); ImGui::SameLine();
+        ImGui::RadioButton("Rigid Body", &s_state.simulable, 1); ImGui::SameLine();
+        ImGui::RadioButton("FEM", &s_state.simulable, 2);
+        switch (s_state.simulable) {
             case 0: // Mass Spring
             {
-                static float mass = 100;
-                static float k_tension = 100;
-                static float k_bending = 1;
-                static float damping = 1;
-                if (ImGui::InputFloat("mass", &mass)) mass = std::clamp(mass, 0.0f, 1000.0f);
-                if (ImGui::InputFloat("tension stiffness", &k_tension)) k_tension = std::clamp(k_tension, 0.0f, 1000.0f);
-                if (ImGui::InputFloat("bending stiffness", &k_bending)) k_bending = std::clamp(k_bending, 0.0f, 1000.0f);
-                if (ImGui::InputFloat("Damping", &damping)) damping = std::clamp(damping, 0.0f, 1000.0f);
+                if (ImGui::InputFloat("mass", &s_state.mass)) s_state.mass = std::clamp(s_state.mass, 0.0f, 1000.0f);
+                if (ImGui::InputFloat("tension stiffness", &s_state.k_tension)) s_state.k_tension = std::clamp(s_state.k_tension, 0.0f, 1000.0f);
+                if (ImGui::InputFloat("bending stiffness", &s_state.k_bending)) s_state.k_bending = std::clamp(s_state.k_bending, 0.0f, 1000.0f);
+                if (ImGui::InputFloat("Damping", &s_state.damping)) s_state.damping = std::clamp(s_state.damping, 0.0f, 1000.0f);
                 if (ImGui::Button("Add mass spring behaviour to mesh")) {
-                    MassSpringGUIGenerator generator = {mass, k_tension, k_bending, damping};
-                    mesh_manager.add_physics_to_mesh(mesh_list[selected_mesh], generator);
+                    MassSpringGUIGenerator generator = {s_state.mass, s_state.k_tension, s_state.k_bending, s_state.damping};
+                    mesh_manager.add_physics_to_mesh(mesh_list[s_state.selected_mesh], generator);
                 }
             }
                 break;
@@ -224,11 +230,10 @@ void edit_mode_sidebar(GUI_STATE& gui_state, MeshManager& mesh_manager, Simulati
         }
     }
     if (mesh_manager.size() != 0) {
-        static float TimeStep = 0.1;
         ImGui::SeparatorText("Simulation settings");
-        ImGui::InputFloat("Delta Time", &TimeStep);
+        ImGui::InputFloat("Delta Time", &s_state.TimeStep);
         if (ImGui::Button("Simulate!")) {
-            out_sim.TimeStep = TimeStep;
+            out_sim.TimeStep = s_state.TimeStep;
             for (const auto& pair : mesh_manager.get_mesh_map()) {
                 pair.second.generate_phyiscs(out_sim, out_renderers);
                 gui_state = SIMULATION_MODE;
@@ -245,6 +250,7 @@ void edit_mode_loop() {
     Simulation simulation;
     PhysicsRenderers physics_renderers;
     GUI_STATE gui_state = EDIT_MODE;
+    EditModeUserSelectionState selection_state;
     // Main game loop
     while (!WindowShouldClose() && gui_state == EDIT_MODE)
     {
@@ -270,7 +276,7 @@ void edit_mode_loop() {
             DrawFPS(GetScreenWidth()*0.95, 10);
             ImGuiBeginDrawing();
             {
-                edit_mode_sidebar(gui_state, mesh_manager, simulation, physics_renderers);
+                edit_mode_sidebar(selection_state, gui_state, mesh_manager, simulation, physics_renderers);
             }
             ImGuiEndDrawing();
         }
