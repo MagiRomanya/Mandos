@@ -10,10 +10,12 @@ struct PhysicsState {
     Vec x;
     Vec x_old;
 
-    void add_size(unsigned int increment_dof) {
+    inline void add_size(unsigned int increment_dof) {
         x.conservativeResize(x.size() + increment_dof);
         x_old.conservativeResize(x_old.size() + increment_dof);
     }
+
+    inline unsigned int get_nDoF() const {return x.size(); }
 };
 
 struct EnergyAndDerivatives {
@@ -30,6 +32,12 @@ struct EnergyAndDerivatives {
 struct ConstraintsAndJacobians {
     Vec constraints;
     std::vector<Triplet> jacobian_triplets;
+
+    inline void increase_n_constraints(unsigned int increment_constraints) {
+        constraints.conservativeResize(constraints.size() + increment_constraints);
+    }
+
+    inline unsigned int get_n_constraints() const { return constraints.size(); }
 };
 
 inline void set_linear_velocity(PhysicsState& state, Scalar TimeStep, unsigned int index, const Vec3& v) {

@@ -7,7 +7,6 @@
 
 struct RB_PointConstraint {
     RB_PointConstraint(unsigned int index, const RigidBody& rbA, const RigidBody& rbB, const Vec3& pA, const Vec3& pB) : index(index), pA(pA), pB(pB), rbA(rbA), rbB(rbB) {}
-    static const unsigned int n_constraints = 3;
     const Vec3 pA, pB; // Joined points in rb frame of reference
     const RigidBody rbA, rbB;
     const unsigned int index;

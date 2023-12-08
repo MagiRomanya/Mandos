@@ -1,23 +1,33 @@
 #include <Eigen/IterativeLinearSolvers>
+#include <Eigen/SparseCore>
 #include <iostream>
 #include <vector>
+
 #include "integrators.hpp"
 #include "linear_algebra.hpp"
+#include "physics_state.hpp"
 #include "simulation.hpp"
 
-void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, Vec& dx) {
-    const unsigned int nDoF = state.x.size();
+void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, const ConstraintsAndJacobians& c, Vec& dx) {
+    const unsigned int nDoF = state.get_nDoF();
+    const unsigned int n_constraints = c.get_n_constraints();
 
-    // Assembre the Hessian matrix
+    // Assemble the Hessian matrix
     // ----------------------------------------------------------------------------------
-    SparseMat Hessian(nDoF, nDoF);
-    Hessian.setFromTriplets(f.hessian_triplets.begin(), f.hessian_triplets.end());
+    std::vector<Triplet> equation_matrix_triplets;
+    equation_matrix_triplets.insert(equation_matrix_triplets.end(), f.hessian_triplets.begin(), f.hessian_triplets.end());
+    equation_matrix_triplets.insert(equation_matrix_triplets.end(), c.jacobian_triplets.begin(), c.jacobian_triplets.end());
     // ----------------------------------------------------------------------------------
 
     // Construct the system of equations
+    // / H  J^T \ /  dx  \ = /-GradE\
+    // \ J   0  / \lambda/ = \-C(x0)/
     // ----------------------------------------------------------------------------------
-    Vec equation_vector = - f.gradient;
-    SparseMat equation_matrix = Hessian;
+    Vec equation_vector(nDoF + n_constraints);
+    equation_vector << - f.gradient, -c.constraints;
+    SparseMat equation_matrix(nDoF + n_constraints, nDoF + n_constraints);
+    equation_matrix.setFromTriplets(equation_matrix_triplets.begin(), equation_matrix_triplets.end());
+
     handle_frozen_dof(simulation.frozen_dof, &equation_vector, &equation_matrix);
     // ----------------------------------------------------------------------------------
 

@@ -55,6 +55,4 @@ void update_simulation_state(const Simulables& simulables, const Vec& dx, Vec& x
 
 void compute_constraints_and_jacobians(const HardConstraints& c, const PhysicsState& state, ConstraintsAndJacobians& out);
 
-unsigned int count_number_of_constraints(const HardConstraints& c);
-
 #endif // SIMULABLE_H_

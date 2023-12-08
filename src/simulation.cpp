@@ -46,17 +46,28 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     // Energy and derivatives computation
     const unsigned int nDoF = simulation.initial_state.x.size();
     EnergyAndDerivatives f(0);
+    ConstraintsAndJacobians c;
     const PhysicsState state0 = state;
 
     for (unsigned int i = 0; i < 1; i++) {
         f = EnergyAndDerivatives(nDoF);
+        c = ConstraintsAndJacobians();
+
         // Compute energy and derivatives from the energies
+        // -----------------------------------------------------------------------------------------
         compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
+
+        // Compute constrainrs and Jacobians from the Hard Constraints
+        // -----------------------------------------------------------------------------------------
+        compute_constraints_and_jacobians(simulation.constraints, state, c);
+
         // Integration step
+        // -----------------------------------------------------------------------------------------
         Vec dx;
-        integrate_implicit_euler(simulation, state, f, dx);
+        integrate_implicit_euler(simulation, state, f, c, dx);
 
         // Update state
+        // -----------------------------------------------------------------------------------------
         state.x_old = state0.x;
         update_simulation_state(simulation.simulables, dx, state.x);
 
@@ -80,14 +91,9 @@ void update_simulation_state(const Simulables& simulables, const Vec& dx, Vec& x
 }
 
 
-unsigned int count_number_of_constraints(const HardConstraints& c) {
-    unsigned int n_constraints = 0;
-    n_constraints += RB_PointConstraint::n_constraints * c.rb_point_constraints.size();
-    return n_constraints;
-}
-
 void compute_constraints_and_jacobians(const HardConstraints& c, const PhysicsState& state, ConstraintsAndJacobians& out) {
     // RIGID BODY point constraints
+    // ---------------------------------------------------------------------
     for (unsigned int i = 0; i < c.rb_point_constraints.size(); i++) {
         c.rb_point_constraints[i].compute_constraint_and_jacobian(state, out);
     }

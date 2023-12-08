@@ -11,6 +11,9 @@ CLOSED: [2023-12-05 dt. 14:04]
 * DONE Set a mode to render simulation by simulables and meshes :RENDER:
 CLOSED: [2023-11-22 Wed 16:49]
 * TODO Implement an arena to avoid heap allocations in every simulation step :PERFORMANCE:
+** DONE Memory arena implemented
+CLOSED: [2023-12-08 dv. 20:01]
+** TODO Integrate the arena into the simulation loop
 
 * TODO Implement FEM :SIMULATION:
 ** DONE Implement energy derivatives
@@ -20,11 +23,20 @@ CLOSED: [2023-11-22 Wed 15:26]
 CLOSED: [2023-11-23 Thu 16:58]
 ** TODO Implement embedded mesh to handle contact and render :GEOMETRY:
 
-* TODO Implement constraints with Lagrange multipliers :SIMULATION:
-* TODO Implement inertial energies :SIMULATION:
+
+* DONE Implement inertial energies :SIMULATION:
+CLOSED: [2023-12-08 dv. 20:00]
 ** DONE Implement linear inertial energy :TESTING:SIMULATION:
 CLOSED: [2023-12-05 dt. 14:05]
-** TODO Implement rotational inertial energy :TESTING:SIMULATION:
-** TODO Test FEM with the new scheme :TESTING:
+** DONE Implement rotational inertial energy :TESTING:SIMULATION:
+CLOSED: [2023-12-08 dv. 20:00]
+** DONE Test FEM with the new scheme :TESTING:
+CLOSED: [2023-12-08 dv. 20:00]
+
+
+* TODO Implement constraints with Lagrange multipliers :SIMULATION:
+** DONE Basic rigid body fixed point implementation
+CLOSED: [2023-12-08 dv. 19:59]
+** TODO Test the rigid body constraint implementation
 
 * IDEA Implement axis angle rotation to axis angle update

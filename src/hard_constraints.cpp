@@ -20,14 +20,21 @@ Eigen::Matrix<Scalar, 3, 12> RB_PointConstraint::evaluate_constraint_jacobian(co
 }
 
 void RB_PointConstraint::compute_constraint_and_jacobian(const PhysicsState & state, ConstraintsAndJacobians& c) const {
+    const unsigned int nDoF = state.get_nDoF();
+    const unsigned int g_index = nDoF + index;
 
     c.constraints.segment<3>(index) = evaluate_constraint(state);
 
     const Eigen::Matrix<Scalar, 3, 12> jacobian = evaluate_constraint_jacobian(state);
     for (unsigned int i = 0; i < 3; i++) {
         for (unsigned int j = 0; j < 6; j++) {
-            c.jacobian_triplets.emplace_back(index, rbA.index, jacobian(i,j));
-            c.jacobian_triplets.emplace_back(index, rbB.index, jacobian(i,6+j));
+            // Jacobian
+            c.jacobian_triplets.emplace_back(g_index, rbA.index, jacobian(i,j));
+            c.jacobian_triplets.emplace_back(g_index, rbB.index, jacobian(i,6+j));
+
+            // Jacobian transposed
+            c.jacobian_triplets.emplace_back(rbA.index, g_index, jacobian(j  ,i));
+            c.jacobian_triplets.emplace_back(rbB.index, g_index, jacobian(6+j,i));
         }
     }
 }
