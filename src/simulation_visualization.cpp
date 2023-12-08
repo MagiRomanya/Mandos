@@ -200,7 +200,7 @@ void simulation_render_simulables(const Simulables& simulables, const PhysicsSta
         const RigidBody& rb = simulables.rigid_bodies[i];
         const Vec3 x = rb.get_COM_position(state);
         const Mat3 rot = rb.compute_rotation_matrix(state.x);
-        std::cout << "DRAW RIGID BODIES NOT IMPLEMENTED YET" << std::endl;
+        std::cout << "ERROR::SIMULATION_RENDER_SIMULABLES::DRAW RIGID BODIES NOT IMPLEMENTED YET" << std::endl;
     }
 }
 void simulation_render_energies(const Energies& energies, const PhysicsState& state) {

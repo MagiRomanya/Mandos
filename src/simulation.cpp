@@ -1,10 +1,12 @@
+#include <vector>
+
 #include "simulation.hpp"
+#include "hard_constraints.hpp"
 #include "integrators.hpp"
 #include "linear_algebra.hpp"
 #include "particle.hpp"
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
-#include <vector>
 
 void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out) {
     // This function is responsible of computing the energy and derivatives for each energy in the simulation.
@@ -36,6 +38,8 @@ void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, c
     for (size_t i = 0; i < energies.fem_elements_3d.size(); i++) {
         energies.fem_elements_3d[i].compute_energy_and_derivatives(state, out);
     }
+
+    // ... future energies here
 }
 
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out) {
@@ -73,4 +77,20 @@ void update_simulation_state(const Simulables& simulables, const Vec& dx, Vec& x
     for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
         simulables.rigid_bodies[i].update_state(dx, x);
     }
+}
+
+
+unsigned int count_number_of_constraints(const HardConstraints& c) {
+    unsigned int n_constraints = 0;
+    n_constraints += RB_PointConstraint::n_constraints * c.rb_point_constraints.size();
+    return n_constraints;
+}
+
+void compute_constraints_and_jacobians(const HardConstraints& c, const PhysicsState& state, ConstraintsAndJacobians& out) {
+    // RIGID BODY point constraints
+    for (unsigned int i = 0; i < c.rb_point_constraints.size(); i++) {
+        c.rb_point_constraints[i].compute_constraint_and_jacobian(state, out);
+    }
+
+    // ... future constraints here
 }

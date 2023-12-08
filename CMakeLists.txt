@@ -63,7 +63,7 @@ target_link_libraries(libmandos PUBLIC
   tetgen
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC)
+# target_include_directories(${PROJECT_NAME} PUBLIC)
 target_link_libraries(${PROJECT_NAME} PUBLIC libmandos)
-target_include_directories(mandos_gui PUBLIC)
+# target_include_directories(mandos_gui PUBLIC)
 target_link_libraries(mandos_gui PUBLIC libmandos)
