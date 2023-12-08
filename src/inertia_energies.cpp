@@ -1,4 +1,6 @@
 #include "inertia_energies.hpp"
+#include "particle.hpp"
+#include "simulation.hpp"
 
 void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
     // Get the relevant sate
@@ -56,4 +58,15 @@ void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const Ph
             f.hessian_triplets.emplace_back(rb.index + 3 + i, rb.index + 3 + j, hessian(i, j));
         }
     }
+}
+
+void add_particle_to_simulation(Simulation& simulation, const Particle& p) {
+    simulation.simulables.particles.push_back(p);
+    simulation.energies.linear_inertias.emplace_back(p);
+}
+
+void add_rigid_body_to_simulation(Simulation& simulation, const RigidBody& rb) {
+    simulation.simulables.rigid_bodies.emplace_back(rb);
+    simulation.energies.linear_inertias.emplace_back(Particle(rb.mass, rb.index));
+    simulation.energies.rotational_inertias.emplace_back(rb);
 }

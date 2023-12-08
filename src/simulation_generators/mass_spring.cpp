@@ -1,5 +1,6 @@
 #include "edge.hpp"
 #include "gravity.hpp"
+#include "inertia_energies.hpp"
 #include "mesh_boundary.hpp"
 #include "particle.hpp"
 #include "spring.hpp"
@@ -29,11 +30,7 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
     const unsigned int particle_index = simulation.simulables.particles.size();
     const std::vector<Particle>& particles = simulation.simulables.particles;
     for (unsigned int i = 0; i < n_dof; i+=3) {
-        simulation.simulables.particles.emplace_back(node_mass, index + i);
-    }
-    // Create the inertia forces
-    for (unsigned int i = particle_index; i < n_dof / 3; i++) {
-        simulation.energies.linear_inertias.emplace_back(simulation.simulables.particles[i]);
+        add_particle_to_simulation(simulation, Particle(node_mass, index+i));
     }
 
     // Initial conditions ( v = 0)

@@ -23,4 +23,8 @@ struct RotationalInertia {
 };
 
 
+struct Simulation;
+void add_particle_to_simulation(Simulation& simulation, const Particle& p);
+void add_rigid_body_to_simulation(Simulation& simulation, const RigidBody& rb);
+
 #endif // INERTIA_ENERGIES_H_

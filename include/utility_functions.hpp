@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "linear_algebra.hpp"
+#include "simulation.hpp"
 
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
@@ -24,4 +25,5 @@ Scalar compute_tetrahedron_volume(const Vec3& AB, const Vec3& AC, const Vec3& AD
 Scalar compute_mesh_volume(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices);
 Scalar compute_mesh_surface_area(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices);
 Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta);
+
 #endif // UTILITY_FUNCTIONS_H_

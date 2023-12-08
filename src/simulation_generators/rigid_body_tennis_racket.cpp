@@ -1,3 +1,5 @@
+#include "inertia_energies.hpp"
+#include "particle.hpp"
 #include "raylib.h"
 #include "rigid_body.hpp"
 #include "simulable_generator.hpp"
@@ -17,15 +19,12 @@ SimulableBounds generate_RigidBody_tennis_racket_effect(Simulation& simulation) 
   const unsigned int index = simulation.initial_state.x.size();
   simulation.initial_state.add_size(6);
   RigidBody rb(index, RB_MASS, inertia_tensor);
-  simulation.simulables.rigid_bodies.push_back(rb);
+  add_rigid_body_to_simulation(simulation, rb);
 
   // Initial conditions
   simulation.initial_state.x.segment<nDoF>(index).setZero();
   simulation.initial_state.x_old.segment<nDoF>(index).setZero();
-
-  // simulation.initial_state.v.segment<nDoF>(index).setZero();
-  // simulation.initial_state.v(index + 5) = 1; // add y direction angular velocity
-  // simulation.initial_state.v(index + 4) = 0.001; // add z direction angular velocity
+  set_angular_velocity(simulation.initial_state, simulation.TimeStep, rb.index+3, Vec3(0,0.01,0.1));
 
   return SimulableBounds{index, nDoF};
 }
