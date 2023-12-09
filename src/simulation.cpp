@@ -45,13 +45,14 @@ void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, c
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out) {
     // Energy and derivatives computation
     const unsigned int nDoF = simulation.initial_state.x.size();
+    const unsigned int nConstraints = count_constraints(simulation.constraints);
     EnergyAndDerivatives f(0);
-    ConstraintsAndJacobians c;
+    ConstraintsAndJacobians c(0);
     const PhysicsState state0 = state;
 
     for (unsigned int i = 0; i < 1; i++) {
         f = EnergyAndDerivatives(nDoF);
-        c = ConstraintsAndJacobians();
+        c = ConstraintsAndJacobians(nConstraints);
 
         // Compute energy and derivatives from the energies
         // -----------------------------------------------------------------------------------------

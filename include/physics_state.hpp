@@ -22,6 +22,7 @@ struct EnergyAndDerivatives {
     EnergyAndDerivatives(unsigned int nDoF) {
         energy = 0;
         gradient.setZero(nDoF);
+        hessian_triplets.clear();
     }
     // Container
     Scalar energy;
@@ -30,6 +31,10 @@ struct EnergyAndDerivatives {
 };
 
 struct ConstraintsAndJacobians {
+    ConstraintsAndJacobians(unsigned int nConstraints) {
+        constraints.setZero(nConstraints);
+        jacobian_triplets.clear();
+    }
     Vec constraints;
     std::vector<Triplet> jacobian_triplets;
 

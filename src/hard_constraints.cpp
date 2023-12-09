@@ -15,7 +15,7 @@ Eigen::Matrix<Scalar, 3, 12> RB_PointConstraint::evaluate_constraint_jacobian(co
     const Mat3 dc_dtheta1 = - skew(rbA.compute_rotation_matrix(state.x) * pA);
     const Mat3 dc_dtheta2 = - skew(rbB.compute_rotation_matrix(state.x) * pB);
     Eigen::Matrix<Scalar, 3, 12> result;
-    result << dc_dx, dc_dtheta1, dc_dx, dc_dtheta2;
+    result << dc_dx, dc_dtheta1, -dc_dx, -dc_dtheta2;
     return result;
 }
 
@@ -29,12 +29,12 @@ void RB_PointConstraint::compute_constraint_and_jacobian(const PhysicsState & st
     for (unsigned int i = 0; i < 3; i++) {
         for (unsigned int j = 0; j < 6; j++) {
             // Jacobian
-            c.jacobian_triplets.emplace_back(g_index, rbA.index, jacobian(i,j));
-            c.jacobian_triplets.emplace_back(g_index, rbB.index, jacobian(i,6+j));
+            c.jacobian_triplets.emplace_back(g_index+i, rbA.index+j, jacobian(i,j));
+            c.jacobian_triplets.emplace_back(g_index+i, rbB.index+j, jacobian(i,6+j));
 
             // Jacobian transposed
-            c.jacobian_triplets.emplace_back(rbA.index, g_index, jacobian(j  ,i));
-            c.jacobian_triplets.emplace_back(rbB.index, g_index, jacobian(6+j,i));
+            c.jacobian_triplets.emplace_back(rbA.index+j, g_index+i, jacobian(i,j));
+            c.jacobian_triplets.emplace_back(rbB.index+j, g_index+i, jacobian(i,6+j));
         }
     }
 }
