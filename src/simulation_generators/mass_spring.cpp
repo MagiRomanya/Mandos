@@ -75,5 +75,5 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
         simulation.energies.gravities.push_back(Gravity(index+i+1, param));
     }
 
-    return SimulableBounds{.dof_index = index, .nDoF = n_dof};
+    return SimulableBounds{.dof_index = index, .nDoF = n_dof, .particle_index = particle_index, .n_particles = n_dof / 3, .rb_index = 0, .n_rb = 0};
 };

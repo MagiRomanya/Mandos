@@ -2,7 +2,7 @@
 #define PHYSICSSTATE_H_
 
 #include <vector>
-#include <Eigen/Geometry>
+#include "../external/eigen/Eigen/Geometry"
 
 #include "linear_algebra.hpp"
 

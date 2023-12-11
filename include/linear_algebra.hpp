@@ -1,8 +1,8 @@
 #ifndef LINEAR_ALGEBRA_H_
 #define LINEAR_ALGEBRA_H_
 
-#include <Eigen/Core>
-#include <Eigen/SparseCore>
+#include "../external/eigen/Eigen/Core"
+#include "../external/eigen/Eigen/SparseCore"
 
 typedef float Scalar;
 

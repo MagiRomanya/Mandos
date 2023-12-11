@@ -6,6 +6,7 @@
 
 SimulableBounds generate_RigidBody_tennis_racket_effect(Simulation& simulation) {
   const unsigned int nDoF = 6;
+  const unsigned int rb_index = simulation.simulables.rigid_bodies.size();
   // Mesh -> vertices & indices
   const Mesh RB_mesh = GenMeshPlane(8.0, 1.0, 20, 20);
   const unsigned int n_vertices = RB_mesh.vertexCount * 3;
@@ -26,5 +27,5 @@ SimulableBounds generate_RigidBody_tennis_racket_effect(Simulation& simulation) 
   simulation.initial_state.x_old.segment<nDoF>(index).setZero();
   set_angular_velocity(simulation.initial_state, simulation.TimeStep, rb.index+3, Vec3(0,0.01,0.1));
 
-  return SimulableBounds{index, nDoF};
+  return SimulableBounds{index, nDoF, 0, 0, rb_index, nDoF / 6};
 }

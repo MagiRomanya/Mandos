@@ -6,6 +6,8 @@
 
 struct SimulableBounds {
     unsigned int dof_index, nDoF;
+    unsigned int particle_index, n_particles;
+    unsigned int rb_index, n_rb;
 };
 
 SimulableBounds generate_mass_spring(Simulation& simulation,

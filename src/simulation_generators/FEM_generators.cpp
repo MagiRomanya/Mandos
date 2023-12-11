@@ -37,7 +37,7 @@ SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_m
   simulation.initial_state.x.segment<3>(3*2+index) = Vec3(0,1.5,0);
   simulation.initial_state.x_old.segment<3>(3*2+index) = Vec3(0,1.5,0);
 
-  return SimulableBounds{index, nDoF};
+  return SimulableBounds{index, nDoF, particle_index, nDoF / 3, 0, 0};
 }
 
 SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,
@@ -83,5 +83,5 @@ SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Sca
   simulation.initial_state.x[index] += 2;
   simulation.initial_state.x_old[index] += 2;
 
-  return SimulableBounds{index, nDoF};
+  return SimulableBounds{index, nDoF, particle_index, nDoF/3, 0, 0};
 }

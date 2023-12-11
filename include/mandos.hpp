@@ -6,10 +6,12 @@
 #include "gravity.hpp"
 #include "linear_algebra.hpp"
 #include "inertia_energies.hpp"
+#include "particle.hpp"
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
+#include "simulable_generator.hpp"
 #include "simulation.hpp"
-
+#include "spring.hpp"
 
 class RigidBodyHandle {
     public:
@@ -69,5 +71,77 @@ class RigidBodyHandle {
         const unsigned int rb_index;
 };
 
+
+class MassSpringHandle {
+    public:
+        MassSpringHandle(Simulation& simulation,
+                         const std::vector<Scalar>& vertices,
+                         const std::vector<unsigned int>& indices,
+                         Scalar TotalMass, Scalar k_tension, Scalar k_bending, Scalar damping)
+            : bounds(generate_mass_spring(simulation, vertices, indices, 3*TotalMass / vertices.size(), k_tension, k_bending, damping)),
+              TotalMass(TotalMass)
+        {}
+
+        inline Vec3 compute_center_of_mass(const Simulation& simulation, const PhysicsState& state) const {
+            Vec3 center_of_mass = Vec3::Zero();
+            Scalar total_mass = 0;
+            for (unsigned int i = bounds.particle_index; i < bounds.particle_index + bounds.n_particles; i++) {
+                const Particle& p = simulation.simulables.particles[i];
+                center_of_mass += p.get_position(state.x) * p.mass;
+                total_mass += p.mass;
+            }
+            return center_of_mass / total_mass;
+        }
+
+        inline unsigned int get_n_particles() const { return bounds.n_particles; }
+
+        inline void freeze_particles(Simulation& simulation, const std::vector<unsigned int>& particle_indices) const {
+            for (unsigned int i = 0; i < particle_indices.size(); i++) {
+                const Particle& p = simulation.simulables.particles[i];
+                simulation.frozen_dof.push_back(p.index+0);
+                simulation.frozen_dof.push_back(p.index+1);
+                simulation.frozen_dof.push_back(p.index+2);
+            }
+        }
+
+        const Scalar TotalMass;
+        const SimulableBounds bounds;
+};
+
+class FEMHandle {
+    public:
+        FEMHandle(Simulation& simulation,
+                  const std::vector<Scalar>& tetrahedron_vertices,
+                  const std::vector<unsigned int>& tetrahedron_indices,
+                  Scalar TotalMass, Scalar poisson_ratio, Scalar young_modulus)
+            : bounds(generate_FEM3D_from_tetrahedron_mesh(simulation, 3 *TotalMass / tetrahedron_vertices.size(), poisson_ratio, young_modulus, tetrahedron_indices, tetrahedron_vertices)),
+              TotalMass(TotalMass)
+        {}
+
+        inline Vec3 compute_center_of_mass(const Simulation& simulation, const PhysicsState& state) const {
+            Vec3 center_of_mass = Vec3::Zero();
+            Scalar total_mass = 0;
+            for (unsigned int i = bounds.particle_index; i < bounds.particle_index + bounds.n_particles; i++) {
+                const Particle& p = simulation.simulables.particles[i];
+                center_of_mass += p.get_position(state.x) * p.mass;
+                total_mass += p.mass;
+            }
+            return center_of_mass / total_mass;
+        }
+
+        inline unsigned int get_n_particles() const { return bounds.n_particles; }
+
+        inline void freeze_particles(Simulation& simulation, const std::vector<unsigned int>& particle_indices) const {
+            for (unsigned int i = 0; i < particle_indices.size(); i++) {
+                const Particle& p = simulation.simulables.particles[i];
+                simulation.frozen_dof.push_back(p.index+0);
+                simulation.frozen_dof.push_back(p.index+1);
+                simulation.frozen_dof.push_back(p.index+2);
+            }
+        }
+
+    const Scalar TotalMass;
+    const SimulableBounds bounds;
+};
 
 #endif // MANDOS_H_

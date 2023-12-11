@@ -57,13 +57,11 @@ target_include_directories(libmandos PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/
 )
 
-target_link_libraries(libmandos PUBLIC
+target_link_libraries(libmandos
   raylib
   raylib_imgui
   tetgen
 )
 
-# target_include_directories(${PROJECT_NAME} PUBLIC)
 target_link_libraries(${PROJECT_NAME} PUBLIC libmandos)
-# target_include_directories(mandos_gui PUBLIC)
 target_link_libraries(mandos_gui PUBLIC libmandos)
