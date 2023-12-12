@@ -33,7 +33,7 @@ struct FEM_Element3D {
     const Particle p1, p2, p3, p4;
     const FEM_ElementParameters parameters;
 
-    void compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const;
+    void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const;
 };
 
 #endif // FEM_UNIT_H_

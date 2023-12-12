@@ -12,34 +12,19 @@ void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, c
     // This function is responsible of computing the energy and derivatives for each energy in the simulation.
     // Here the energies must place the energy, gradient and Hessians to the correct place in the global energy and derivative structure
 
-    /// Inertial energies
-    // Linear
-    for (size_t i = 0; i < energies.linear_inertias.size(); i++) {
-        energies.linear_inertias[i].compute_energy_and_derivatives(TimeStep, state, state0, out);
+#define X(type, energy) \
+    for (size_t i = 0; i < energies.energy.size(); i++) { \
+        energies.energy[i].compute_energy_and_derivatives(TimeStep, state, state0, out); \
     }
-    // Rotation
-    for (size_t i = 0; i < energies.rotational_inertias.size(); i++) {
-        energies.rotational_inertias[i].compute_energy_and_derivatives(TimeStep, state, state0, out);
-    }
+    INERTIAL_ENERGY_MEMBERS
+#undef X
 
-    /// Potential energies
-    // Springs
-    // ---------------------------------------------------------------------
-    for (size_t i = 0; i < energies.particle_springs.size(); i++) {
-        energies.particle_springs[i].compute_energy_and_derivatives(TimeStep, state, out);
+#define X(type, energy) \
+    for (size_t i = 0; i < energies.energy.size(); i++) { \
+        energies.energy[i].compute_energy_and_derivatives(TimeStep, state, out); \
     }
-    // Gravity
-    // ---------------------------------------------------------------------
-    for (size_t i = 0; i < energies.gravities.size(); i++) {
-        energies.gravities[i].compute_energy_and_derivatives(state, out);
-    }
-    // FEM 3D elements
-    // ---------------------------------------------------------------------
-    for (size_t i = 0; i < energies.fem_elements_3d.size(); i++) {
-        energies.fem_elements_3d[i].compute_energy_and_derivatives(state, out);
-    }
-
-    // ... future energies here
+    POTENTIAL_ENERGY_MEMBERS
+#undef X
 }
 
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out) {

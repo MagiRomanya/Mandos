@@ -60,6 +60,20 @@ class RigidBodyHandle {
             return *this;
         }
 
+        inline RigidBodyHandle freeze_translation(Simulation& simulation) const {
+            simulation.frozen_dof.push_back(rb.index+0);
+            simulation.frozen_dof.push_back(rb.index+1);
+            simulation.frozen_dof.push_back(rb.index+2);
+            return *this;
+        }
+
+        inline RigidBodyHandle freeze_rotation(Simulation& simulation) const {
+            simulation.frozen_dof.push_back(rb.index+3+0);
+            simulation.frozen_dof.push_back(rb.index+3+1);
+            simulation.frozen_dof.push_back(rb.index+3+2);
+            return *this;
+
+        }
         inline Mat4 get_RB_transformation(const PhysicsState& state) const {
             Eigen::Transform<Scalar, 3, Eigen::Affine> transformation;
             transformation.linear() = rb.compute_rotation_matrix(state.x);
@@ -67,9 +81,14 @@ class RigidBodyHandle {
             return transformation.matrix();
         }
 
+
         const RigidBody rb;
         const unsigned int rb_index;
 };
+
+inline void join_rigid_bodies(Simulation& simulation, RigidBody rbA, Vec3 pA, RigidBody rbB, Vec3 pB) {
+    simulation.constraints.rb_point_constraints.emplace_back(count_constraints(simulation.constraints), rbA, rbB, pA, pB);
+}
 
 
 class MassSpringHandle {

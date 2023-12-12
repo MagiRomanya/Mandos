@@ -20,12 +20,21 @@ struct Simulables {
     std::vector<RigidBody> rigid_bodies;
 };
 
+/* X-Macro for defining energies */
+#define INERTIAL_ENERGY_MEMBERS \
+    X(std::vector<LinearInertia>, linear_inertias) \
+    X(std::vector<RotationalInertia>, rotational_inertias)
+
+#define POTENTIAL_ENERGY_MEMBERS \
+    X(std::vector<ParticleSpring>, particle_springs) \
+    X(std::vector<FEM_Element3D>, fem_elements_3d) \
+    X(std::vector<Gravity>, gravities)
+
 struct Energies {
-    std::vector<LinearInertia> linear_inertias;
-    std::vector<RotationalInertia> rotational_inertias;
-    std::vector<ParticleSpring> particle_springs;
-    std::vector<FEM_Element3D> fem_elements_3d;
-    std::vector<Gravity> gravities;
+#define X(type, name) type name;
+    INERTIAL_ENERGY_MEMBERS
+    POTENTIAL_ENERGY_MEMBERS
+#undef X
 };
 
 struct HardConstraints {

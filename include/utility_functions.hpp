@@ -26,4 +26,15 @@ Scalar compute_mesh_volume(const std::vector<unsigned int>& indices, const std::
 Scalar compute_mesh_surface_area(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices);
 Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta);
 
+inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
+    Matrix r = {
+    m(0,0), m(0,1), m(0, 2), m(0, 3),
+    m(1,0), m(1,1), m(1, 2), m(1, 3),
+    m(2,0), m(2,1), m(2, 2), m(2, 3),
+    m(3,0), m(3,1), m(3, 2), m(3, 3),
+    };
+    return r;
+}
+
+
 #endif // UTILITY_FUNCTIONS_H_

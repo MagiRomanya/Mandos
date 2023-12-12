@@ -15,7 +15,7 @@ struct Gravity {
   const GravityParameters parameters;
   const unsigned int index;
 
-  void compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
+  void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const {
     const Scalar default_height = 10;
     out.energy += - parameters.intensity * (state.x(index) + default_height);
 

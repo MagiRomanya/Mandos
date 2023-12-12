@@ -17,16 +17,6 @@
 #include "utility_functions.hpp"
 
 
-inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
-    Matrix r = {
-    m(0,0), m(0,1), m(0, 2), m(0, 3),
-    m(1,0), m(1,1), m(1, 2), m(1, 3),
-    m(2,0), m(2,1), m(2, 2), m(2, 3),
-    m(3,0), m(3,1), m(3, 2), m(3, 3),
-    };
-    return r;
-}
-
 int main(void) {
 
     // Initialization
@@ -50,6 +40,7 @@ int main(void) {
 
     const RigidBodyHandle rb1 = RigidBodyHandle(simulation, RB_MASS, inertia_tensor)
         .set_COM_initial_position(simulation, Vec3(0,0,0))
+        .freeze_translation(simulation)
         .add_gravity(simulation, -1);
 
     const RigidBodyHandle rb2 = RigidBodyHandle(simulation, RB_MASS, inertia_tensor)
@@ -60,12 +51,8 @@ int main(void) {
         .set_COM_initial_position(simulation, Vec3(8,0,0))
         .add_gravity(simulation, -1);
 
-    simulation.constraints.rb_point_constraints.emplace_back(0, rb1.rb, rb2.rb, Vec3(2,0,0), Vec3(-2,0,0));
-    simulation.constraints.rb_point_constraints.emplace_back(3, rb2.rb, rb3.rb, Vec3(2,0,0), Vec3(-2,0,0));
-
-    simulation.frozen_dof.push_back(0);
-    simulation.frozen_dof.push_back(1);
-    simulation.frozen_dof.push_back(2);
+    join_rigid_bodies(simulation, rb1.rb, Vec3(2,0,0), rb2.rb, Vec3(-2,0,0));
+    join_rigid_bodies(simulation, rb2.rb, Vec3(2,0,0), rb3.rb, Vec3(-2,0,0));
 
     SetTargetFPS(200);
     //--------------------------------------------------------------------------------------

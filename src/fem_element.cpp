@@ -95,7 +95,7 @@ Scalar FEM_ElementParameters::compute_volume(const Vec3& x1, const Vec3& x2, con
   return compute_tetrahedron_volume(x2-x1, x3-x1, x4-x1);
 }
 
-void FEM_Element3D::compute_energy_and_derivatives(const PhysicsState& state, EnergyAndDerivatives& out) const {
+void FEM_Element3D::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const {
   // Get the relevant sate
   // ---------------------------------------------------------------
   const Vec3& x1 = p1.get_position(state.x);
