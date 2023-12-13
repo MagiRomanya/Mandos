@@ -31,23 +31,24 @@ void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const Physic
 void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
     // Get the relevant sate
     // ---------------------------------------------------------------
-    const Mat3 inertia_tensor = rb.inertia_tensor0;
+    const Vec3 theta = state.x.segment<3>(rb.index+3);
+    const Mat3 inertia_tensor = rb.J_inertia_tensor0;
     const Mat3 R = rb.compute_rotation_matrix(state.x);
     const Mat3 R0 = rb.compute_rotation_matrix(state0.x);
     const Mat3 R0old = rb.compute_rotation_matrix(state0.x_old);
     const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
 
     const Mat3 deltaR = R - R_guess;
-    const Mat3 mat = R_guess * inertia_tensor * R.transpose();
-    const Mat3 Asim = (mat - mat.transpose());
-    const Mat3 Sim = (mat + mat.transpose()) / 2;
+    const Mat3 rot_inertia = R * inertia_tensor * R_guess.transpose();
+    const Mat3 S = (rot_inertia + rot_inertia.transpose()) / 2;
+    const Mat3 A = (rot_inertia - rot_inertia.transpose()) / 2;
     const Scalar h2 = TimeStep * TimeStep;
 
     // Compute the energy derivatives
     // ---------------------------------------------------------------
-    const Scalar KE = (deltaR * rb.inertia_tensor0 * deltaR.transpose()).trace();
-    const Vec3 gradient = Vec3(Asim(1,2), - Asim(0,2), Asim(0,1)) / h2;
-    const Mat3 hessian = 1.0 / h2 * (Sim.trace() * Mat3::Identity() - Sim);
+    const Scalar KE = (deltaR * rb.J_inertia_tensor0 * deltaR.transpose()).trace();
+    const Vec3 gradient = 2 * Vec3(-A(1,2), A(0,2), -A(0,1)) / h2;                 // v s.t. A = skew(v)
+    const Mat3 hessian = 1.0 / h2 * (S.trace() * Mat3::Identity() - S);
 
     // Add the energy derivatives to the global structure
     // ---------------------------------------------------------------

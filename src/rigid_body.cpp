@@ -1,6 +1,8 @@
+#include <cassert>
 #include <iostream>
 #include <vector>
 #include <Eigen/Geometry>
+#include <Eigen/Dense>
 #include <cmath>
 
 #include "physics_state.hpp"
@@ -48,7 +50,7 @@ Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta) {
 }
 
 Mat3 RigidBody::compute_inertia_tensor(const Mat3& rotation_matrix) const {
-    return rotation_matrix * inertia_tensor0 * rotation_matrix.transpose();
+    return rotation_matrix * J_inertia_tensor0 * rotation_matrix.transpose();
 }
 
 Vec3 RigidBody::get_COM_position(const PhysicsState& state) const {
@@ -179,3 +181,11 @@ void RigidBody::update_state(const Vec& dx, Vec& x) const {
     const Vec3 axis_angle = update_axis_angle(theta, omega);
     x.segment(index+3, 3) = axis_angle;
 }
+
+Vec3 compute_principal_moments_of_inertia(const Mat3& inertia_tensor) {
+    Eigen::EigenSolver<Mat3> solver(inertia_tensor);
+    const auto eigenvalues = solver.eigenvalues();
+    assert(eigenvalues.imag().isZero());
+    return eigenvalues.real();
+}
+
