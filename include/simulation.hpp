@@ -15,6 +15,7 @@
 #include "spring.hpp"
 #include "particle.hpp"
 
+
 struct Simulables {
     std::vector<Particle> particles;
     std::vector<RigidBody> rigid_bodies;
@@ -37,10 +38,6 @@ struct Energies {
 #undef X
 };
 
-struct HardConstraints {
-    std::vector<RB_PointConstraint> rb_point_constraints;
-};
-
 struct Simulation {
     Simulables simulables;
     Energies energies;
@@ -51,7 +48,9 @@ struct Simulation {
     // Boundary conditions
     PhysicsState initial_state;
     std::vector<unsigned int> frozen_dof;
+#ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
     HardConstraints constraints;
+#endif
 };
 
 void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out);
@@ -61,13 +60,5 @@ void simulation_step(const Simulation& simulation, PhysicsState& state);
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out);
 
 void update_simulation_state(const Simulables& simulables, const Vec& dx, Vec& x);
-
-void compute_constraints_and_jacobians(const HardConstraints& c, const PhysicsState& state, ConstraintsAndJacobians& out);
-
-inline unsigned int count_constraints(const HardConstraints& constraints) {
-    unsigned int nConstraints = 0;
-    nConstraints += constraints.rb_point_constraints.size() * 3;
-    return nConstraints;
-}
 
 #endif // SIMULABLE_H_

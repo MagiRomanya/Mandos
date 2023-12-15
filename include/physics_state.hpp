@@ -30,21 +30,6 @@ struct EnergyAndDerivatives {
     std::vector<Triplet> hessian_triplets;
 };
 
-struct ConstraintsAndJacobians {
-    ConstraintsAndJacobians(unsigned int nConstraints) {
-        constraints.setZero(nConstraints);
-        jacobian_triplets.clear();
-    }
-    Vec constraints;
-    std::vector<Triplet> jacobian_triplets;
-
-    inline void increase_n_constraints(unsigned int increment_constraints) {
-        constraints.conservativeResize(constraints.size() + increment_constraints);
-    }
-
-    inline unsigned int get_n_constraints() const { return constraints.size(); }
-};
-
 inline void set_linear_velocity(PhysicsState& state, Scalar TimeStep, unsigned int index, const Vec3& v) {
     state.x_old.segment<3>(index) = state.x.segment<3>(index) - TimeStep * v;
 }

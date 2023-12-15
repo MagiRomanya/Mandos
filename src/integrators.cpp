@@ -8,11 +8,29 @@
 #include "physics_state.hpp"
 #include "simulation.hpp"
 
+void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, Vec& dx) {
+    const unsigned int nDoF = state.get_nDoF();
+
+    SparseMat equation_matrix(nDoF, nDoF);
+    Vec equation_vector = - f.gradient;
+    equation_matrix.setFromTriplets(f.hessian_triplets.begin(), f.hessian_triplets.end());
+
+    handle_frozen_dof(simulation.frozen_dof, &equation_vector, &equation_matrix);
+    // ----------------------------------------------------------------------------------
+
+    // Solving the system of equations
+    // ----------------------------------------------------------------------------------
+    // Gradient conjugate solving method class
+    Eigen::ConjugateGradient<Eigen::SparseMatrix<Scalar>> cg;
+    cg.compute(equation_matrix);
+    dx = cg.solve(equation_vector);
+}
+
+#ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
 void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, const ConstraintsAndJacobians& c, Vec& dx) {
     const unsigned int nDoF = state.get_nDoF();
     const unsigned int n_constraints = c.get_n_constraints();
 
-    // Assemble the Hessian matrix
     // ----------------------------------------------------------------------------------
     std::vector<Triplet> equation_matrix_triplets;
     equation_matrix_triplets.insert(equation_matrix_triplets.end(), f.hessian_triplets.begin(), f.hessian_triplets.end());
@@ -38,6 +56,7 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
     cg.compute(equation_matrix);
     dx = cg.solve(equation_vector);
 }
+#endif // ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
 
 struct FrozenDoFPredicate {
     FrozenDoFPredicate(const std::vector<unsigned int>& frozen_dof) : frozen_dof(frozen_dof) {}

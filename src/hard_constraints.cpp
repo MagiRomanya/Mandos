@@ -1,6 +1,7 @@
 #include "hard_constraints.hpp"
 #include "utility_functions.hpp"
 
+#ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
 Vec3 RB_PointConstraint::evaluate_constraint(const PhysicsState& state) const {
     const Vec3 O1 = rbA.get_COM_position(state);
     const Vec3 O2 = rbB.get_COM_position(state);
@@ -38,3 +39,16 @@ void RB_PointConstraint::compute_constraint_and_jacobian(const PhysicsState & st
         }
     }
 }
+
+
+void compute_constraints_and_jacobians(const HardConstraints& c, const PhysicsState& state, ConstraintsAndJacobians& out) {
+    // RIGID BODY point constraints
+    // ---------------------------------------------------------------------
+    for (unsigned int i = 0; i < c.rb_point_constraints.size(); i++) {
+        c.rb_point_constraints[i].compute_constraint_and_jacobian(state, out);
+    }
+
+    // ... future constraints here
+}
+
+#endif // ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS

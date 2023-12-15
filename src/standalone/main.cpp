@@ -1,4 +1,5 @@
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <vector>
 #include <raylib.h>
@@ -7,13 +8,11 @@
 #include "inertia_energies.hpp"
 #include "linear_algebra.hpp"
 #include "mandos.hpp"
-#include "particle.hpp"
+#include "particle_rigid_body_copuling.hpp"
 #include "physics_state.hpp"
-#include "raymath.h"
 #include "render/simulation_visualization.hpp"
 #include "rigid_body.hpp"
-#include "simulable_generator.hpp"
-#include "simulation.hpp"
+#include "clock.hpp"
 #include "utility_functions.hpp"
 
 
@@ -31,7 +30,7 @@ int main(void) {
     Simulation simulation;
     const Scalar RB_MASS = 1;
 
-    const Mesh RB_mesh = GenMeshPlane(4.0, 1.0, 20, 20);
+    const Mesh RB_mesh = GenMeshPlane(4.0, 1.0, 10, 10);
     const unsigned int n_vertices = RB_mesh.vertexCount * 3;
     const unsigned int n_indices = RB_mesh.triangleCount * 3;
     const std::vector<Scalar> vertices(RB_mesh.vertices, RB_mesh.vertices + n_vertices);
@@ -40,19 +39,11 @@ int main(void) {
 
     const RigidBodyHandle rb1 = RigidBodyHandle(simulation, RB_MASS, inertia_tensor)
         .set_COM_initial_position(simulation, Vec3(0,0,0))
-        .freeze_translation(simulation)
         .add_gravity(simulation, -1);
 
-    const RigidBodyHandle rb2 = RigidBodyHandle(simulation, RB_MASS, inertia_tensor)
-        .set_COM_initial_position(simulation, Vec3(4,0,0))
-        .add_gravity(simulation, -1);
+    const ParticleHandle p1 = ParticleHandle(simulation, 1);
 
-    const RigidBodyHandle rb3 = RigidBodyHandle(simulation, RB_MASS, inertia_tensor)
-        .set_COM_initial_position(simulation, Vec3(8,0,0))
-        .add_gravity(simulation, -1);
-
-    join_rigid_bodies(simulation, rb1.rb, Vec3(2,0,0), rb2.rb, Vec3(-2,0,0));
-    join_rigid_bodies(simulation, rb2.rb, Vec3(2,0,0), rb3.rb, Vec3(-2,0,0));
+    ParticleRigidBodyCopuling copuling = ParticleRigidBodyCopuling(rb1.rb, p1.particle, Vec3(0,0,0));
 
     SetTargetFPS(200);
     //--------------------------------------------------------------------------------------
@@ -77,10 +68,14 @@ int main(void) {
 
         if (IsKeyPressed(KEY_H)) simulation_paused = !simulation_paused;
         if (IsKeyPressed(KEY_R)) state = simulation.initial_state;
+        static double simulation_time = 0;
         if (!simulation_paused or IsKeyPressed(KEY_G)) {
+            Clock clock = Clock(simulation_time);
             EnergyAndDerivatives f(0);
             simulation_step(simulation, state, f);
-            std::cout << "Energy " << f.energy << std::endl;
+            // std::cout << "Energy " << f.energy << std::endl;
+            std::cout << "Simulation time " << simulation_time << " (ms)" << std::endl;
+
         }
         //----------------------------------------------------------------------------------
 
@@ -95,11 +90,7 @@ int main(void) {
                 DrawGrid(30, 1.0f);
                 // simulation_render_simulables_and_energies(simulation, state);
                 Matrix rb1_m = matrix_eigen_to_raylib(rb1.get_RB_transformation(state));
-                Matrix rb2_m = matrix_eigen_to_raylib(rb2.get_RB_transformation(state));
-                Matrix rb3_m = matrix_eigen_to_raylib(rb3.get_RB_transformation(state));
                 DrawMesh(RB_mesh, material1, rb1_m);
-                DrawMesh(RB_mesh, material2, rb2_m);
-                DrawMesh(RB_mesh, material3, rb3_m);
             }
             EndMode3D();
 
