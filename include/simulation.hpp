@@ -9,6 +9,7 @@
 #include "hard_constraints.hpp"
 #include "inertia_energies.hpp"
 #include "linear_algebra.hpp"
+#include "particle_rigid_body_copuling.hpp"
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
 #include "fem_unit.hpp"
@@ -48,6 +49,8 @@ struct Simulation {
     // Boundary conditions
     PhysicsState initial_state;
     std::vector<unsigned int> frozen_dof;
+    std::vector<ParticleRigidBodyCopuling> copulings;
+
 #ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
     HardConstraints constraints;
 #endif

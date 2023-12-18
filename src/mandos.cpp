@@ -1,5 +1,6 @@
 #include "mandos.hpp"
-
+#include "gravity.hpp"
+#include "spring.hpp"
 
 RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const std::vector<Scalar> vertices)
     : rb(simulation.initial_state.get_nDoF(), mass, compute_initial_inertia_tensor_PARTICLES(mass, vertices)),
@@ -7,8 +8,8 @@ RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const std:
 {
     simulation.initial_state.add_size(6);
     add_rigid_body_to_simulation(simulation, rb);
-    set_COM_initial_position(simulation, Vec3::Zero());
-    set_initial_orientation(simulation, Vec3::Zero());
+    simulation.initial_state.x.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
+    simulation.initial_state.x_old.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
 }
 
 RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const Mat3& inertia_tensor)
@@ -17,13 +18,16 @@ RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const Mat3
 {
     simulation.initial_state.add_size(6);
     add_rigid_body_to_simulation(simulation, rb);
-    set_COM_initial_position(simulation, Vec3::Zero());
-    set_initial_orientation(simulation, Vec3::Zero());
+    simulation.initial_state.x.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
+    simulation.initial_state.x_old.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
 }
 
 RigidBodyHandle RigidBodyHandle::set_COM_initial_position(Simulation& simulation, Vec3 pos) const {
+    const Vec3 x = rb.get_COM_position(simulation.initial_state.x);
+    const Vec3 x_old = rb.get_COM_position(simulation.initial_state.x_old);
+    const Vec3 delta = x - x_old;
     simulation.initial_state.x.segment<3>(rb.index) = pos;
-    simulation.initial_state.x_old.segment<3>(rb.index) = pos;
+    simulation.initial_state.x_old.segment<3>(rb.index) = pos - delta;
     return *this;
 }
 
@@ -66,7 +70,7 @@ RigidBodyHandle RigidBodyHandle::freeze_rotation(Simulation& simulation) const {
 Mat4 RigidBodyHandle::get_RB_transformation(const PhysicsState& state) const {
     Eigen::Transform<Scalar, 3, Eigen::Affine> transformation;
     transformation.linear() = rb.compute_rotation_matrix(state.x);
-    transformation.translation() = rb.get_COM_position(state);
+    transformation.translation() = rb.get_COM_position(state.x);
     return transformation.matrix();
 }
 
@@ -125,10 +129,13 @@ void MassSpringHandle::get_dof_vector(const PhysicsState& state, std::vector<flo
 }
 
 ParticleHandle::ParticleHandle(Simulation& simulation, Scalar mass)
-    : particle(simulation.initial_state.get_nDoF(), mass),
+    : particle(mass, simulation.initial_state.get_nDoF()),
       particle_index(simulation.simulables.particles.size())
 {
     simulation.initial_state.add_size(3);
+    // Initialize initial conditions
+    simulation.initial_state.x.segment<3>(particle.index) = Vec3::Zero();
+    simulation.initial_state.x_old.segment<3>(particle.index) = Vec3::Zero();
     add_particle_to_simulation(simulation, particle);
 }
 
@@ -137,7 +144,7 @@ ParticleHandle ParticleHandle::set_initial_position(Simulation& simulation, Vec3
     const Vec3 x_old = particle.get_position(simulation.initial_state.x_old);
     const Vec3 delta = x - x_old;
     simulation.initial_state.x.segment<3>(particle.index) = position;
-    simulation.initial_state.x.segment<3>(particle.index) = position - delta;
+    simulation.initial_state.x_old.segment<3>(particle.index) = position - delta;
     return *this;
 }
 
@@ -147,6 +154,26 @@ ParticleHandle ParticleHandle::set_initial_velocity(Simulation& simulation, Vec3
     return *this;
 }
 
+ParticleHandle ParticleHandle::add_gravity(Simulation& simulation, Scalar gravity) const {
+    simulation.energies.gravities.push_back(Gravity(particle.index+1, GravityParameters(gravity)));
+    return *this;
+}
+
+
+ParticleHandle ParticleHandle::freeze(Simulation& simulation) const {
+    simulation.frozen_dof.push_back(particle.index+0);
+    simulation.frozen_dof.push_back(particle.index+1);
+    simulation.frozen_dof.push_back(particle.index+2);
+    return *this;
+}
+
+void join_particles_with_spring(Simulation& simulation, const ParticleHandle& p1, const ParticleHandle& p2, Scalar k, Scalar damping) {
+    const Vec3 x1 = p1.particle.get_position(simulation.initial_state.x);
+    const Vec3 x2 = p2.particle.get_position(simulation.initial_state.x);
+    const Scalar distance = (x1 -x2).norm();
+    simulation.energies.particle_springs.emplace_back(p1.particle, p2.particle,
+                                                      SpringParameters{.k = k, .L0 = distance, .damping = damping});
+}
 
 FEMHandle::FEMHandle(Simulation& simulation,
                      const std::vector<Scalar>& tetrahedron_vertices,

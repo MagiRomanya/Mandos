@@ -31,7 +31,6 @@ void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const Physic
 void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
     // Get the relevant sate
     // ---------------------------------------------------------------
-    const Vec3 theta = state.x.segment<3>(rb.index+3);
     const Mat3 inertia_tensor = rb.J_inertia_tensor0;
     const Mat3 R = rb.compute_rotation_matrix(state.x);
     const Mat3 R0 = rb.compute_rotation_matrix(state0.x);

@@ -15,11 +15,11 @@ struct ParticleRigidBodyCopuling {
     const Particle particle;
     const Vec3 pos;                         // Particle fixed position wrt the RB rotating frame
 
-    void apply_copuling(const PhysicsState& state, SparseMat& hessian, Vec& gradient) const ;
-
 };
 
-void sort_triplets_row_major(std::vector<Triplet>& triplets);
-void sort_triplets_column_major(std::vector<Triplet>& triplets);
+bool operator<(const ParticleRigidBodyCopuling& c1, const ParticleRigidBodyCopuling& c2);
+
+void compute_copuling_jacobian(const std::vector<ParticleRigidBodyCopuling> copulings, const PhysicsState& state, SparseMat& copuling_jacobian);
+
 
 #endif // PARTICLE_RIGID_BODY_COPULING_H_

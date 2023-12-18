@@ -53,8 +53,8 @@ Mat3 RigidBody::compute_inertia_tensor(const Mat3& rotation_matrix) const {
     return rotation_matrix * J_inertia_tensor0 * rotation_matrix.transpose();
 }
 
-Vec3 RigidBody::get_COM_position(const PhysicsState& state) const {
-    return state.x.segment(index, 3);
+Vec3 RigidBody::get_COM_position(const Vec& x) const {
+    return x.segment(index, 3);
 }
 
 Mat3 RigidBody::compute_rotation_matrix(const Vec& x) const {

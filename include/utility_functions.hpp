@@ -6,13 +6,13 @@
 #include <vector>
 
 #include "linear_algebra.hpp"
-#include "simulation.hpp"
 
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
 #endif
 
 Mesh LoadMeshTinyOBJ(std::string inputfile);
+
 void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& out_vertices, std::vector<unsigned int>& out_indices);
 
 void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices,
@@ -20,10 +20,15 @@ void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indic
 
 // Geometry related functions
 Mat3 skew(const Vec3& v);
+
 inline Scalar compute_trinagle_area(const Vec3& AB, const Vec3& AC) { return (skew(AB) * AC).norm() / 2; }
+
 Scalar compute_tetrahedron_volume(const Vec3& AB, const Vec3& AC, const Vec3& AD);
+
 Scalar compute_mesh_volume(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices);
+
 Scalar compute_mesh_surface_area(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices);
+
 Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta);
 
 inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
@@ -34,6 +39,10 @@ inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
     m(3,0), m(3,1), m(3, 2), m(3, 3),
     };
     return r;
+}
+
+inline Vector3 vector3_eigen_to_raylib(const Vec3& v) {
+    return Vector3{v.x(), v.y(), v.z()};
 }
 
 

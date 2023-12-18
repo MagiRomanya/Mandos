@@ -120,11 +120,17 @@ class ParticleHandle {
 
         ParticleHandle set_initial_velocity(Simulation& simulation, Vec3 velocity) const;
 
+        ParticleHandle add_gravity(Simulation& simulation, Scalar gravity) const;
+
+        ParticleHandle freeze(Simulation& simulation) const;
+
         inline Vec3 get_position(const PhysicsState& state) { return particle.get_position(state.x); }
 
         const Particle particle;
         const unsigned int particle_index;
 };
+
+void join_particles_with_spring(Simulation& simulation, const ParticleHandle& p1, const ParticleHandle& p2, Scalar k, Scalar damping);
 
 class FEMHandle {
     public:

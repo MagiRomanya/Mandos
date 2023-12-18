@@ -184,10 +184,19 @@ void simulation_render_simulables_and_energies(const Simulation& simulation, con
     simulation_render_simulables(simulation.simulables, state);
 }
 
+void simulation_render_particles(const Simulables& simulables, const PhysicsState& state) {
+    const Color colors[] = {LIGHTGRAY, GRAY, DARKGRAY, YELLOW, GOLD, ORANGE, RED, MAROON, GREEN, LIME, DARKGREEN, SKYBLUE, BLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN};
+    for (unsigned int i = 0; i < simulables.particles.size(); i++) {
+        const Particle& p = simulables.particles[i];
+        const Vec3 x = p.get_position(state.x);
+        DrawSphere(Vector3{x.x(), x.y(), x.z()}, 0.05, colors[i % IM_ARRAYSIZE(colors)]);
+    }
+}
+
 void simulation_render_simulables(const Simulables& simulables, const PhysicsState& state) {
     // DRAW PARTICLES
     //----------------------------------------------------------------------------------
-    Color colors[] = {LIGHTGRAY, GRAY, DARKGRAY, YELLOW, GOLD, ORANGE, RED, MAROON, GREEN, LIME, DARKGREEN, SKYBLUE, BLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN};
+    const Color colors[] = {LIGHTGRAY, GRAY, DARKGRAY, YELLOW, GOLD, ORANGE, RED, MAROON, GREEN, LIME, DARKGREEN, SKYBLUE, BLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN};
     for (unsigned int i = 0; i < simulables.particles.size(); i++) {
         const Particle& p = simulables.particles[i];
         const Vec3 x = p.get_position(state.x);
@@ -198,7 +207,7 @@ void simulation_render_simulables(const Simulables& simulables, const PhysicsSta
     //----------------------------------------------------------------------------------
     for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
         const RigidBody& rb = simulables.rigid_bodies[i];
-        const Vec3 x = rb.get_COM_position(state);
+        const Vec3 x = rb.get_COM_position(state.x);
         const Mat3 rot = rb.compute_rotation_matrix(state.x);
         std::cout << "ERROR::SIMULATION_RENDER_SIMULABLES::DRAW RIGID BODIES NOT IMPLEMENTED YET" << std::endl;
     }

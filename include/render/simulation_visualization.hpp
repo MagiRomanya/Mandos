@@ -16,4 +16,6 @@ void simulation_render_energies(const Energies& energies, const PhysicsState& st
 
 void simulation_visualization_loop(Simulation& simulation, PhysicsRenderers& phy_renderers);
 
+void simulation_render_particles(const Simulables& simulables, const PhysicsState& state);
+
 #endif // SIMULATION_VISUALIZATION_H_

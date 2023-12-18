@@ -5,6 +5,7 @@
 
 #include "integrators.hpp"
 #include "linear_algebra.hpp"
+#include "particle_rigid_body_copuling.hpp"
 #include "physics_state.hpp"
 #include "simulation.hpp"
 
@@ -16,6 +17,14 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
     equation_matrix.setFromTriplets(f.hessian_triplets.begin(), f.hessian_triplets.end());
 
     handle_frozen_dof(simulation.frozen_dof, &equation_vector, &equation_matrix);
+
+    SparseMat copuling_jacobian;
+    compute_copuling_jacobian(simulation.copulings, state, copuling_jacobian);
+    std::cout << copuling_jacobian.toDense() << std::endl;
+    const SparseMat copuling_jacobian_t = copuling_jacobian.transpose();
+
+    equation_matrix = copuling_jacobian_t * equation_matrix * copuling_jacobian;
+    equation_vector = copuling_jacobian_t * equation_vector;
     // ----------------------------------------------------------------------------------
 
     // Solving the system of equations
@@ -23,7 +32,7 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
     // Gradient conjugate solving method class
     Eigen::ConjugateGradient<Eigen::SparseMatrix<Scalar>> cg;
     cg.compute(equation_matrix);
-    dx = cg.solve(equation_vector);
+    dx = copuling_jacobian * cg.solve(equation_vector);
 }
 
 #ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
