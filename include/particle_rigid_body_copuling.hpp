@@ -14,12 +14,32 @@ struct ParticleRigidBodyCopuling {
     const RigidBody rb;
     const Particle particle;
     const Vec3 pos;                         // Particle fixed position wrt the RB rotating frame
+};
+
+
+struct Copulings {
+    Copulings() {};
+    Copulings(const std::vector<ParticleRigidBodyCopuling>& copulings) : copulings(copulings) {
+        compute_rigid_body_index_conversion();
+        compute_dof_index_to_copuling();
+    }
+
+    std::vector<ParticleRigidBodyCopuling> copulings;
+
+    // Rigid body index (full dof state) --> Rigid body index (copuled dofs state)
+    std::unordered_map<unsigned int, unsigned int> rigid_body_indices_conversion;
+
+    // Dof index (full dof state) --> copuling index
+    std::unordered_map<unsigned int, unsigned int> dof_index_to_copuling;
+
+    void compute_rigid_body_index_conversion();
+    void compute_dof_index_to_copuling();
+
+    inline ParticleRigidBodyCopuling get_copuling(unsigned int dof_index) const {return copulings[dof_index_to_copuling.at(dof_index)];}
 
 };
 
-bool operator<(const ParticleRigidBodyCopuling& c1, const ParticleRigidBodyCopuling& c2);
-
-void compute_copuling_jacobian(const std::vector<ParticleRigidBodyCopuling> copulings, const PhysicsState& state, SparseMat& copuling_jacobian);
+void compute_copuling_jacobian(const Copulings& copulings, const PhysicsState& state, SparseMat& copuling_jacobian);
 
 
 #endif // PARTICLE_RIGID_BODY_COPULING_H_

@@ -20,8 +20,9 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
 
     SparseMat copuling_jacobian;
     compute_copuling_jacobian(simulation.copulings, state, copuling_jacobian);
-    std::cout << copuling_jacobian.toDense() << std::endl;
     const SparseMat copuling_jacobian_t = copuling_jacobian.transpose();
+
+    // std::cout << copuling_jacobian.toDense() << std::endl;
 
     equation_matrix = copuling_jacobian_t * equation_matrix * copuling_jacobian;
     equation_vector = copuling_jacobian_t * equation_vector;

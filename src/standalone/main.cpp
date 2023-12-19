@@ -46,17 +46,19 @@ int main(void) {
         .set_initial_position(simulation, Vec3(0,1,1));
 
     const ParticleHandle p3 = ParticleHandle(simulation, MASS)
-        .freeze(simulation)
         .set_initial_position(simulation, Vec3(0,1,-1));
 
     const RigidBodyHandle rb1 = RigidBodyHandle(simulation, MASS, inertia_tensor)
         .add_gravity(simulation, GRAVITY)
         .set_COM_initial_position(simulation, Vec3(0,0,0));
 
+    std::vector<ParticleRigidBodyCopuling> copulings_vec;
     ParticleRigidBodyCopuling copuling = ParticleRigidBodyCopuling(rb1.rb, p1.particle, p1.particle.get_position(simulation.initial_state.x));
-    simulation.copulings.push_back(copuling);
+    copulings_vec.push_back(copuling);
     ParticleRigidBodyCopuling copuling2 = ParticleRigidBodyCopuling(rb1.rb, p3.particle, p3.particle.get_position(simulation.initial_state.x));
-    simulation.copulings.push_back(copuling2);
+    copulings_vec.push_back(copuling2);
+
+    simulation.copulings = Copulings(copulings_vec);
 
     std::cout << rb1.rb.get_COM_position(simulation.initial_state.x).transpose() << std::endl;
     std::cout << rb1.rb.get_COM_position(simulation.initial_state.x_old).transpose() << std::endl;
@@ -111,6 +113,7 @@ int main(void) {
                 Matrix rb1_m = matrix_eigen_to_raylib(rb1.get_RB_transformation(state));
                 DrawMesh(RB_mesh, material1, rb1_m);
                 simulation_render_particles(simulation.simulables, state);
+                simulation_render_energies(simulation.energies, state);
             }
             EndMode3D();
 

@@ -49,7 +49,7 @@ struct Simulation {
     // Boundary conditions
     PhysicsState initial_state;
     std::vector<unsigned int> frozen_dof;
-    std::vector<ParticleRigidBodyCopuling> copulings;
+    Copulings copulings;
 
 #ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
     HardConstraints constraints;

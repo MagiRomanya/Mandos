@@ -4,8 +4,6 @@
 #include <vector>
 
 #include "linear_algebra.hpp"
-#include "physics_state.hpp"
-
 Mat3 compute_initial_inertia_tensor_PARTICLES(Scalar rb_total_mass, const std::vector<Scalar>& vertices);
 
 Vec3 compute_COM_position_PARTICLES(const std::vector<Scalar>& vertices);
@@ -30,8 +28,8 @@ inline Mat3 compute_J_inertia_tensor(const Mat3& inertia_tensor) {
 }
 
 struct RigidBody {
-    RigidBody(unsigned int index, Scalar mass, Mat3 inertia_tensor0)
-        : index(index), mass(mass), J_inertia_tensor0(inertia_tensor0) {}
+    RigidBody(unsigned int index, Scalar mass, Mat3 J_inertia_tensor0)
+        : index(index), mass(mass), J_inertia_tensor0(J_inertia_tensor0) {}
 
     const unsigned int index;
     const Scalar mass;
