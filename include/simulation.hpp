@@ -22,7 +22,9 @@ struct Simulables {
     std::vector<RigidBody> rigid_bodies;
 };
 
-/* X-Macro for defining energies */
+/** X-Macro for defining energies
+ *  https://en.wikipedia.org/wiki/X_macro
+ */
 #define INERTIAL_ENERGY_MEMBERS \
     X(std::vector<LinearInertia>, linear_inertias) \
     X(std::vector<RotationalInertia>, rotational_inertias)

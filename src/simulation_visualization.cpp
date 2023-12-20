@@ -167,7 +167,7 @@ std::jthread simulation_thread(simulation_update_thread, std::cref(simulation), 
 
             }
             ImGuiEndDrawing();
-;        }
+        }
         EndDrawing();
         //----------------------------------------------------------------------------------
     }
@@ -184,8 +184,9 @@ void simulation_render_simulables_and_energies(const Simulation& simulation, con
     simulation_render_simulables(simulation.simulables, state);
 }
 
+static const Color colors[] = {LIME, VIOLET, RED, GRAY, PURPLE, DARKGREEN, DARKGRAY, DARKBROWN, BLUE, ORANGE, BEIGE, DARKBLUE, SKYBLUE, BROWN, DARKPURPLE, MAROON, YELLOW, GREEN, LIGHTGRAY, GOLD};
+
 void simulation_render_particles(const Simulables& simulables, const PhysicsState& state) {
-    const Color colors[] = {LIGHTGRAY, GRAY, DARKGRAY, YELLOW, GOLD, ORANGE, RED, MAROON, GREEN, LIME, DARKGREEN, SKYBLUE, BLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN};
     for (unsigned int i = 0; i < simulables.particles.size(); i++) {
         const Particle& p = simulables.particles[i];
         const Vec3 x = p.get_position(state.x);
@@ -194,14 +195,7 @@ void simulation_render_particles(const Simulables& simulables, const PhysicsStat
 }
 
 void simulation_render_simulables(const Simulables& simulables, const PhysicsState& state) {
-    // DRAW PARTICLES
-    //----------------------------------------------------------------------------------
-    const Color colors[] = {LIGHTGRAY, GRAY, DARKGRAY, YELLOW, GOLD, ORANGE, RED, MAROON, GREEN, LIME, DARKGREEN, SKYBLUE, BLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN};
-    for (unsigned int i = 0; i < simulables.particles.size(); i++) {
-        const Particle& p = simulables.particles[i];
-        const Vec3 x = p.get_position(state.x);
-        DrawSphere(Vector3{x.x(), x.y(), x.z()}, 0.05, colors[i % IM_ARRAYSIZE(colors)]);
-    }
+    simulation_render_particles(simulables, state);
 
     // DRAW RIGID BODIES
     //----------------------------------------------------------------------------------

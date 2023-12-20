@@ -16,7 +16,6 @@
 
 
 int main(void) {
-
     // Initialization
     //--------------------------------------------------------------------------------------
     const int screenWidth = 1600;
@@ -37,26 +36,41 @@ int main(void) {
     const std::vector<unsigned int> indices(RB_mesh.indices, RB_mesh.indices + n_indices);
     const Mat3 inertia_tensor = compute_initial_inertia_tensor_PARTICLES(MASS, vertices);
 
-    const ParticleHandle p1 = ParticleHandle(simulation, MASS)
-        .add_gravity(simulation, GRAVITY)
-        .set_initial_position(simulation, Vec3(0,1,0));
-
-    const ParticleHandle p2 = ParticleHandle(simulation, MASS)
-        .freeze(simulation)
-        .set_initial_position(simulation, Vec3(0,1,1));
-
-    const ParticleHandle p3 = ParticleHandle(simulation, MASS)
-        .set_initial_position(simulation, Vec3(0,1,-1));
-
     const RigidBodyHandle rb1 = RigidBodyHandle(simulation, MASS, inertia_tensor)
         .add_gravity(simulation, GRAVITY)
         .set_COM_initial_position(simulation, Vec3(0,0,0));
+
+    const ParticleHandle p1 = ParticleHandle(simulation, MASS)
+        .add_gravity(simulation, GRAVITY)
+        .set_initial_position(simulation, Vec3(1,1,0));
+
+    const ParticleHandle p2 = ParticleHandle(simulation, MASS)
+        .freeze(simulation)
+        .set_initial_position(simulation, Vec3(0,0,1));
+
+    const ParticleHandle p3 = ParticleHandle(simulation, MASS)
+        .add_gravity(simulation, GRAVITY)
+        .set_initial_position(simulation, Vec3(0,1,-1));
+
+    const ParticleHandle p4 = ParticleHandle(simulation, MASS)
+        .add_gravity(simulation, GRAVITY)
+        .set_initial_position(simulation, Vec3(0,1,1));
+
+    const ParticleHandle p5 = ParticleHandle(simulation, MASS)
+        .add_gravity(simulation, GRAVITY)
+        .set_initial_position(simulation, Vec3(1,1,1));
+
+    const ParticleHandle p6 = ParticleHandle(simulation, MASS)
+        .add_gravity(simulation, GRAVITY)
+        .set_initial_position(simulation, Vec3(2,1,1));
 
     std::vector<ParticleRigidBodyCopuling> copulings_vec;
     ParticleRigidBodyCopuling copuling = ParticleRigidBodyCopuling(rb1.rb, p1.particle, p1.particle.get_position(simulation.initial_state.x));
     copulings_vec.push_back(copuling);
     ParticleRigidBodyCopuling copuling2 = ParticleRigidBodyCopuling(rb1.rb, p3.particle, p3.particle.get_position(simulation.initial_state.x));
     copulings_vec.push_back(copuling2);
+    ParticleRigidBodyCopuling copuling3 = ParticleRigidBodyCopuling(rb1.rb, p4.particle, p4.particle.get_position(simulation.initial_state.x));
+    copulings_vec.push_back(copuling3);
 
     simulation.copulings = Copulings(copulings_vec);
 
@@ -65,6 +79,8 @@ int main(void) {
     std::cout << simulation.initial_state.x.transpose() << std::endl;
 
     join_particles_with_spring(simulation, p1, p2, 10.0, 1);
+    join_particles_with_spring(simulation, p4, p5, 10.0, 1);
+    join_particles_with_spring(simulation, p5, p6, 10.0, 1);
 
     SetTargetFPS(200);
     //--------------------------------------------------------------------------------------

@@ -22,8 +22,6 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
     compute_copuling_jacobian(simulation.copulings, state, copuling_jacobian);
     const SparseMat copuling_jacobian_t = copuling_jacobian.transpose();
 
-    // std::cout << copuling_jacobian.toDense() << std::endl;
-
     equation_matrix = copuling_jacobian_t * equation_matrix * copuling_jacobian;
     equation_vector = copuling_jacobian_t * equation_vector;
     // ----------------------------------------------------------------------------------
@@ -31,7 +29,7 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
     // Solving the system of equations
     // ----------------------------------------------------------------------------------
     // Gradient conjugate solving method class
-    Eigen::ConjugateGradient<Eigen::SparseMatrix<Scalar>> cg;
+    Eigen::ConjugateGradient<SparseMat> cg;
     cg.compute(equation_matrix);
     dx = copuling_jacobian * cg.solve(equation_vector);
 }
