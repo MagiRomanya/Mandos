@@ -1,4 +1,4 @@
-#include "mesh_boundary.hpp"
+#include "mesh.hpp"
 #include "edge.hpp"
 #include "linear_algebra.hpp"
 #include <cstdio>

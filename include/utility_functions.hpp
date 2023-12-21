@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "linear_algebra.hpp"
+#include "mesh.hpp"
 
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
@@ -14,25 +15,35 @@
 
 #define DEBUG_LOG(variable) std::cout << #variable << " " << variable << std::endl;
 
-Mesh LoadMeshTinyOBJ(std::string inputfile);
-
-void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& out_vertices, std::vector<unsigned int>& out_indices);
-
-void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices,
-                                 std::vector<unsigned int>& out_tetrahedron_indices, std::vector<float>& out_tetrahedron_vertices);
-
-// Geometry related functions
+/**
+ * Compute the skew-symetric matrix of the given vector.
+ */
 Mat3 skew(const Vec3& v);
 
+/**
+ * Compute the area of the triangle.
+ *
+ * @param AB, AC the 2 vectors defining the triangle.
+ */
 inline Scalar compute_trinagle_area(const Vec3& AB, const Vec3& AC) { return (skew(AB) * AC).norm() / 2; }
 
+/**
+ * Compute the volume of the tetrahedron.
+ *
+ * @param AB, AC, AD the 3 vectors defining the tetrahedron
+ */
 Scalar compute_tetrahedron_volume(const Vec3& AB, const Vec3& AC, const Vec3& AD);
 
-Scalar compute_mesh_volume(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices);
-
-Scalar compute_mesh_surface_area(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices);
-
+/**
+ * Computes the rotation matrix from a given axis-angle rotation vector using Rodrigues'.
+ */
 Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta);
+
+Mesh LoadMeshTinyOBJ(std::string inputfile);
+
+Mesh RenderMesh_to_RaylibMesh(const RenderMesh& render_mesh);
+
+Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh);
 
 inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
     Matrix r = {

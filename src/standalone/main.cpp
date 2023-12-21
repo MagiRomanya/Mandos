@@ -7,8 +7,10 @@
 
 #include "linear_algebra.hpp"
 #include "mandos.hpp"
+#include "mesh.hpp"
 #include "particle_rigid_body_copuling.hpp"
 #include "physics_state.hpp"
+#include "raymath.h"
 #include "render/simulation_visualization.hpp"
 #include "rigid_body.hpp"
 #include "clock.hpp"
@@ -91,15 +93,23 @@ int main(void) {
     Material material1 = LoadMaterialDefault();
     material1.maps[MATERIAL_MAP_DIFFUSE].color = RED;
     Material material2 = LoadMaterialDefault();
-    material2.maps[MATERIAL_MAP_DIFFUSE].color = GREEN;
+    Texture2D texture = LoadTexture("img/textures/mass-spring.png");
+    SetMaterialTexture(&material2, MATERIAL_MAP_DIFFUSE, texture);
+
+    // material2.maps[MATERIAL_MAP_DIFFUSE].color = GREEN;
     Material material3 = LoadMaterialDefault();
     material3.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
+
+    RenderMesh render_mesh = RenderMesh("img/obj/cone.obj");
+    SimulationMesh sim_mesh = SimulationMesh(render_mesh);
+
+    Mesh raylib_mesh = SimulationMesh_to_RaylibMesh(sim_mesh);
 
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Update
         //----------------------------------------------------------------------------------
-        UpdateCamera(&camera, CAMERA_ORBITAL);
+        UpdateCamera(&camera, CAMERA_FREE);
         /// Keyboard controls
         if (IsKeyPressed(KEY_Q)) break;
 
@@ -130,6 +140,7 @@ int main(void) {
                 DrawMesh(RB_mesh, material1, rb1_m);
                 simulation_render_particles(simulation.simulables, state);
                 simulation_render_energies(simulation.energies, state);
+                DrawMesh(raylib_mesh, material2, MatrixIdentity());
             }
             EndMode3D();
 

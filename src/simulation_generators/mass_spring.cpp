@@ -1,10 +1,11 @@
 #include "edge.hpp"
 #include "gravity.hpp"
 #include "inertia_energies.hpp"
-#include "mesh_boundary.hpp"
+#include "mesh.hpp"
 #include "particle.hpp"
 #include "spring.hpp"
 #include "simulable_generator.hpp"
+
 #include <vector>
 
 Scalar distance(const std::vector<Scalar>& vertices, unsigned int i1, unsigned int i2) {
