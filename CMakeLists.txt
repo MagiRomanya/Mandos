@@ -37,7 +37,9 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/eigen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON) # Necessary for pybind11 dynamic lib
 set(CMAKE_BUILD_TYPE Debug)
 # set(CMAKE_BUILD_TYPE Release)
 
@@ -66,3 +68,9 @@ target_link_libraries(libmandos
 
 target_link_libraries(${PROJECT_NAME} PUBLIC libmandos)
 target_link_libraries(mandos_gui PUBLIC libmandos)
+
+# Creating the pyhon library
+find_package(Python 3.6 COMPONENTS Interpreter Development REQUIRED)
+pybind11_add_module(pymandos ${CMAKE_CURRENT_SOURCE_DIR}/src/python/pybinding.cpp)
+target_link_libraries(pymandos PUBLIC libmandos ${PYTHON_LIBRARIES})
+include_directories(pymandos PUBLIC ${PYTHON_INCLUDE_DIRS})

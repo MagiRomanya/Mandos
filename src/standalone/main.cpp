@@ -37,32 +37,32 @@ int main(void) {
     const Mat3 inertia_tensor = compute_initial_inertia_tensor_PARTICLES(MASS, vertices);
 
     const RigidBodyHandle rb1 = RigidBodyHandle(simulation, MASS, inertia_tensor)
-        .add_gravity(simulation, GRAVITY)
-        .set_COM_initial_position(simulation, Vec3(0,0,0));
+        .add_gravity(GRAVITY)
+        .set_COM_initial_position(Vec3(0,0,0));
 
     const ParticleHandle p1 = ParticleHandle(simulation, MASS)
-        .add_gravity(simulation, GRAVITY)
-        .set_initial_position(simulation, Vec3(1,1,0));
+        .add_gravity(GRAVITY)
+        .set_initial_position(Vec3(1,1,0));
 
     const ParticleHandle p2 = ParticleHandle(simulation, MASS)
-        .freeze(simulation)
-        .set_initial_position(simulation, Vec3(0,0,1));
+        .freeze()
+        .set_initial_position(Vec3(0,0,1));
 
     const ParticleHandle p3 = ParticleHandle(simulation, MASS)
-        .add_gravity(simulation, GRAVITY)
-        .set_initial_position(simulation, Vec3(0,1,-1));
+        .add_gravity(GRAVITY)
+        .set_initial_position(Vec3(0,1,-1));
 
     const ParticleHandle p4 = ParticleHandle(simulation, MASS)
-        .add_gravity(simulation, GRAVITY)
-        .set_initial_position(simulation, Vec3(0,1,1));
+        .add_gravity(GRAVITY)
+        .set_initial_position(Vec3(0,1,1));
 
     const ParticleHandle p5 = ParticleHandle(simulation, MASS)
-        .add_gravity(simulation, GRAVITY)
-        .set_initial_position(simulation, Vec3(1,1,1));
+        .add_gravity(GRAVITY)
+        .set_initial_position(Vec3(1,1,1));
 
     const ParticleHandle p6 = ParticleHandle(simulation, MASS)
-        .add_gravity(simulation, GRAVITY)
-        .set_initial_position(simulation, Vec3(2,1,1));
+        .add_gravity(GRAVITY)
+        .set_initial_position(Vec3(2,1,1));
 
     std::vector<ParticleRigidBodyCopuling> copulings_vec;
     ParticleRigidBodyCopuling copuling = ParticleRigidBodyCopuling(rb1.rb, p1.particle, p1.particle.get_position(simulation.initial_state.x));
@@ -126,7 +126,7 @@ int main(void) {
             {
                 DrawGrid(30, 1.0f);
                 // simulation_render_simulables_and_energies(simulation, state);
-                Matrix rb1_m = matrix_eigen_to_raylib(rb1.get_RB_transformation(state));
+                Matrix rb1_m = matrix_eigen_to_raylib(rb1.get_transformation_matrix(state));
                 DrawMesh(RB_mesh, material1, rb1_m);
                 simulation_render_particles(simulation.simulables, state);
                 simulation_render_energies(simulation.energies, state);
