@@ -4,9 +4,11 @@
 [submodule "external/raylib"]
 	path = external/raylib
 	url = https://github.com/raysan5/raylib.git
+	branch = 5.0
 [submodule "external/eigen"]
 	path = external/eigen
 	url = https://gitlab.com/libeigen/eigen.git
+	branch = 3.4
 [submodule "external/imgui"]
 	path = external/imgui
 	url = https://github.com/ocornut/imgui.git
@@ -15,3 +17,7 @@
 	path = external/pybind11
 	url = https://github.com/pybind/pybind11.git
 	branch = stable
+[submodule "external/external/polyscope"]
+	path = external/external/polyscope
+	url = https://github.com/nmwsharp/polyscope.git
+	branch = v1.3.0
