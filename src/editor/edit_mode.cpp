@@ -114,9 +114,9 @@ struct MeshManager {
 
     private:
         std::unordered_map<std::string, PhysicsMesh> mesh_map;
-        Texture2D mass_spring_texture = LoadTexture("img/textures/mass-spring.png");
-        Texture2D rigid_body_texture = LoadTexture("img/textures/rigid-body.png");
-        Texture2D fem_texture = LoadTexture("img/textures/fem.png");
+        Texture2D mass_spring_texture = LoadTexture("resources/textures/mass-spring.png");
+        Texture2D rigid_body_texture = LoadTexture("resources/textures/rigid-body.png");
+        Texture2D fem_texture = LoadTexture("resources/textures/fem.png");
 };
 
 struct EditModeUserSelectionState {
@@ -180,7 +180,7 @@ void edit_mode_sidebar(EditModeUserSelectionState& s_state, GUI_STATE& gui_state
         case 1: // Sphere
         {
             if (ImGui::Button("Add")) {
-                Mesh sphere = LoadMeshTinyOBJ("img/obj/sphere.obj");
+                Mesh sphere = LoadMeshTinyOBJ("resources/obj/sphere.obj");
                 mesh_manager.add_mesh("sphere"+std::to_string(s_state.n_spheres), sphere);
                 s_state.n_spheres++;
             }

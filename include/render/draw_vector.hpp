@@ -23,7 +23,7 @@ inline void DrawVector(Vec3 position, Vec3 vector, Color color, Scalar scale = 1
                       scale*rot(2,0), scale*rot(2,1), scale*rot(2,2), position.z(),
                            0.0,      0.0,      0.0,          1.0};
   // render
-  const Mesh vector_mesh = LoadMeshTinyOBJ("img/obj/vector.obj");
+  const Mesh vector_mesh = LoadMeshTinyOBJ("resources/obj/vector.obj");
   Material material = LoadMaterialDefault();
   Image im_color = GenImageColor(1, 1, color);
   Texture2D texture = LoadTextureFromImage(im_color);

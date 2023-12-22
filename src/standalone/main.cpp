@@ -76,9 +76,9 @@ int main(void) {
 
     simulation.copulings = Copulings(copulings_vec);
 
-    std::cout << rb1.rb.get_COM_position(simulation.initial_state.x).transpose() << std::endl;
-    std::cout << rb1.rb.get_COM_position(simulation.initial_state.x_old).transpose() << std::endl;
-    std::cout << simulation.initial_state.x.transpose() << std::endl;
+    // std::cout << rb1.rb.get_COM_position(simulation.initial_state.x).transpose() << std::endl;
+    // std::cout << rb1.rb.get_COM_position(simulation.initial_state.x_old).transpose() << std::endl;
+    // std::cout << simulation.initial_state.x.transpose() << std::endl;
 
     join_particles_with_spring(simulation, p1, p2, 10.0, 1);
     join_particles_with_spring(simulation, p4, p5, 10.0, 1);
@@ -93,14 +93,14 @@ int main(void) {
     Material material1 = LoadMaterialDefault();
     material1.maps[MATERIAL_MAP_DIFFUSE].color = RED;
     Material material2 = LoadMaterialDefault();
-    Texture2D texture = LoadTexture("img/textures/mass-spring.png");
+    Texture2D texture = LoadTexture("resources/textures/mass-spring.png");
     SetMaterialTexture(&material2, MATERIAL_MAP_DIFFUSE, texture);
 
     // material2.maps[MATERIAL_MAP_DIFFUSE].color = GREEN;
     Material material3 = LoadMaterialDefault();
     material3.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
 
-    RenderMesh render_mesh = RenderMesh("img/obj/cone.obj");
+    RenderMesh render_mesh = RenderMesh("resources/obj/cone.obj");
     SimulationMesh sim_mesh = SimulationMesh(render_mesh);
 
     Mesh raylib_mesh = SimulationMesh_to_RaylibMesh(sim_mesh);
@@ -140,7 +140,7 @@ int main(void) {
                 DrawMesh(RB_mesh, material1, rb1_m);
                 simulation_render_particles(simulation.simulables, state);
                 simulation_render_energies(simulation.energies, state);
-                DrawMesh(raylib_mesh, material2, MatrixIdentity());
+                // DrawMesh(raylib_mesh, material2, MatrixIdentity());
             }
             EndMode3D();
 

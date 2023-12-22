@@ -13,7 +13,7 @@ class MassSpringRenderer {
         MassSpringRenderer(Mesh mesh, SimulableBounds bounds)
             :mesh(mesh), dof_index(bounds.dof_index), nDoF(bounds.nDoF)
         {
-            texture = LoadTexture("img/textures/bricks.png");
+            texture = LoadTexture("resources/textures/bricks.png");
         }
 
         ~MassSpringRenderer() {

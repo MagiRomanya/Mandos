@@ -111,9 +111,18 @@ namespace std {
 }
 
 
+/**
+ * Initialize the simulation mesh from a render mesh.
+ *
+ * The render mesh will have repeated vertices to properly define normals and texture
+ * coordinates throughout the surface. For simulation repeated vertices are not desired
+ * and are eliminated in this function.
+ *
+ * @param render_mesh A render mesh (only necessary to have the vertices and indices vectors initialized)
+ */
 SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
-    std::unordered_map<h_vec3, unsigned int> vertex_index_map;
-    std::vector<unsigned int> removed_vertex_indices;
+    std::unordered_map<h_vec3, unsigned int> vertex_index_map; // Maps the vertex to the new simulation mesh index
+
     for (unsigned int i = 0; i < render_mesh.indices.size()/3; i++) {
         // Get the triangle vertices
         const unsigned int a = 3*render_mesh.indices[3*i+0];
@@ -123,11 +132,15 @@ SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
         const h_vec3 vb = h_vec3(render_mesh.vertices[b], render_mesh.vertices[b+1], render_mesh.vertices[b+2]);
         const h_vec3 vc = h_vec3(render_mesh.vertices[c], render_mesh.vertices[c+1], render_mesh.vertices[c+2]);
 
+        // The new triangle indices
         unsigned int a_new;
         unsigned int b_new;
         unsigned int c_new;
+
+        // Save only the vertices not already found
+        // and initialize the new indices accordingly
         if (not vertex_index_map.contains(va)) {
-            a_new = vertices.size();
+            a_new = vertices.size()/3;
             vertex_index_map[va] = a_new;
             vertices.push_back(va.x);
             vertices.push_back(va.y);
@@ -137,7 +150,7 @@ SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
             a_new = vertex_index_map[va];
         }
         if (not vertex_index_map.contains(vb)) {
-            b_new = vertices.size();
+            b_new = vertices.size()/3;
             vertex_index_map[vb] = b_new;
             vertices.push_back(vb.x);
             vertices.push_back(vb.y);
@@ -147,7 +160,7 @@ SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
             b_new = vertex_index_map[vb];
         }
         if (not vertex_index_map.contains(vc)) {
-            c_new = vertices.size();
+            c_new = vertices.size()/3;
             vertex_index_map[vc] = c_new;
             vertices.push_back(vc.x);
             vertices.push_back(vc.y);
@@ -157,9 +170,10 @@ SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
             c_new = vertex_index_map[vc];
         }
 
-        indices.push_back(a_new/3);
-        indices.push_back(b_new/3);
-        indices.push_back(c_new/3);
+        // Store the new triangle indices
+        indices.push_back(a_new);
+        indices.push_back(b_new);
+        indices.push_back(c_new);
     }
 }
 

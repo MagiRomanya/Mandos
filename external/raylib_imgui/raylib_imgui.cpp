@@ -43,7 +43,7 @@ void ImGui_initialize() {
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     // Set font
-    io.Fonts->AddFontFromFileTTF("img/fonts/iosevka-regular.ttc", 20);
+    io.Fonts->AddFontFromFileTTF("resources/fonts/iosevka-regular.ttc", 20);
 }
 
 void ImGuiBeginDrawing() {
