@@ -302,3 +302,11 @@ Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh) {
     UploadMesh(&mesh, false);
     return mesh;
 }
+
+void recenter_mesh(SimulationMesh& mesh, const Vec3& com) {
+    for (unsigned int i = 0; i < mesh.vertices.size() / 3; i++) {
+        mesh.vertices[3*i+0] -= com.x();
+        mesh.vertices[3*i+1] -= com.y();
+        mesh.vertices[3*i+2] -= com.z();
+    }
+}

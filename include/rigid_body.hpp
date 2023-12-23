@@ -2,18 +2,47 @@
 #define RIGID_BODY_H_
 
 #include <vector>
-
 #include "linear_algebra.hpp"
+
+/**
+ * Compute the inertia tensor as if the object is made out of mass particles in their vertices.
+ *
+ * @param rb_total_mass total mass of the object.
+ * @param vertices vector of the object's vertices.
+ */
 Mat3 compute_initial_inertia_tensor_PARTICLES(Scalar rb_total_mass, const std::vector<Scalar>& vertices);
 
+/**
+ * Compute the center of mass as if the object is made out of mass particles in their vertices.
+ *
+ * @param vertices vector of the object's vertices.
+ */
 Vec3 compute_COM_position_PARTICLES(const std::vector<Scalar>& vertices);
 
+/**
+ * Compute the center of mass as if the object was a 2D thin shell (a hollow object)
+ *
+ * @param indices, vertices vector of the object's indices and vertices.
+ */
 Vec3 compute_COM_position_SHELL(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices);
 
+/**
+ * Compute the center of mass as if the object was a 3D volume with uniform volume.
+ *
+ * @param indices, vertices vector of the object's indices and vertices.
+ */
 Vec3 compute_COM_position_UNIFORM_VOLUME(const std::vector<unsigned int>& indices, const std::vector<Scalar>& vertices);
 
+/**
+ * Computes the pure diagonal components of the inertia tensor.
+ */
 Vec3 compute_principal_moments_of_inertia(const Mat3& inertia_tensor);
 
+/**
+ * Computes the J inertia tensor.
+ *
+ * @param I principal moments of inertia.
+ */
 inline Mat3 compute_J_inertia_tensor(const Vec3& I) {
     Mat3 J = Mat3::Zero();
     J(1,1) = - I.x() + I.y() + I.z();
@@ -22,6 +51,11 @@ inline Mat3 compute_J_inertia_tensor(const Vec3& I) {
     return 0.5 * J;
 }
 
+/**
+ * Computes the J inertia tensor.
+ *
+ * @param inertia_tensor the regular inertia tensor.
+ */
 inline Mat3 compute_J_inertia_tensor(const Mat3& inertia_tensor) {
     const Vec3 I = compute_principal_moments_of_inertia(inertia_tensor);
     return compute_J_inertia_tensor(I);

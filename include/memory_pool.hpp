@@ -44,6 +44,8 @@ class MemoryPoolAllocator {
     public:
         MemoryPoolAllocator(MemoryPool& pool) : pool(pool) {}
 
+        using value_type = T;
+
         inline T* allocate(std::size_t n) {
             return static_cast<T*>(pool.allocate(n * sizeof(T)));
         }

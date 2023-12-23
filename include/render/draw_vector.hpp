@@ -1,10 +1,11 @@
 #ifndef DRAW_VECTOR_H__
 #define DRAW_VECTOR_H__
 
-#include "raylib.h"
-#include "linear_algebra.hpp"
-#include "utility_functions.hpp"
+#include <raylib.h>
 #include <iostream>
+
+#include "../linear_algebra.hpp"
+#include "../utility_functions.hpp"
 
 inline void DrawVector(Vec3 position, Vec3 vector, Color color, Scalar scale = 1) {
   const Vec3 v = (vector - position).normalized();
