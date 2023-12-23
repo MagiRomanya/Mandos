@@ -121,7 +121,7 @@ int main(void) {
         {
             viewer.begin_3D_mode();
             {
-                viewer.draw_rigid_body(rb1, state, RB_mesh);
+                viewer.draw_rigid_body(rb1, state, render_mesh);
                 viewer.draw_particle(p1, state);
                 viewer.draw_particle(p2, state);
                 viewer.draw_particle(p3, state);

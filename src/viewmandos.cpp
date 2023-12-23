@@ -47,16 +47,29 @@ void UnloadGPUMesh(const Mesh& mesh) {
 static Camera3D camera;
 
 static Model sphere_model;
+static Material base_material;
+static Shader base_shader;
 
 MandosViewer::MandosViewer() {
     InitWindow(initialScreenWidth, initialScreenHeight, "Mandos");
-    SetTraceLogLevel(TraceLogLevel::LOG_WARNING);
     camera = create_camera();
     sphere_model = LoadModelFromMesh(GenMeshSphere(0.1, 15, 15));
     SetTargetFPS(200);
+
+    // Load basic lighting shader
+    base_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/lighting.fs");
+    // Get some required shader locations
+    base_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(base_shader, "viewPos");
+    base_material = LoadMaterialDefault();
+    base_material.shader = base_shader;
+    sphere_model.materialCount = 1;
+    sphere_model.materials[0] = base_material;
+    SetTraceLogLevel(TraceLogLevel::LOG_WARNING);
 }
 
 MandosViewer::~MandosViewer() {
+    UnloadModel(sphere_model);
+    UnloadMaterial(base_material);
     CloseWindow();
 }
 
@@ -86,7 +99,12 @@ void MandosViewer::begin_ImGUI_mode() { begin_ImGUI_mode(); }
 
 void MandosViewer::end_ImGUI_mode() { end_ImGUI_mode(); }
 
-void MandosViewer::update_camera() { UpdateCamera(&camera, CAMERA_FREE); }
+void MandosViewer::update_camera() {
+    UpdateCamera(&camera, CAMERA_FREE);
+    // Update the shader with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
+    float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
+    SetShaderValue(base_shader, base_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
+}
 
 bool MandosViewer::is_key_pressed(int Key) { return IsKeyPressed(Key); }
 
@@ -98,7 +116,7 @@ void MandosViewer::draw_particle(const ParticleHandle& particle, const PhysicsSt
 void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const RenderMesh& mesh) {
     const Mesh raymesh = RenderMesh_to_RaylibMesh(mesh, mem_pool);
     const Matrix transformation = matrix_eigen_to_raylib(rb.get_transformation_matrix(state));
-    Material material = LoadMaterialDefault();
+    Material material = base_material;
     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
     DrawMesh(raymesh, material, transformation);
     UnloadGPUMesh(raymesh);
@@ -107,7 +125,7 @@ void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState
 void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const SimulationMesh& mesh) {
     const Mesh raymesh = SimulationMesh_to_RaylibMesh(mesh, mem_pool);
     const Matrix transformation = matrix_eigen_to_raylib(rb.get_transformation_matrix(state));
-    Material material = LoadMaterialDefault();
+    Material material = base_material;
     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
     DrawMesh(raymesh, material, transformation);
     UnloadGPUMesh(raymesh);
