@@ -17,7 +17,3 @@
 	path = external/pybind11
 	url = https://github.com/pybind/pybind11.git
 	branch = stable
-[submodule "external/polyscope"]
-	path = external/polyscope
-	url = https://github.com/nmwsharp/polyscope.git
-	branch = v1.3.0
