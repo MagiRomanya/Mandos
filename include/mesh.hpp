@@ -14,7 +14,7 @@ struct SimulationMesh;
 ** The normals and texture coordinates are also stored as vector of floats with sizes nVertices*3 and nVertices*2 respectivly.
  */
 struct RenderMesh {
-    RenderMesh();
+    RenderMesh() {};
     RenderMesh(std::string filename);
 
     void updateFromSimulationMesh(const SimulationMesh& sim_mesh);

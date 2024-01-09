@@ -29,7 +29,7 @@ int main(void) {
 
     const RigidBodyHandle rb1 = RigidBodyHandle(simulation, MASS, inertia_tensor)
         // .add_gravity(GRAVITY)
-        .set_initial_angluar_velocity(Vec3(0,0.01,0.1))
+        .set_initial_angular_velocity(Vec3(0,0.01,0.1))
         .set_COM_initial_position(Vec3(0,0,0))
         ;
 

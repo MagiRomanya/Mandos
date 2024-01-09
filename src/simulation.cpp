@@ -31,6 +31,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     // Energy and derivatives computation
     const unsigned int nDoF = simulation.initial_state.x.size();
     EnergyAndDerivatives f(0);
+
 #ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
     const unsigned int nConstraints = count_constraints(simulation.constraints);
     ConstraintsAndJacobians c(0);

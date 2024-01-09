@@ -1,7 +1,6 @@
 #include "memory_pool.hpp"
 #include "mesh.hpp"
 #include "raylib.h"
-#include "raymath.h"
 #include "raylib_imgui.hpp"
 #include "rlgl.h"
 #include "utility_functions.hpp"
@@ -169,7 +168,8 @@ void MandosViewer::begin_ImGUI_mode() { ImGuiBeginDrawing(); }
 void MandosViewer::end_ImGUI_mode() { ImGuiEndDrawing(); }
 
 void MandosViewer::update_camera() {
-    UpdateCamera(&camera, CAMERA_FREE);
+    // UpdateCamera(&camera, CAMERA_FREE);
+
     // Update the shader with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
     float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
     SetShaderValue(base_shader, base_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);

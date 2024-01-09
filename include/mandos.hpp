@@ -42,7 +42,7 @@ class RigidBodyHandle {
          *
          * @param omega The angular velocity given in axis angle notation
          */
-        RigidBodyHandle set_initial_angluar_velocity(Vec3 omega) const;
+        RigidBodyHandle set_initial_angular_velocity(Vec3 omega) const;
 
         /**
          * Make this Rigid Body affected by gravity
