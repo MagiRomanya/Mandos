@@ -6,7 +6,7 @@
 #include "utility_functions.hpp"
 #include "viewmandos.hpp"
 #include "render/simulation_visualization.hpp"
-
+#include <cstdlib>
 
 Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh, MemoryPool& pool) {
     std::vector<unsigned short> indices = std::vector<unsigned short>(sim_mesh.indices.begin(), sim_mesh.indices.end());
@@ -22,16 +22,74 @@ Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh, MemoryPool& po
 }
 
 Mesh RenderMesh_to_RaylibMesh(const RenderMesh& render_mesh, MemoryPool& pool) {
-    std::vector<unsigned short> indices = std::vector<unsigned short>(render_mesh.indices.begin(), render_mesh.indices.end());
     Mesh mesh = {0};
-    mesh.vertexCount = render_mesh.vertices.size() / 3;
-    mesh.triangleCount = indices.size() / 3;
+    mesh.vertexCount = render_mesh.vertices.size() / 3; // 3 coordinates per vertex
+    mesh.triangleCount = mesh.vertexCount / 3; // 3 vertices per triangle
     mesh.vertices = (float *)std::memcpy(pool.allocate(render_mesh.vertices.size() * sizeof(float)), render_mesh.vertices.data(), render_mesh.vertices.size() * sizeof(float));
     mesh.texcoords = (float *)std::memcpy(pool.allocate(render_mesh.texcoord.size() * sizeof(float)), render_mesh.texcoord.data(), render_mesh.texcoord.size() * sizeof(float));
     mesh.normals = (float *)std::memcpy(pool.allocate(render_mesh.normals.size() * sizeof(float)), render_mesh.normals.data(), render_mesh.normals.size() * sizeof(float));
-    mesh.indices = (unsigned short *)std::memcpy(pool.allocate(indices.size() * sizeof(unsigned short)), indices.data(), indices.size() * sizeof(unsigned short));
+    mesh.indices = NULL;
     UploadMesh(&mesh, false);
     return mesh;
+}
+
+MeshGPU::MeshGPU(const RenderMesh& mesh) {
+    // Allocate resources
+    vertices = (float*) calloc(sizeof(float), mesh.vertices.size());
+    texcoords = (float*) calloc(sizeof(float), mesh.texcoord.size());
+    normals = (float*) calloc(sizeof(float), mesh.normals.size());
+
+    // Copy the data
+    nVertices = mesh.vertices.size() / 3;
+    vertices = (float *) std::memcpy(vertices, mesh.vertices.data(), mesh.vertices.size()*sizeof(float));
+    texcoords = (float *) std::memcpy(texcoords, mesh.texcoord.data(), mesh.texcoord.size()*sizeof(float));
+    normals = (float *) std::memcpy(normals, mesh.normals.data(), mesh.normals.size()*sizeof(float));
+    if (!vertices) std::cerr << "MeshGPU::MeshGPU: vertices null" << std::endl;
+    if (!texcoords) std::cerr << "MeshGPU::MeshGPU: texcoord null" << std::endl;
+    if (!normals) std::cerr << "MeshGPU::MeshGPU: normals null" << std::endl;
+
+    // Uload the mesh to GPU
+    Mesh raymesh = {0};
+    raymesh.vertexCount = mesh.vertices.size() / 3; // 3 coordinates per vertex
+    raymesh.triangleCount = raymesh.vertexCount / 3; // 3 vertices per triangle
+    raymesh.vertices = vertices;
+    raymesh.texcoords = texcoords;
+    raymesh.normals = normals;
+    UploadMesh(&raymesh, true);
+    verticesVBO = raymesh.vboId[0];
+    texcoordsVBO = raymesh.vboId[1];
+    normalsVBO = raymesh.vboId[2];
+    VAO = raymesh.vaoId;
+    RL_FREE(raymesh.vboId);
+}
+
+MeshGPU::~MeshGPU() {
+    free(vertices);
+    free(texcoords);
+    free(normals);
+
+    // Unload the mesh buffers
+    rlUnloadVertexArray(VAO);
+    rlUnloadVertexBuffer(verticesVBO);
+    rlUnloadVertexBuffer(texcoordsVBO);
+    rlUnloadVertexBuffer(normalsVBO);
+}
+
+Mesh MeshGPUtoRaymesh(const MeshGPU& mesh, MemoryPool& pool) {
+    Mesh raymesh = {0};
+    raymesh.vertexCount = mesh.nVertices;
+    raymesh.triangleCount = raymesh.vertexCount / 3; // 3 vertices per triangle
+    raymesh.vertices = mesh.vertices;
+    raymesh.texcoords = mesh.texcoords;
+    raymesh.normals = mesh.normals;
+    // Copy the vaos
+    raymesh.vaoId = mesh.VAO;
+    raymesh.vboId = (unsigned int*) pool.allocate(sizeof(unsigned int) * 3);
+    raymesh.vboId[0] = mesh.verticesVBO;
+    raymesh.vboId[1] = mesh.texcoordsVBO;
+    raymesh.vboId[2] = mesh.normalsVBO;
+
+    return raymesh;
 }
 
 void UnloadGPUMesh(const Mesh& mesh) {
@@ -42,6 +100,7 @@ void UnloadGPUMesh(const Mesh& mesh) {
     #define MAX_MESH_VERTEX_BUFFERS 7
     if (mesh.vboId != NULL) for (int i = 0; i < MAX_MESH_VERTEX_BUFFERS; i++) rlUnloadVertexBuffer(mesh.vboId[i]);
     RL_FREE(mesh.vboId);
+    #undef MAX_MESH_VERTEX_BUFFERS
 }
 
 static Camera3D camera;
@@ -64,12 +123,12 @@ MandosViewer::MandosViewer() {
     base_material.shader = base_shader;
     sphere_model.materialCount = 1;
     sphere_model.materials[0] = base_material;
-    SetTraceLogLevel(TraceLogLevel::LOG_WARNING);
+    // SetTraceLogLevel(TraceLogLevel::LOG_WARNING);
 }
 
 MandosViewer::~MandosViewer() {
     UnloadModel(sphere_model);
-    UnloadMaterial(base_material);
+    UnloadShader(base_shader);
     CloseWindow();
 }
 
@@ -113,48 +172,64 @@ void MandosViewer::draw_particle(const ParticleHandle& particle, const PhysicsSt
     DrawModel(sphere_model, vector3_eigen_to_raylib(position), 1, DARKPURPLE);
 }
 
-void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const RenderMesh& mesh) {
-    const Mesh raymesh = RenderMesh_to_RaylibMesh(mesh, mem_pool);
-    const Matrix transformation = matrix_eigen_to_raylib(rb.get_transformation_matrix(state));
+
+void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh) {
+    const Matrix transform = matrix_eigen_to_raylib(rb.get_transformation_matrix(state));
     Material material = base_material;
     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-    DrawMesh(raymesh, material, transformation);
-    UnloadGPUMesh(raymesh);
+    Mesh raymesh = MeshGPUtoRaymesh(mesh, mem_pool);
+    DrawMesh(raymesh, material, transform);
 }
 
-void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const SimulationMesh& mesh) {
-    const Mesh raymesh = SimulationMesh_to_RaylibMesh(mesh, mem_pool);
-    const Matrix transformation = matrix_eigen_to_raylib(rb.get_transformation_matrix(state));
+void MandosViewer::draw_mesh(const Mat4& transform, const MeshGPU& mesh) {
     Material material = base_material;
     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-    DrawMesh(raymesh, material, transformation);
-    UnloadGPUMesh(raymesh);
-}
-
-void MandosViewer::draw_mesh(const Mat4& transform, const SimulationMesh& mesh) {
-    const Mesh raymesh = SimulationMesh_to_RaylibMesh(mesh, mem_pool);
-    Material material = LoadMaterialDefault();
-    material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
+    Mesh raymesh = MeshGPUtoRaymesh(mesh, mem_pool);
     DrawMesh(raymesh, material, matrix_eigen_to_raylib(transform));
-    UnloadGPUMesh(raymesh);
 }
 
-void MandosViewer::draw_mesh(const Mat4& transform, const RenderMesh& mesh) {
-    const Mesh raymesh = RenderMesh_to_RaylibMesh(mesh, mem_pool);
-    Material material = LoadMaterialDefault();
-    material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-    DrawMesh(raymesh, material, matrix_eigen_to_raylib(transform));
-    UnloadGPUMesh(raymesh);
-}
+// void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const RenderMesh& mesh) {
+//     const Mesh raymesh = RenderMesh_to_RaylibMesh(mesh, mem_pool);
+//     const Matrix transformation = matrix_eigen_to_raylib(rb.get_transformation_matrix(state));
+//     Material material = base_material;
+//     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
+//     DrawMesh(raymesh, material, transformation);
+//     UnloadGPUMesh(raymesh);
+// }
 
-void MandosViewer::draw_mesh(SimulableBounds& bounds, const PhysicsState& state, const SimulationMesh& mesh) {
-    static_assert(std::is_same<Scalar, float>::value, "We need scalars to be floats in this implementation.");
-    Mesh raymesh = SimulationMesh_to_RaylibMesh(mesh, mem_pool);
-    const void* vertices_start = (void*)(state.x.data() + bounds.dof_index);
-    memcpy(raymesh.vertices, vertices_start, sizeof(float)*bounds.nDoF);
+// void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const SimulationMesh& mesh) {
+//     const Mesh raymesh = SimulationMesh_to_RaylibMesh(mesh, mem_pool);
+//     const Matrix transformation = matrix_eigen_to_raylib(rb.get_transformation_matrix(state));
+//     Material material = base_material;
+//     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
+//     DrawMesh(raymesh, material, transformation);
+//     UnloadGPUMesh(raymesh);
+// }
 
-    Material material = LoadMaterialDefault();
-    material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-    DrawMesh(raymesh, material, MatrixIdentity());
-    UnloadGPUMesh(raymesh);
-}
+// void MandosViewer::draw_mesh(const Mat4& transform, const SimulationMesh& mesh) {
+//     const Mesh raymesh = SimulationMesh_to_RaylibMesh(mesh, mem_pool);
+//     Material material = LoadMaterialDefault();
+//     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
+//     DrawMesh(raymesh, material, matrix_eigen_to_raylib(transform));
+//     UnloadGPUMesh(raymesh);
+// }
+
+// void MandosViewer::draw_mesh(const Mat4& transform, const RenderMesh& mesh) {
+//     const Mesh raymesh = RenderMesh_to_RaylibMesh(mesh, mem_pool);
+//     Material material = LoadMaterialDefault();
+//     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
+//     DrawMesh(raymesh, material, matrix_eigen_to_raylib(transform));
+//     UnloadGPUMesh(raymesh);
+// }
+
+// void MandosViewer::draw_mesh(SimulableBounds& bounds, const PhysicsState& state, const SimulationMesh& mesh) {
+//     static_assert(std::is_same<Scalar, float>::value, "We need scalars to be floats in this implementation.");
+//     Mesh raymesh = SimulationMesh_to_RaylibMesh(mesh, mem_pool);
+//     const void* vertices_start = (void*)(state.x.data() + bounds.dof_index);
+//     memcpy(raymesh.vertices, vertices_start, sizeof(float)*bounds.nDoF);
+
+//     Material material = LoadMaterialDefault();
+//     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
+//     DrawMesh(raymesh, material, MatrixIdentity());
+//     UnloadGPUMesh(raymesh);
+// }

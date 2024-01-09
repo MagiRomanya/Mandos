@@ -24,11 +24,6 @@ struct SimulationMesh {
     std::vector<unsigned int> indices; // index % 3 != 0
 };
 
-struct SimulationRenderMesh {
-    SimulationMesh simulation_mesh;
-    RenderMesh render_mesh;
-};
-
 /**
  * Load an obj file to a vector of vertices and a vector of indices.
  *

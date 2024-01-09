@@ -6,7 +6,7 @@
 #include "physics_state.hpp"
 #include "memory_pool.hpp"
 
-typedef enum {
+enum KeyboardKeys {
     Key_NULL            = 0,        // Key: NULL, used for no key pressed
     // Alphanumeric keys
     Key_APOSTROPHE      = 39,       // Key: '
@@ -116,15 +116,18 @@ typedef enum {
     Key_KP_ADD          = 334,      // Key: Keypad +
     Key_KP_ENTER        = 335,      // Key: Keypad Enter
     Key_KP_EQUAL        = 336,      // Key: Keypad =
-    // Android key buttons
-    Key_BACK            = 4,        // Key: Android back button
-    Key_MENU            = 82,       // Key: Android menu button
-    Key_VOLUME_UP       = 24,       // Key: Android volume up button
-    Key_VOLUME_DOWN     = 25        // Key: Android volume down button
-} KeyboardKeys;
+};
+
+struct MeshGPU {
+    MeshGPU(const RenderMesh& mesh);
+    ~MeshGPU();
+
+    int nVertices;
+    unsigned int verticesVBO, texcoordsVBO, normalsVBO, VAO;
+    float *vertices, *texcoords, *normals;
+};
 
 struct MandosViewer {
-
     const int initialScreenWidth = 1600;
     const int initialScreenHeight = 900;
     MemoryPool mem_pool = MemoryPool(1e6*sizeof(float));
@@ -152,15 +155,19 @@ struct MandosViewer {
 
     void draw_particle(const ParticleHandle& particle, const PhysicsState& state);
 
-    void draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const RenderMesh& mesh);
+    void draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh);
 
-    void draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const SimulationMesh& mesh);
+    void draw_mesh(const Mat4& transform, const MeshGPU& mesh);
 
-    void draw_mesh(const Mat4& transform, const SimulationMesh& mesh);
+    // void draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const RenderMesh& mesh);
 
-    void draw_mesh(const Mat4& transform, const RenderMesh& mesh);
+    // void draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const SimulationMesh& mesh);
 
-    void draw_mesh(SimulableBounds& bounds, const PhysicsState& state, const SimulationMesh& mesh);
+    // void draw_mesh(const Mat4& transform, const SimulationMesh& mesh);
+
+    // void draw_mesh(const Mat4& transform, const RenderMesh& mesh);
+
+    // void draw_mesh(SimulableBounds& bounds, const PhysicsState& state, const SimulationMesh& mesh);
 };
 
 #endif // VIEWMANDOS_H_

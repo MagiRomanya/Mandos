@@ -80,20 +80,9 @@ int main(void) {
 
     // Render Initialization
     //--------------------------------------------------------------------------------------
-
-    // Material material1 = LoadMaterialDefault();
-    // material1.maps[MATERIAL_MAP_DIFFUSE].color = RED;
-    // Material material2 = LoadMaterialDefault();
-    // Texture2D texture = LoadTexture("resources/textures/mass-spring.png");
-    // SetMaterialTexture(&material2, MATERIAL_MAP_DIFFUSE, texture);
-
-    // // material2.maps[MATERIAL_MAP_DIFFUSE].color = GREEN;
-    // Material material3 = LoadMaterialDefault();
-    // material3.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-
-    // Mesh raylib_mesh = SimulationMesh_to_RaylibMesh(RB_mesh);
-
     MandosViewer viewer = MandosViewer();
+    MeshGPU meshGPU = MeshGPU(render_mesh);
+
     while (!viewer.window_should_close())    // Detect window close button or ESC key
     {
         // Update
@@ -121,7 +110,7 @@ int main(void) {
         {
             viewer.begin_3D_mode();
             {
-                viewer.draw_rigid_body(rb1, state, render_mesh);
+                viewer.draw_rigid_body(rb1, state, meshGPU);
                 viewer.draw_particle(p1, state);
                 viewer.draw_particle(p2, state);
                 viewer.draw_particle(p3, state);

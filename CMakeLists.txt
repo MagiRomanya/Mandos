@@ -33,6 +33,9 @@ file(GLOB EDITOR_SOURCE_FILES
   src/editor/*.cpp
 )
 
+set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_BUILD_TYPE Release)
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/eigen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/)
@@ -40,8 +43,6 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON) # Necessary for pybind11 dynamic lib
-set(CMAKE_BUILD_TYPE Debug)
-# set(CMAKE_BUILD_TYPE Release)
 
 add_library(libmandos STATIC ${SOURCE_FILES})
 set_target_properties(libmandos PROPERTIES OUTPUT_NAME mandos)
