@@ -24,6 +24,12 @@ struct Copulings {
         compute_dof_index_to_copuling();
     }
 
+    inline void add_copuling(ParticleRigidBodyCopuling copuling) {
+        copulings.push_back(copuling);
+        compute_rigid_body_index_conversion();
+        compute_dof_index_to_copuling();
+    }
+
     std::vector<ParticleRigidBodyCopuling> copulings;
 
     // Rigid body index (full dof state) --> Rigid body index (copuled dofs state)

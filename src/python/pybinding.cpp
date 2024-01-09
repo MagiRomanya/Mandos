@@ -56,6 +56,10 @@ PYBIND11_MODULE(pymandos, m) {
 
     m.def("compute_COM_position_PARTICLES", &compute_COM_position_PARTICLES);
 
+    m.def("join_rigid_body_with_particle", &join_rigid_body_with_particle);
+
+    m.def("join_particles_with_spring", &join_particles_with_spring);
+
     py::class_<RigidBodyHandle>(m, "RigidBody")
         .def(py::init<Simulation&, Scalar, std::vector<Scalar>>())
         .def(py::init<Simulation&, Scalar, Mat3>())
@@ -86,8 +90,6 @@ PYBIND11_MODULE(pymandos, m) {
         .def("freeze", &ParticleHandle::freeze)
         .def("get_position", &ParticleHandle::get_position)
         ;
-
-    m.def("join_particles_with_spring", &join_particles_with_spring);
 
     py::class_<FEMHandle>(m, "FEM")
         .def(py::init<Simulation&, const std::vector<Scalar>, const std::vector<unsigned int>, Scalar, Scalar, Scalar>())

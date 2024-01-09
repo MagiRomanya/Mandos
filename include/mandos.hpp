@@ -85,7 +85,6 @@ class RigidBodyHandle {
 void join_rigid_bodies(Simulation& simulation, RigidBodyHandle rbA, Vec3 pA, RigidBodyHandle rbB, Vec3 pB);
 #endif //ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
 
-
 class MassSpringHandle {
     public:
         MassSpringHandle(Simulation& simulation,
@@ -132,6 +131,8 @@ class ParticleHandle {
 };
 
 void join_particles_with_spring(Simulation& simulation, const ParticleHandle& p1, const ParticleHandle& p2, Scalar k, Scalar damping);
+
+void join_rigid_body_with_particle(Simulation& sim, RigidBodyHandle rbA, ParticleHandle p);
 
 class FEMHandle {
     public:

@@ -1,5 +1,6 @@
 #include "mandos.hpp"
 #include "gravity.hpp"
+#include "particle_rigid_body_copuling.hpp"
 #include "spring.hpp"
 
 RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const std::vector<Scalar> vertices)
@@ -205,4 +206,10 @@ FEMHandle FEMHandle::freeze_particles(const std::vector<unsigned int>& particle_
         simulation.frozen_dof.push_back(p.index+2);
     }
     return *this;
+}
+
+
+void join_rigid_body_with_particle(Simulation& sim, RigidBodyHandle rb, ParticleHandle p) {
+    ParticleRigidBodyCopuling copuling = ParticleRigidBodyCopuling(rb.rb, p.particle, p.particle.get_position(sim.initial_state.x));
+    sim.copulings.add_copuling(copuling);
 }
