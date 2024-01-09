@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstddef>
 #include <limits>
 #include <string>
@@ -123,11 +124,11 @@ namespace std {
 SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
     std::unordered_map<h_vec3, unsigned int> vertex_index_map; // Maps the vertex to the new simulation mesh index
 
-    for (unsigned int i = 0; i < render_mesh.indices.size()/3; i++) {
+    for (unsigned int i = 0; i < render_mesh.vertices.size()/9; i++) {
         // Get the triangle vertices
-        const unsigned int a = 3*render_mesh.indices[3*i+0];
-        const unsigned int b = 3*render_mesh.indices[3*i+1];
-        const unsigned int c = 3*render_mesh.indices[3*i+2];
+        const unsigned int a = 9*i + 0;
+        const unsigned int b = 9*i + 3;
+        const unsigned int c = 9*i + 6;
         const h_vec3 va = h_vec3(render_mesh.vertices[a], render_mesh.vertices[a+1], render_mesh.vertices[a+2]);
         const h_vec3 vb = h_vec3(render_mesh.vertices[b], render_mesh.vertices[b+1], render_mesh.vertices[b+2]);
         const h_vec3 vc = h_vec3(render_mesh.vertices[c], render_mesh.vertices[c+1], render_mesh.vertices[c+2]);
@@ -199,7 +200,6 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile,
 
     auto &attrib = reader.GetAttrib();
     auto &shapes = reader.GetShapes();
-    auto &materials = reader.GetMaterials();
 
     // Loop over shapes
     for (size_t s = 0; s < shapes.size(); s++) {
@@ -254,6 +254,7 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile,
 }
 
 RenderMesh::RenderMesh(std::string filename) {
+    std::vector<unsigned int> indices;
     LoadVerticesAndIndicesTinyOBJ(filename, vertices, indices, normals, texcoord);
 }
 
@@ -284,24 +285,24 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& ou
     }
 }
 
-Mesh RenderMesh_to_RaylibMesh(const RenderMesh& render_mesh) {
-    std::vector<unsigned short> indices = std::vector<unsigned short>(render_mesh.indices.begin(), render_mesh.indices.end());
-    return LoadMeshFromVectors(indices, render_mesh.vertices, render_mesh.normals, render_mesh.texcoord);
-}
+// Mesh RenderMesh_to_RaylibMesh(const RenderMesh& render_mesh) {
+//     std::vector<unsigned short> indices = std::vector<unsigned short>(render_mesh.indices.begin(), render_mesh.indices.end());
+//     return LoadMeshFromVectors(indices, render_mesh.vertices, render_mesh.normals, render_mesh.texcoord);
+// }
 
 
-Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh) {
-    std::vector<unsigned short> indices = std::vector<unsigned short>(sim_mesh.indices.begin(), sim_mesh.indices.end());
-    Mesh mesh = {0};
-    mesh.vertexCount = sim_mesh.vertices.size() / 3;
-    mesh.triangleCount = indices.size() / 3;
-    mesh.vertices = (float *)std::memcpy(RL_MALLOC(sim_mesh.vertices.size() * sizeof(float)), sim_mesh.vertices.data(), sim_mesh.vertices.size() * sizeof(float));
-    mesh.texcoords = NULL;
-    mesh.normals = NULL;
-    mesh.indices = (unsigned short *)std::memcpy(RL_MALLOC(indices.size() * sizeof(unsigned short)), indices.data(), indices.size() * sizeof(unsigned short));
-    UploadMesh(&mesh, false);
-    return mesh;
-}
+// Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh) {
+//     std::vector<unsigned short> indices = std::vector<unsigned short>(sim_mesh.indices.begin(), sim_mesh.indices.end());
+//     Mesh mesh = {0};
+//     mesh.vertexCount = sim_mesh.vertices.size() / 3;
+//     mesh.triangleCount = indices.size() / 3;
+//     mesh.vertices = (float *)std::memcpy(RL_MALLOC(sim_mesh.vertices.size() * sizeof(float)), sim_mesh.vertices.data(), sim_mesh.vertices.size() * sizeof(float));
+//     mesh.texcoords = NULL;
+//     mesh.normals = NULL;
+//     mesh.indices = (unsigned short *)std::memcpy(RL_MALLOC(indices.size() * sizeof(unsigned short)), indices.data(), indices.size() * sizeof(unsigned short));
+//     UploadMesh(&mesh, false);
+//     return mesh;
+// }
 
 void recenter_mesh(SimulationMesh& mesh, const Vec3& com) {
     for (unsigned int i = 0; i < mesh.vertices.size() / 3; i++) {
@@ -309,4 +310,33 @@ void recenter_mesh(SimulationMesh& mesh, const Vec3& com) {
         mesh.vertices[3*i+1] -= com.y();
         mesh.vertices[3*i+2] -= com.z();
     }
+}
+
+void RenderMesh::updateFromSimulationMesh(const SimulationMesh& sim_mesh) {
+    // The number of triangles of both meshes must be the same
+    assert(sim_mesh.indices.size() / 3 == vertices.size() / 9);
+
+    for (unsigned int i = 0; i < sim_mesh.indices.size() / 3; i++) { // Iterate triangles
+        // each triangle has 3 vertices -> 9 coordinates
+        const Vec3 x1 = Vec3(sim_mesh.vertices[3*sim_mesh.indices[3*i+0] + 0], sim_mesh.vertices[3*sim_mesh.indices[3*i+0] + 1] , sim_mesh.vertices[3*sim_mesh.indices[3*i+0] + 2]);
+        const Vec3 x2 = Vec3(sim_mesh.vertices[3*sim_mesh.indices[3*i+1] + 0], sim_mesh.vertices[3*sim_mesh.indices[3*i+1] + 1] , sim_mesh.vertices[3*sim_mesh.indices[3*i+1] + 2]);
+        const Vec3 x3 = Vec3(sim_mesh.vertices[3*sim_mesh.indices[3*i+2] + 0], sim_mesh.vertices[3*sim_mesh.indices[3*i+2] + 1] , sim_mesh.vertices[3*sim_mesh.indices[3*i+2] + 2]);
+        const Vec3 x21 = (x2 - x1).normalized();
+        const Vec3 x31 = (x3 - x1).normalized();
+        const Vec3 normal = skew(x21) * x31;
+        for (unsigned int j = 0; j < 3; j++) {
+            unsigned int index = 3*sim_mesh.indices[3*i+j];
+            // Update the vertices
+            vertices[9*i + 3*j + 0] = sim_mesh.vertices[index + 0]; // x
+            vertices[9*i + 3*j + 1] = sim_mesh.vertices[index + 1]; // y
+            vertices[9*i + 3*j + 2] = sim_mesh.vertices[index + 2]; // z
+
+            // Update the normals
+            normals[9*i + 3*j + 0] = normal.x();
+            normals[9*i + 3*j + 1] = normal.y();
+            normals[9*i + 3*j + 2] = normal.z();
+        }
+
+    }
+
 }

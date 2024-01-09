@@ -5,23 +5,38 @@
 #include "edge.hpp"
 #include "linear_algebra.hpp"
 
+struct SimulationMesh;
+
+/*
+** Mesh description with repeated vertices, along with normals and texture coordinates.
+**
+** The vertices are stored as a vector of floats. The vector has size nVertices * 3. The number of triangles is nVertices / 3.
+** The normals and texture coordinates are also stored as vector of floats with sizes nVertices*3 and nVertices*2 respectivly.
+ */
 struct RenderMesh {
     RenderMesh();
     RenderMesh(std::string filename);
 
+    void updateFromSimulationMesh(const SimulationMesh& sim_mesh);
+
     std::vector<float> vertices;
     std::vector<float> normals;
     std::vector<float> texcoord;
-    std::vector<unsigned int> indices; // index % 3 != 0
 };
 
+/*
+** Mesh description with no repeated vertices.
+**
+** The vertices are stored as a vector of floats. The vector has size nVertices * 3.
+** The indices are stored as a vector of unsigned integers. The vector has size nTriangles * 3.
+ */
 struct SimulationMesh {
     SimulationMesh() {};
     SimulationMesh(std::string filename);
     SimulationMesh(const RenderMesh& render_mesh);
 
     std::vector<Scalar> vertices;
-    std::vector<unsigned int> indices; // index % 3 != 0
+    std::vector<unsigned int> indices;
 };
 
 /**

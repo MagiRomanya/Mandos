@@ -121,7 +121,7 @@ enum KeyboardKeys {
 struct MeshGPU {
     MeshGPU(const RenderMesh& mesh);
     ~MeshGPU();
-
+    void updateData(const RenderMesh& mesh);
     int nVertices;
     unsigned int verticesVBO, texcoordsVBO, normalsVBO, VAO;
     float *vertices, *texcoords, *normals;
@@ -158,16 +158,6 @@ struct MandosViewer {
     void draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh);
 
     void draw_mesh(const Mat4& transform, const MeshGPU& mesh);
-
-    // void draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const RenderMesh& mesh);
-
-    // void draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const SimulationMesh& mesh);
-
-    // void draw_mesh(const Mat4& transform, const SimulationMesh& mesh);
-
-    // void draw_mesh(const Mat4& transform, const RenderMesh& mesh);
-
-    // void draw_mesh(SimulableBounds& bounds, const PhysicsState& state, const SimulationMesh& mesh);
 };
 
 #endif // VIEWMANDOS_H_

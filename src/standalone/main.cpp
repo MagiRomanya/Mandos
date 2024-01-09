@@ -81,6 +81,7 @@ int main(void) {
     // Render Initialization
     //--------------------------------------------------------------------------------------
     MandosViewer viewer = MandosViewer();
+    render_mesh.updateFromSimulationMesh(RB_mesh);
     MeshGPU meshGPU = MeshGPU(render_mesh);
 
     while (!viewer.window_should_close())    // Detect window close button or ESC key

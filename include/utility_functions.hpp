@@ -5,9 +5,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
-
 #include "linear_algebra.hpp"
-#include "mesh.hpp"
 
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
@@ -40,10 +38,6 @@ Scalar compute_tetrahedron_volume(const Vec3& AB, const Vec3& AC, const Vec3& AD
 Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta);
 
 Mesh LoadMeshTinyOBJ(std::string inputfile);
-
-Mesh RenderMesh_to_RaylibMesh(const RenderMesh& render_mesh);
-
-Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh);
 
 inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
     Matrix r = {

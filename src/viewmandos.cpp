@@ -2,6 +2,7 @@
 #include "mesh.hpp"
 #include "raylib.h"
 #include "raymath.h"
+#include "raylib_imgui.hpp"
 #include "rlgl.h"
 #include "utility_functions.hpp"
 #include "viewmandos.hpp"
@@ -63,6 +64,13 @@ MeshGPU::MeshGPU(const RenderMesh& mesh) {
     RL_FREE(raymesh.vboId);
 }
 
+void MeshGPU::updateData(const RenderMesh& mesh) {
+    vertices = (float*) std::memcpy(vertices, mesh.vertices.data(), mesh.vertices.size()*sizeof(float));
+    normals = (float*) std::memcpy(normals, mesh.normals.data(), mesh.normals.size()*sizeof(float));
+    rlUpdateVertexBuffer(verticesVBO, vertices, mesh.vertices.size() * sizeof(float), 0);
+    rlUpdateVertexBuffer(normalsVBO, normals, mesh.normals.size() * sizeof(float), 0);
+}
+
 MeshGPU::~MeshGPU() {
     free(vertices);
     free(texcoords);
@@ -105,6 +113,7 @@ void UnloadGPUMesh(const Mesh& mesh) {
 
 static Camera3D camera;
 
+#define SPHERE_SUBDIVISIONS 30
 static Model sphere_model;
 static Material base_material;
 static Shader base_shader;
@@ -112,7 +121,7 @@ static Shader base_shader;
 MandosViewer::MandosViewer() {
     InitWindow(initialScreenWidth, initialScreenHeight, "Mandos");
     camera = create_camera();
-    sphere_model = LoadModelFromMesh(GenMeshSphere(0.1, 15, 15));
+    sphere_model = LoadModelFromMesh(GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS));
     SetTargetFPS(200);
 
     // Load basic lighting shader
@@ -154,9 +163,10 @@ void MandosViewer::begin_3D_mode() {
 
 void MandosViewer::end_3D_mode() { EndMode3D(); }
 
-void MandosViewer::begin_ImGUI_mode() { begin_ImGUI_mode(); }
 
-void MandosViewer::end_ImGUI_mode() { end_ImGUI_mode(); }
+void MandosViewer::begin_ImGUI_mode() { ImGuiBeginDrawing(); }
+
+void MandosViewer::end_ImGUI_mode() { ImGuiEndDrawing(); }
 
 void MandosViewer::update_camera() {
     UpdateCamera(&camera, CAMERA_FREE);
@@ -172,13 +182,8 @@ void MandosViewer::draw_particle(const ParticleHandle& particle, const PhysicsSt
     DrawModel(sphere_model, vector3_eigen_to_raylib(position), 1, DARKPURPLE);
 }
 
-
 void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh) {
-    const Matrix transform = matrix_eigen_to_raylib(rb.get_transformation_matrix(state));
-    Material material = base_material;
-    material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-    Mesh raymesh = MeshGPUtoRaymesh(mesh, mem_pool);
-    DrawMesh(raymesh, material, transform);
+    this->draw_mesh(rb.get_transformation_matrix(state), mesh);
 }
 
 void MandosViewer::draw_mesh(const Mat4& transform, const MeshGPU& mesh) {
@@ -187,49 +192,3 @@ void MandosViewer::draw_mesh(const Mat4& transform, const MeshGPU& mesh) {
     Mesh raymesh = MeshGPUtoRaymesh(mesh, mem_pool);
     DrawMesh(raymesh, material, matrix_eigen_to_raylib(transform));
 }
-
-// void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const RenderMesh& mesh) {
-//     const Mesh raymesh = RenderMesh_to_RaylibMesh(mesh, mem_pool);
-//     const Matrix transformation = matrix_eigen_to_raylib(rb.get_transformation_matrix(state));
-//     Material material = base_material;
-//     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-//     DrawMesh(raymesh, material, transformation);
-//     UnloadGPUMesh(raymesh);
-// }
-
-// void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const SimulationMesh& mesh) {
-//     const Mesh raymesh = SimulationMesh_to_RaylibMesh(mesh, mem_pool);
-//     const Matrix transformation = matrix_eigen_to_raylib(rb.get_transformation_matrix(state));
-//     Material material = base_material;
-//     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-//     DrawMesh(raymesh, material, transformation);
-//     UnloadGPUMesh(raymesh);
-// }
-
-// void MandosViewer::draw_mesh(const Mat4& transform, const SimulationMesh& mesh) {
-//     const Mesh raymesh = SimulationMesh_to_RaylibMesh(mesh, mem_pool);
-//     Material material = LoadMaterialDefault();
-//     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-//     DrawMesh(raymesh, material, matrix_eigen_to_raylib(transform));
-//     UnloadGPUMesh(raymesh);
-// }
-
-// void MandosViewer::draw_mesh(const Mat4& transform, const RenderMesh& mesh) {
-//     const Mesh raymesh = RenderMesh_to_RaylibMesh(mesh, mem_pool);
-//     Material material = LoadMaterialDefault();
-//     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-//     DrawMesh(raymesh, material, matrix_eigen_to_raylib(transform));
-//     UnloadGPUMesh(raymesh);
-// }
-
-// void MandosViewer::draw_mesh(SimulableBounds& bounds, const PhysicsState& state, const SimulationMesh& mesh) {
-//     static_assert(std::is_same<Scalar, float>::value, "We need scalars to be floats in this implementation.");
-//     Mesh raymesh = SimulationMesh_to_RaylibMesh(mesh, mem_pool);
-//     const void* vertices_start = (void*)(state.x.data() + bounds.dof_index);
-//     memcpy(raymesh.vertices, vertices_start, sizeof(float)*bounds.nDoF);
-
-//     Material material = LoadMaterialDefault();
-//     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-//     DrawMesh(raymesh, material, MatrixIdentity());
-//     UnloadGPUMesh(raymesh);
-// }

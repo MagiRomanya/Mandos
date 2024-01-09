@@ -5,7 +5,6 @@
 #include <Eigen/Dense>
 #include <cmath>
 
-#include "physics_state.hpp"
 #include "rigid_body.hpp"
 #include "linear_algebra.hpp"
 #include "utility_functions.hpp"
