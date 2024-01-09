@@ -43,7 +43,7 @@ RigidBodyHandle RigidBodyHandle::set_COM_initial_velocity(Vec3 vel) const {
 }
 
 RigidBodyHandle RigidBodyHandle::set_initial_angluar_velocity(Vec3 omega) const {
-    set_angular_velocity(simulation.initial_state, simulation.TimeStep, rb.index, omega);
+    set_angular_velocity(simulation.initial_state, simulation.TimeStep, rb.index+3, omega);
     return *this;
 }
 
