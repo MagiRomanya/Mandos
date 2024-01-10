@@ -1,8 +1,6 @@
 #include <vector>
 #include <tetgen.h>
 
-#include "utility_functions.hpp"
-
 void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices,
                                  std::vector<unsigned int>& out_tetrahedron_indices, std::vector<float>& out_tetrahedron_vertices) {
 
@@ -34,7 +32,7 @@ void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indic
         facet->numberofholes = 0;
         facet->holelist = nullptr;
 
-        polygon = &facet->polygonlist[0];
+        polygon = &facet->polygonlist[0]; // The triangle in the facet
         polygon->numberofvertices = 3; // The polygon is a triangle
         polygon->vertexlist = new int[polygon->numberofvertices];
         polygon->vertexlist[0] = triangle_indices[3*i+0];

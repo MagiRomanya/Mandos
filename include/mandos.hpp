@@ -145,6 +145,8 @@ class FEMHandle {
 
         FEMHandle freeze_particles(const std::vector<unsigned int>& particle_indices) const;
 
+        FEMHandle add_gravity(Scalar gravity) const;
+
         inline unsigned int get_n_particles() const { return bounds.n_particles; }
 
 

@@ -46,7 +46,7 @@ void main()
 
     light.enabled = 1;
     light.type = LIGHT_POINT;
-    light.position = vec3(1, 3, 0);
+    light.position = vec3(2, 6, 0);
     light.target = vec3(0, 0, 0);
     light.color = vec4(1.0); // white light
 

@@ -23,6 +23,9 @@ PYBIND11_MODULE(pymandos, m) {
         .def(py::init())
         .def_readonly("x", &PhysicsState::x)
         .def_readonly("x_old", &PhysicsState::x_old)
+        .def("copy",  [](const PhysicsState &self) {
+            return PhysicsState(self);
+        })
         ;
 
     py::class_<EnergyAndDerivatives>(m, "EnergyAndDerivatives")
@@ -60,6 +63,8 @@ PYBIND11_MODULE(pymandos, m) {
 
     m.def("join_particles_with_spring", &join_particles_with_spring);
 
+    m.def("compute_tetrahedrons", &tetgen_compute_tetrahedrons);
+
     py::class_<RigidBodyHandle>(m, "RigidBody")
         .def(py::init<Simulation&, Scalar, std::vector<Scalar>>())
         .def(py::init<Simulation&, Scalar, Mat3>())
@@ -96,6 +101,7 @@ PYBIND11_MODULE(pymandos, m) {
         .def("compute_center_of_mass", &FEMHandle::compute_center_of_mass)
         .def("freeze_particles", &FEMHandle::freeze_particles)
         .def("get_n_particles", &FEMHandle::get_n_particles)
+        .def("add_gravity", &FEMHandle::add_gravity)
         ;
 
     // RENDERING
@@ -117,6 +123,8 @@ PYBIND11_MODULE(pymandos, m) {
         .def("draw_particle", &MandosViewer::draw_particle)
         .def("draw_rigid_body", &MandosViewer::draw_rigid_body)
         .def("draw_mesh", &MandosViewer::draw_mesh)
+        .def("draw_springs", &MandosViewer::draw_springs)
+        .def("draw_particles", &MandosViewer::draw_particles)
         ;
 
 }

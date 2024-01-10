@@ -1,11 +1,15 @@
+#include "mandos.hpp"
 #include "memory_pool.hpp"
 #include "mesh.hpp"
 #include "raylib.h"
 #include "raylib_imgui.hpp"
 #include "rlgl.h"
+#include "spring.hpp"
 #include "utility_functions.hpp"
 #include "viewmandos.hpp"
 #include "render/simulation_visualization.hpp"
+#include <cassert>
+#include <cstddef>
 #include <cstdlib>
 
 Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh, MemoryPool& pool) {
@@ -168,7 +172,7 @@ void MandosViewer::begin_ImGUI_mode() { ImGuiBeginDrawing(); }
 void MandosViewer::end_ImGUI_mode() { ImGuiEndDrawing(); }
 
 void MandosViewer::update_camera() {
-    // UpdateCamera(&camera, CAMERA_FREE);
+    UpdateCamera(&camera, CAMERA_FREE);
 
     // Update the shader with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
     float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
@@ -191,4 +195,61 @@ void MandosViewer::draw_mesh(const Mat4& transform, const MeshGPU& mesh) {
     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
     Mesh raymesh = MeshGPUtoRaymesh(mesh, mem_pool);
     DrawMesh(raymesh, material, matrix_eigen_to_raylib(transform));
+}
+
+void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState& state) {
+    for (size_t i = 0; i < simulation.energies.particle_springs.size(); i++) {
+        ParticleSpring s = simulation.energies.particle_springs[i];
+        Vec3 x1 = s.p1.get_position(state.x);
+        Vec3 x2 = s.p2.get_position(state.x);
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x2), BLACK);
+    }
+}
+
+void MandosViewer::draw_particles(const Simulation& simulation, const PhysicsState& state) {
+    DEBUG_LOG(simulation.simulables.particles.size());
+    for (size_t i = 0; i < simulation.simulables.particles.size(); i++) {
+        Particle particle = simulation.simulables.particles[i];
+        Vec3 position = particle.get_position(state.x);
+        Color color = GREEN;
+        for (unsigned int i = 0; i < simulation.frozen_dof.size(); i++) {
+            unsigned int frozen_index = simulation.frozen_dof[i];
+            if (frozen_index == particle.index) {
+                color = RED;
+                break;
+            }
+        }
+        DrawModel(sphere_model, vector3_eigen_to_raylib(position), 1, color);
+    }
+}
+
+void MandosViewer::draw_FEM(const FEMHandle& fem, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh) {
+    std::cerr << "ERROR: MandosViewer::draw_FEM: TODO!" << std::endl;
+    exit(1);
+    const unsigned int dof_index = fem.bounds.dof_index;
+    const unsigned int nDoF = fem.bounds.nDoF;
+
+    // We should update the simulation mesh from the tetrahedra
+
+    renderMesh.updateFromSimulationMesh(simMesh);
+    gpuMesh.updateData(renderMesh);
+}
+
+
+void MandosViewer::draw_FEM_tetrahedrons(const Simulation& simulation, const PhysicsState& state) {
+    for (unsigned int i = 0; i < simulation.energies.fem_elements_3d.size(); i++) {
+        const FEM_Element3D& e = simulation.energies.fem_elements_3d[i];
+        const Vec3& x1 = e.p1.get_position(state.x);
+        const Vec3& x2 = e.p2.get_position(state.x);
+        const Vec3& x3 = e.p3.get_position(state.x);
+        const Vec3& x4 = e.p4.get_position(state.x);
+
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x2), BLUE);
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x3), BLUE);
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x4), BLUE);
+        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x2), BLUE);
+        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x3), BLUE);
+        DrawLine3D(vector3_eigen_to_raylib(x2), vector3_eigen_to_raylib(x3), BLUE);
+    }
+
 }

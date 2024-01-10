@@ -1,7 +1,6 @@
 #ifndef SIMULATION_VISUALIZATION_H_
 #define SIMULATION_VISUALIZATION_H_
 
-#include <imgui.h>
 #include "physics_render.hpp"
 #include "physics_state.hpp"
 #include "simulation.hpp"
