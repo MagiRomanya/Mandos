@@ -51,6 +51,13 @@ PYBIND11_MODULE(pymandos, m) {
         .def_readonly("indices", &SimulationMesh::indices)
         ;
 
+    py::class_<TetrahedronMesh>(m, "TetrahedronMesh")
+        .def(py::init())
+        .def_readonly("vertices", &TetrahedronMesh::vertices)
+        .def_readonly("indices", &TetrahedronMesh::indices)
+        ;
+
+
     // SIMULATION
     // -----------------------------------------------------------------------------
     m.def("simulation_step", py::overload_cast<const Simulation&, PhysicsState&, EnergyAndDerivatives&>(&simulation_step));
@@ -63,7 +70,7 @@ PYBIND11_MODULE(pymandos, m) {
 
     m.def("join_particles_with_spring", &join_particles_with_spring);
 
-    m.def("compute_tetrahedrons", &tetgen_compute_tetrahedrons);
+    m.def("compute_tetrahedrons", py::overload_cast<const std::vector<unsigned int>&, const std::vector<float>&, TetrahedronMesh&>(&tetgen_compute_tetrahedrons));
 
     py::class_<RigidBodyHandle>(m, "RigidBody")
         .def(py::init<Simulation&, Scalar, std::vector<Scalar>>())
@@ -122,9 +129,11 @@ PYBIND11_MODULE(pymandos, m) {
         .def("is_key_pressed", &MandosViewer::is_key_pressed)
         .def("draw_particle", &MandosViewer::draw_particle)
         .def("draw_rigid_body", &MandosViewer::draw_rigid_body)
+        .def("draw_FEM", &MandosViewer::draw_FEM)
         .def("draw_mesh", &MandosViewer::draw_mesh)
         .def("draw_springs", &MandosViewer::draw_springs)
         .def("draw_particles", &MandosViewer::draw_particles)
+        .def("draw_FEM_tetrahedrons", &MandosViewer::draw_FEM_tetrahedrons)
         ;
 
 }

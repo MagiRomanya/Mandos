@@ -17,7 +17,7 @@ int main(void) {
     const Scalar GRAVITY = -1.0;
 
     RenderMesh render_mesh = RenderMesh("resources/obj/bar.obj");
-    SimulationMesh sim_mesh = SimulationMesh(render_mesh);
+    SimulationMesh sim_mesh = SimulationMesh("resources/obj/bar.obj");
 
     const Mat3 inertia_tensor = compute_initial_inertia_tensor_PARTICLES(MASS, sim_mesh.vertices);
     const Vec3 center_of_mass = compute_COM_position_PARTICLES(sim_mesh.vertices);
@@ -32,7 +32,7 @@ int main(void) {
     const FEMHandle fem1 = FEMHandle(simulation, tet_vertices, tet_indices, MASS, poisson_ratio, young_modulus)
         .add_gravity(GRAVITY)
         // .freeze_particles({0,1,2,5})
-        .freeze_particles({0,1,2,3,4,5,6,9})
+        .freeze_particles({0,1,5,4});
         ;
     //--------------------------------------------------------------------------------------
 
@@ -72,8 +72,9 @@ int main(void) {
         {
             viewer.begin_3D_mode();
             {
-                viewer.draw_particles(simulation, state);
-                viewer.draw_FEM_tetrahedrons(simulation, state);
+                // viewer.draw_particles(simulation, state);
+                // viewer.draw_FEM_tetrahedrons(simulation, state);
+                viewer.draw_FEM(fem1, state, meshGPU, render_mesh, sim_mesh);
             }
             viewer.end_3D_mode();
         }

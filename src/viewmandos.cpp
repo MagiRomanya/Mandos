@@ -166,13 +166,12 @@ void MandosViewer::begin_3D_mode() {
 
 void MandosViewer::end_3D_mode() { EndMode3D(); }
 
-
 void MandosViewer::begin_ImGUI_mode() { ImGuiBeginDrawing(); }
 
 void MandosViewer::end_ImGUI_mode() { ImGuiEndDrawing(); }
 
 void MandosViewer::update_camera() {
-    UpdateCamera(&camera, CAMERA_FREE);
+    // UpdateCamera(&camera, CAMERA_FREE);
 
     // Update the shader with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
     float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
@@ -207,7 +206,6 @@ void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState
 }
 
 void MandosViewer::draw_particles(const Simulation& simulation, const PhysicsState& state) {
-    DEBUG_LOG(simulation.simulables.particles.size());
     for (size_t i = 0; i < simulation.simulables.particles.size(); i++) {
         Particle particle = simulation.simulables.particles[i];
         Vec3 position = particle.get_position(state.x);
@@ -224,15 +222,19 @@ void MandosViewer::draw_particles(const Simulation& simulation, const PhysicsSta
 }
 
 void MandosViewer::draw_FEM(const FEMHandle& fem, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh) {
-    std::cerr << "ERROR: MandosViewer::draw_FEM: TODO!" << std::endl;
-    exit(1);
     const unsigned int dof_index = fem.bounds.dof_index;
     const unsigned int nDoF = fem.bounds.nDoF;
 
+    assert(simMesh.vertices.size() < nDoF);
+
     // We should update the simulation mesh from the tetrahedra
+    for (unsigned int i = 0; i < simMesh.vertices.size(); i++) {
+        simMesh.vertices[i] = state.x[dof_index+i];
+    }
 
     renderMesh.updateFromSimulationMesh(simMesh);
     gpuMesh.updateData(renderMesh);
+    draw_mesh(Mat4::Identity(), gpuMesh);
 }
 
 

@@ -39,6 +39,11 @@ struct SimulationMesh {
     std::vector<unsigned int> indices;
 };
 
+struct TetrahedronMesh {
+    std::vector<float> vertices;
+    std::vector<unsigned int> indices;
+};
+
 /**
  * Load an obj file to a vector of vertices and a vector of indices.
  *
@@ -57,6 +62,9 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& ou
  */
 void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices,
                                  std::vector<unsigned int>& out_tetrahedron_indices, std::vector<float>& out_tetrahedron_vertices);
+
+void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices, TetrahedronMesh& tmesh);
+
 
 /**
  * Compute the volume of the mesh (units of the vertices).
