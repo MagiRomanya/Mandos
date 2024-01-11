@@ -3,14 +3,21 @@
 #include "mesh.hpp"
 #include "raylib.h"
 #include "raylib_imgui.hpp"
+#include "render/simulation_visualization.hpp"
 #include "rlgl.h"
 #include "spring.hpp"
 #include "utility_functions.hpp"
 #include "viewmandos.hpp"
-#include "render/simulation_visualization.hpp"
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
+
+#define RB_COLOR YELLOW
+#define FEM_COLOR PINK
+#define PARTICLE_COLOR BLUE
+#define MASS_SPRING_COLOR GREEN
+#define FROZEN_PARTICLE_COLOR WHITE
+
 
 Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh, MemoryPool& pool) {
     std::vector<unsigned short> indices = std::vector<unsigned short>(sim_mesh.indices.begin(), sim_mesh.indices.end());
@@ -121,6 +128,22 @@ static Model sphere_model;
 static Material base_material;
 static Shader base_shader;
 
+Material createMaterialFromShader(Shader shader) {
+    Material material = { 0 };
+    material.maps = (MaterialMap *)calloc(12, sizeof(MaterialMap));
+
+    // Using rlgl default shader
+    material.shader = shader;
+
+    // Using rlgl default texture (1x1 pixel, UNCOMPRESSED_R8G8B8A8, 1 mipmap)
+    material.maps[MATERIAL_MAP_DIFFUSE].texture = (Texture2D){ rlGetTextureIdDefault(), 1, 1, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 };
+
+    material.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;    // Diffuse color
+    material.maps[MATERIAL_MAP_SPECULAR].color = WHITE;   // Specular color
+
+    return material;
+}
+
 MandosViewer::MandosViewer() {
     InitWindow(initialScreenWidth, initialScreenHeight, "Mandos");
     camera = create_camera();
@@ -131,15 +154,13 @@ MandosViewer::MandosViewer() {
     base_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/lighting.fs");
     // Get some required shader locations
     base_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(base_shader, "viewPos");
-    base_material = LoadMaterialDefault();
-    base_material.shader = base_shader;
+    base_material = createMaterialFromShader(base_shader);
     sphere_model.materialCount = 1;
     sphere_model.materials[0] = base_material;
-    // SetTraceLogLevel(TraceLogLevel::LOG_WARNING);
 }
 
 MandosViewer::~MandosViewer() {
-    UnloadModel(sphere_model);
+    UnloadModel(sphere_model); // Unloads also the material maps
     UnloadShader(base_shader);
     CloseWindow();
 }
@@ -151,7 +172,7 @@ bool MandosViewer::window_should_close() {
 void MandosViewer::begin_drawing() {
     mem_pool.reset();
     BeginDrawing();
-    ClearBackground(WHITE);
+    ClearBackground(RAYWHITE);
 }
 
 void MandosViewer::end_drawing() {
@@ -182,18 +203,22 @@ bool MandosViewer::is_key_pressed(int Key) { return IsKeyPressed(Key); }
 
 void MandosViewer::draw_particle(const ParticleHandle& particle, const PhysicsState& state) {
     const Vec3 position = particle.particle.get_position(state.x);
-    DrawModel(sphere_model, vector3_eigen_to_raylib(position), 1, DARKPURPLE);
+    DrawModel(sphere_model, vector3_eigen_to_raylib(position), 1, PARTICLE_COLOR);
+}
+
+void draw_mesh_color(const Mat4& transform, const MeshGPU& mesh, MemoryPool& mem_pool, Color color) {
+    Material material = base_material;
+    material.maps[MATERIAL_MAP_DIFFUSE].color = color;
+    Mesh raymesh = MeshGPUtoRaymesh(mesh, mem_pool);
+    DrawMesh(raymesh, material, matrix_eigen_to_raylib(transform));
+    material.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
 }
 
 void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh) {
-    this->draw_mesh(rb.get_transformation_matrix(state), mesh);
+    draw_mesh_color(rb.get_transformation_matrix(state), mesh, mem_pool, RB_COLOR);
 }
-
 void MandosViewer::draw_mesh(const Mat4& transform, const MeshGPU& mesh) {
-    Material material = base_material;
-    material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-    Mesh raymesh = MeshGPUtoRaymesh(mesh, mem_pool);
-    DrawMesh(raymesh, material, matrix_eigen_to_raylib(transform));
+    draw_mesh_color(transform, mesh, mem_pool, WHITE);
 }
 
 void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState& state) {
@@ -209,11 +234,11 @@ void MandosViewer::draw_particles(const Simulation& simulation, const PhysicsSta
     for (size_t i = 0; i < simulation.simulables.particles.size(); i++) {
         Particle particle = simulation.simulables.particles[i];
         Vec3 position = particle.get_position(state.x);
-        Color color = GREEN;
+        Color color = PARTICLE_COLOR;
         for (unsigned int i = 0; i < simulation.frozen_dof.size(); i++) {
             unsigned int frozen_index = simulation.frozen_dof[i];
             if (frozen_index == particle.index) {
-                color = RED;
+                color = WHITE;
                 break;
             }
         }
@@ -234,7 +259,24 @@ void MandosViewer::draw_FEM(const FEMHandle& fem, const PhysicsState& state, Mes
 
     renderMesh.updateFromSimulationMesh(simMesh);
     gpuMesh.updateData(renderMesh);
-    draw_mesh(Mat4::Identity(), gpuMesh);
+    draw_mesh_color(Mat4::Identity(), gpuMesh, mem_pool, FEM_COLOR);
+}
+
+void MandosViewer::draw_MassSpring(const MassSpringHandle& mass_spring, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh) {
+    const unsigned int dof_index = mass_spring.bounds.dof_index;
+    const unsigned int nDoF = mass_spring.bounds.nDoF;
+
+    assert(simMesh.vertices.size() == nDoF);
+
+    // We should update the simulation mesh from the tetrahedra
+    for (unsigned int i = 0; i < simMesh.vertices.size(); i++) {
+        simMesh.vertices[i] = state.x[dof_index+i];
+    }
+
+    renderMesh.updateFromSimulationMesh(simMesh);
+    gpuMesh.updateData(renderMesh);
+    draw_mesh_color(Mat4::Identity(), gpuMesh, mem_pool, MASS_SPRING_COLOR);
+
 }
 
 

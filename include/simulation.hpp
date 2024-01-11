@@ -46,7 +46,7 @@ struct Simulation {
     Energies energies;
 
     // Integration settings
-    Scalar TimeStep = 0.01;
+    Scalar TimeStep = 0.1;
 
     // Boundary conditions
     PhysicsState initial_state;

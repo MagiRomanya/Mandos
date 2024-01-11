@@ -89,7 +89,8 @@ PYBIND11_MODULE(pymandos, m) {
         .def(py::init<Simulation&, const std::vector<Scalar>&, const std::vector<unsigned int>&, Scalar, Scalar, Scalar, Scalar>())
         .def("compute_center_of_mass", &MassSpringHandle::compute_center_of_mass)
         .def("set_initial_com_position", &MassSpringHandle::set_initial_COM_position)
-        .def("freezze_particles", &MassSpringHandle::freeze_particles)
+        .def("freeze_particles", &MassSpringHandle::freeze_particles)
+        .def("add_gravity", &MassSpringHandle::add_gravity)
         .def("get_n_particles", &MassSpringHandle::get_n_particles)
         .def("get_dof_vector", &MassSpringHandle::get_dof_vector)
         ;
@@ -130,6 +131,7 @@ PYBIND11_MODULE(pymandos, m) {
         .def("draw_particle", &MandosViewer::draw_particle)
         .def("draw_rigid_body", &MandosViewer::draw_rigid_body)
         .def("draw_FEM", &MandosViewer::draw_FEM)
+        .def("draw_MassSpring", &MandosViewer::draw_MassSpring)
         .def("draw_mesh", &MandosViewer::draw_mesh)
         .def("draw_springs", &MandosViewer::draw_springs)
         .def("draw_particles", &MandosViewer::draw_particles)

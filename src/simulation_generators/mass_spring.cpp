@@ -1,5 +1,4 @@
 #include "edge.hpp"
-#include "gravity.hpp"
 #include "inertia_energies.hpp"
 #include "mesh.hpp"
 #include "particle.hpp"
@@ -67,13 +66,6 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
         L0 = distance(vertices, e1.opposite, e2.opposite);
         param = {k_bending, L0, damping};
         simulation.energies.particle_springs.push_back(ParticleSpring(particles[particle_index + e1.opposite], particles[particle_index + e2.opposite], param));
-    }
-
-    // Add gravity
-    for (size_t i = 0; i < vertices.size(); i+=3) {
-        GravityParameters param= {.intensity = static_cast<Scalar>(- node_mass)};
-        // Add gravity to the y component
-        simulation.energies.gravities.push_back(Gravity(index+i+1, param));
     }
 
     return SimulableBounds{.dof_index = index, .nDoF = n_dof, .particle_index = particle_index, .n_particles = n_dof / 3, .rb_index = 0, .n_rb = 0};

@@ -160,8 +160,9 @@ struct MandosViewer {
 
     void draw_particles(const Simulation& simulation, const PhysicsState& state);
 
-
     void draw_FEM(const FEMHandle& fem, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh);
+
+    void draw_MassSpring(const MassSpringHandle& mass_spring, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh);
 
     void draw_mesh(const Mat4& transform, const MeshGPU& mesh);
 

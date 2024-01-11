@@ -116,10 +116,17 @@ MassSpringHandle MassSpringHandle::set_initial_COM_position(const Vec3& position
 
 MassSpringHandle MassSpringHandle::freeze_particles(const std::vector<unsigned int>& particle_indices) const {
     for (unsigned int i = 0; i < particle_indices.size(); i++) {
-        const Particle& p = simulation.simulables.particles[i];
-        simulation.frozen_dof.push_back(p.index+0);
-        simulation.frozen_dof.push_back(p.index+1);
-        simulation.frozen_dof.push_back(p.index+2);
+        unsigned int index = particle_indices[i];
+        simulation.frozen_dof.push_back(3*index+0 + bounds.dof_index);
+        simulation.frozen_dof.push_back(3*index+1 + bounds.dof_index);
+        simulation.frozen_dof.push_back(3*index+2 + bounds.dof_index);
+    }
+    return *this;
+}
+
+MassSpringHandle MassSpringHandle::add_gravity(Scalar gravity) const {
+    for (unsigned int i = 0; i <bounds.nDoF/3; i++) {
+        simulation.energies.gravities.push_back(Gravity(bounds.dof_index+3*i+1, GravityParameters(gravity)));
     }
     return *this;
 }
