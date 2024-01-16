@@ -1,3 +1,7 @@
+#include <cassert>
+#include <cstddef>
+
+#include "fem_unit.hpp"
 #include "mandos.hpp"
 #include "memory_pool.hpp"
 #include "mesh.hpp"
@@ -8,16 +12,12 @@
 #include "spring.hpp"
 #include "utility_functions.hpp"
 #include "viewmandos.hpp"
-#include <cassert>
-#include <cstddef>
-#include <cstdlib>
 
 #define RB_COLOR YELLOW
 #define FEM_COLOR PINK
 #define PARTICLE_COLOR BLUE
 #define MASS_SPRING_COLOR GREEN
 #define FROZEN_PARTICLE_COLOR WHITE
-
 
 Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh, MemoryPool& pool) {
     std::vector<unsigned short> indices = std::vector<unsigned short>(sim_mesh.indices.begin(), sim_mesh.indices.end());
@@ -127,6 +127,10 @@ static Camera3D camera;
 static Model sphere_model;
 static Material base_material;
 static Shader base_shader;
+static Shader normals_shader;
+static Shader diffuse_shader;
+// static uint32_t mesh_index_offset = 4278190080 + 100;
+// static RenderTexture2D pickMeshFBO;
 
 Material createMaterialFromShader(Shader shader) {
     Material material = { 0 };
@@ -146,22 +150,30 @@ Material createMaterialFromShader(Shader shader) {
 
 MandosViewer::MandosViewer() {
     InitWindow(initialScreenWidth, initialScreenHeight, "Mandos");
+    ClearWindowState(FLAG_WINDOW_RESIZABLE);
     camera = create_camera();
     sphere_model = LoadModelFromMesh(GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS));
     SetTargetFPS(200);
 
     // Load basic lighting shader
     base_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/lighting.fs");
+    normals_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/normals.fs");
+    diffuse_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/picker.fs");
     // Get some required shader locations
     base_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(base_shader, "viewPos");
     base_material = createMaterialFromShader(base_shader);
     sphere_model.materialCount = 1;
     sphere_model.materials[0] = base_material;
+    // pickMeshFBO = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+
 }
 
 MandosViewer::~MandosViewer() {
     UnloadModel(sphere_model); // Unloads also the material maps
     UnloadShader(base_shader);
+    UnloadShader(normals_shader);
+    UnloadShader(diffuse_shader);
+    // UnloadRenderTexture(pickMeshFBO);
     CloseWindow();
 }
 
@@ -169,13 +181,56 @@ bool MandosViewer::window_should_close() {
     return WindowShouldClose();
 }
 
+// void pick_buffer(MandosViewer& viewer) {
+//     BeginTextureMode(pickMeshFBO);
+//     BeginMode3D(camera);
+//     ClearBackground(BLACK);
+//     base_material.shader = diffuse_shader;
+//     for (unsigned int i = 0; i < viewer.meshes.size(); i++) {
+//         FullMesh& mesh = viewer.meshes[i];
+//         uint32_t index = i + mesh_index_offset;
+//         Color picker_color = * (Color *) &index;
+//         if (mesh.meshGPU) {
+//             Mesh raymesh = MeshGPUtoRaymesh(*mesh.meshGPU, viewer.mem_pool);
+//             base_material.maps[MATERIAL_MAP_DIFFUSE].color = picker_color;
+//             DrawMesh(raymesh, base_material, MatrixIdentity());
+//             base_material.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+//         }
+//     }
+//     EndMode3D();
+//     EndTextureMode();
+// }
+
 void MandosViewer::begin_drawing() {
     mem_pool.reset();
     BeginDrawing();
     ClearBackground(RAYWHITE);
+    // pick_buffer(*this);
+    // if(IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+    //     Vector2 pos = GetMousePosition();
+    //     Image pickBuffer = LoadImageFromTexture(pickMeshFBO.texture);
+    //     int x = Clamp((int)pos.x, 0, pickBuffer.width - 1);
+    //     int y = pickBuffer.height - Clamp((int)pos.y, 0, pickBuffer.height - 1); // y is inverted in the pickBuffer
+    //     int pixelIndex = y * pickBuffer.width + x;
+    //     Color color = ((Color *)pickBuffer.data)[pixelIndex];
+    //     uint32_t mesh_index = * (uint32_t*) &color - mesh_index_offset;
+    //     printf("a = %u\n", color.a);
+    //     printf("r = %u\n", color.r);
+    //     printf("g = %u\n", color.g);
+    //     printf("b = %u\n", color.b);
+    //     printf("index = %u\n", mesh_index);
+    //     UnloadImage(pickBuffer);
+    // }
 }
 
 void MandosViewer::end_drawing() {
+    // if (IsKeyDown(KEY_I)) {
+    //     const Rectangle source = {0,0, static_cast<float>(initialScreenWidth), -static_cast<float>(initialScreenHeight)};
+    //     const Rectangle dest = {0,0, static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight())};
+    //     const Vector2 origin = {0, 0};
+    //     DrawTexturePro(pickMeshFBO.texture, source, dest, origin, 0, WHITE);
+    //     // DrawTexture(pickMeshFBO.texture, 0, 0, WHITE);
+    // }
     DrawFPS(10, 10);
     EndDrawing();
 }
@@ -207,11 +262,10 @@ void MandosViewer::draw_particle(const ParticleHandle& particle, const PhysicsSt
 }
 
 void draw_mesh_color(const Mat4& transform, const MeshGPU& mesh, MemoryPool& mem_pool, Color color) {
-    Material material = base_material;
-    material.maps[MATERIAL_MAP_DIFFUSE].color = color;
+    base_material.maps[MATERIAL_MAP_DIFFUSE].color = color;
     Mesh raymesh = MeshGPUtoRaymesh(mesh, mem_pool);
-    DrawMesh(raymesh, material, matrix_eigen_to_raylib(transform));
-    material.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+    DrawMesh(raymesh, base_material, matrix_eigen_to_raylib(transform));
+    base_material.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
 }
 
 void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh) {
@@ -250,7 +304,7 @@ void MandosViewer::draw_FEM(const FEMHandle& fem, const PhysicsState& state, Mes
     const unsigned int dof_index = fem.bounds.dof_index;
     const unsigned int nDoF = fem.bounds.nDoF;
 
-    assert(simMesh.vertices.size() < nDoF);
+    assert(simMesh.vertices.size() <= nDoF);
 
     // We should update the simulation mesh from the tetrahedra
     for (unsigned int i = 0; i < simMesh.vertices.size(); i++) {
@@ -281,19 +335,138 @@ void MandosViewer::draw_MassSpring(const MassSpringHandle& mass_spring, const Ph
 
 
 void MandosViewer::draw_FEM_tetrahedrons(const Simulation& simulation, const PhysicsState& state) {
-    for (unsigned int i = 0; i < simulation.energies.fem_elements_3d.size(); i++) {
-        const FEM_Element3D& e = simulation.energies.fem_elements_3d[i];
-        const Vec3& x1 = e.p1.get_position(state.x);
-        const Vec3& x2 = e.p2.get_position(state.x);
-        const Vec3& x3 = e.p3.get_position(state.x);
-        const Vec3& x4 = e.p4.get_position(state.x);
-
-        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x2), BLUE);
-        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x3), BLUE);
-        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x4), BLUE);
-        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x2), BLUE);
-        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x3), BLUE);
-        DrawLine3D(vector3_eigen_to_raylib(x2), vector3_eigen_to_raylib(x3), BLUE);
+#define MAT(type, name)                                                 \
+    for (unsigned int i = 0; i < simulation.energies.fem_elements_##name.size(); i++) { \
+        const FEM_Element3D<type>& e = simulation.energies.fem_elements_##name[i]; \
+        const Vec3& x1 = e.p1.get_position(state.x);                    \
+        const Vec3& x2 = e.p2.get_position(state.x);                    \
+        const Vec3& x3 = e.p3.get_position(state.x);                    \
+        const Vec3& x4 = e.p4.get_position(state.x);                    \
+                                                                        \
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x2), BLUE); \
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x3), BLUE); \
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x4), BLUE); \
+        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x2), BLUE); \
+        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x3), BLUE); \
+        DrawLine3D(vector3_eigen_to_raylib(x2), vector3_eigen_to_raylib(x3), BLUE); \
     }
-
+    FEM_MATERIAL_MEMBERS
+#undef MAT
 }
+
+// void MandosViewer::register_mesh(const ParticleHandle& particle, RenderMesh render_mesh) {
+//     FullMesh fmesh;
+//     fmesh.render_mesh = render_mesh;
+//     fmesh.meshGPU = new MeshGPU(render_mesh);
+//     fmesh.index = particles.size();
+//     particles.push_back(particle);
+//     fmesh.type = FullMesh::PARTICLE;
+//     meshes.push_back(fmesh);
+// }
+
+// void MandosViewer::register_mesh(const ParticleHandle& particle) {
+//     RenderMesh render_mesh = RenderMesh("resources/obj/sphere.obj");
+//     register_mesh(particle, render_mesh);
+// }
+
+// void MandosViewer::register_mesh(const RigidBodyHandle& rb, RenderMesh render_mesh) {
+//     meshes.emplace_back(FullMesh());
+//     FullMesh& fmesh = meshes[meshes.size() - 1];
+//     fmesh.index = rigid_bodies.size();
+//     rigid_bodies.push_back(rb);
+//     fmesh.type = FullMesh::RIGID_BODY;
+//     fmesh.meshGPU = new MeshGPU(render_mesh);
+
+// }
+
+// void MandosViewer::register_mesh(const MassSpringHandle& mass_spring, SimulationMesh sim_mesh, RenderMesh render_mesh) {
+//     meshes.emplace_back(FullMesh());
+//     FullMesh& fmesh = meshes[meshes.size() - 1];
+//     fmesh.index = mass_springs.size();
+//     mass_springs.push_back(mass_spring);
+//     fmesh.type = FullMesh::MASS_SPRING;
+//     fmesh.meshGPU = new MeshGPU(render_mesh);
+//     fmesh.sim_mesh = sim_mesh;
+//     fmesh.render_mesh = render_mesh;
+// }
+
+// void MandosViewer::register_mesh(const FEMHandle& fem, SimulationMesh sim_mesh, RenderMesh render_mesh) {
+//     meshes.emplace_back();
+//     FullMesh* fmesh = &meshes[meshes.size() - 1];
+//     fmesh->index = fems.size();
+//     fems.push_back(fem);
+//     fmesh->type = FullMesh::FEM;
+
+//     fmesh->meshGPU = new MeshGPU(render_mesh);
+//     fmesh->sim_mesh = sim_mesh;
+//     fmesh->render_mesh = render_mesh;
+// }
+
+// void MandosViewer::update_simulable_meshes(const PhysicsState& state) {
+//     for (unsigned int i = 0; i < meshes.size(); i++) {
+//         FullMesh& mesh = meshes[i];
+//         switch (mesh.type) {
+//         case FullMesh::PARTICLE:
+//             {
+//                 Vec3 position = particles[mesh.index].particle.get_position(state.x);
+//                 Vec3 mesh_pos = compute_COM_position_PARTICLES(mesh.render_mesh.vertices);
+//                 Vec3 delta = position - mesh_pos;
+//                 for (unsigned int i = 0; i < mesh.render_mesh.vertices.size(); i++) {
+//                     mesh.render_mesh.vertices[3*i + 0] += delta.x();
+//                     mesh.render_mesh.vertices[3*i + 1] += delta.y();
+//                     mesh.render_mesh.vertices[3*i + 2] += delta.z();
+//                 }
+//                 break;
+//             }
+//         case FullMesh::RIGID_BODY:
+//             {
+//                 draw_rigid_body(rigid_bodies[mesh.index], state, *mesh.meshGPU);
+//                 break;
+//             }
+//         case FullMesh::FEM:
+//             {
+//                 draw_FEM(fems[mesh.index], state, *mesh.meshGPU, mesh.render_mesh, mesh.sim_mesh);
+//                 break;
+//             }
+//         case FullMesh::MASS_SPRING:
+//             {
+//                 draw_MassSpring(mass_springs[mesh.index], state, *mesh.meshGPU, mesh.render_mesh, mesh.sim_mesh);
+//                 break;
+//             }
+//         }
+//     }
+
+// }
+
+// void MandosViewer::draw_registered_meshes(const PhysicsState& state) {
+//     base_material.shader = base_shader;
+//     for (unsigned int i = 0; i < meshes.size(); i++) {
+//         FullMesh& mesh = meshes[i];
+//         Color color;
+//         switch (mesh.type) {
+//         case FullMesh::PARTICLE:
+//             {
+//                 color = PARTICLE_COLOR;
+//                 break;
+//             }
+//         case FullMesh::RIGID_BODY:
+//             {
+//                 color = RB_COLOR;
+//                 break;
+//             }
+//         case FullMesh::FEM:
+//             {
+//                 color = FEM_COLOR;
+//                 break;
+//             }
+//         case FullMesh::MASS_SPRING:
+//             {
+//                 color = MASS_SPRING_COLOR;
+//                 break;
+//             }
+//         }
+//         if (mesh.meshGPU) {
+//             draw_mesh_color(Mat4::Identity(), *mesh.meshGPU, mem_pool, color);
+//         }
+//     }
+// }

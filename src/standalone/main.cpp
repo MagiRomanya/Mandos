@@ -31,8 +31,8 @@ int main(void) {
     const Scalar poisson_ratio = 0.2;
     const FEMHandle fem1 = FEMHandle(simulation, tet_vertices, tet_indices, MASS, poisson_ratio, young_modulus)
         .add_gravity(GRAVITY)
-        // .freeze_particles({0,1,2,5})
-        .freeze_particles({0,1,5,4});
+        // .freeze_particles({0,1,4,5})
+        .freeze_particles({0})
         ;
     //--------------------------------------------------------------------------------------
 
@@ -60,8 +60,8 @@ int main(void) {
             Clock clock = Clock(simulation_time);
             EnergyAndDerivatives f(0);
             simulation_step(simulation, state, f);
-            // std::cout << "Energy " << f.energy << std::endl;
-            std::cout << "Simulation time " << simulation_time << " (ms)" << std::endl;
+            std::cout << "Energy " << f.energy << std::endl;
+            // std::cout << "Simulation time " << simulation_time << " (ms)" << std::endl;
 
         }
         //----------------------------------------------------------------------------------

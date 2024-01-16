@@ -37,7 +37,6 @@ set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON) # Necessary for pybind11 dynamic lib
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/)
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/eigen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/)

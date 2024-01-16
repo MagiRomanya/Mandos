@@ -1,8 +1,10 @@
+#include "fem_unit.hpp"
 #include "inertia_energies.hpp"
 #include "particle.hpp"
 #include "simulable_generator.hpp"
 #include "simulation.hpp"
 
+template <typename MaterialType>
 SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus) {
   // Add 3 dimensions per particle to the degrees of freedom
   const unsigned int index = simulation.initial_state.x.size();
@@ -26,17 +28,24 @@ SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_m
 
   const Scalar mu = young_modulus / (2*(1 + poisson_ratio));
   const Scalar lambda = young_modulus * poisson_ratio / ((1+poisson_ratio) * (1-2*poisson_ratio));
+  MaterialType FEM_material(mu, lambda);
   const Eigen::Matrix<Scalar,4,3> ds_dx =  compute_shape_function_derivative(Vec3(0,0,0), Vec3(1,0,0), Vec3(0,1,0), Vec3(0,0,1));
-  FEM_ElementParameters FEM_paramters(mu, lambda, ds_dx);
-  simulation.energies.fem_elements_3d.emplace_back(simulation.simulables.particles[particle_index + 0],
-                                                   simulation.simulables.particles[particle_index + 1],
-                                                   simulation.simulables.particles[particle_index + 2],
-                                                   simulation.simulables.particles[particle_index + 3],
-                                                   FEM_paramters);
-
+  FEM_Element3D<MaterialType> fem_element = FEM_Element3D<MaterialType>(simulation.simulables.particles[particle_index + 0],
+                                                                        simulation.simulables.particles[particle_index + 1],
+                                                                        simulation.simulables.particles[particle_index + 2],
+                                                                        simulation.simulables.particles[particle_index + 3],
+                                                                        ds_dx,
+                                                                        FEM_material);
+  add_FEM_element(simulation.energies, fem_element);
   return SimulableBounds{index, nDoF, particle_index, nDoF / 3, 0, 0};
 }
 
+
+#define MAT(type, name) template SimulableBounds generate_FEM3D_from_tetrahedron_mesh<type>(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,const std::vector<unsigned int>& tet_indices, const std::vector<float>& tet_vertices);
+FEM_MATERIAL_MEMBERS
+#undef MAT
+
+template <typename MaterialType>
 SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,
                                                      const std::vector<unsigned int>& tet_indices, const std::vector<float>& tet_vertices) {
   const unsigned int index = simulation.initial_state.x.size();
@@ -72,8 +81,9 @@ SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Sca
                                                                                p2.get_position(simulation.initial_state.x),
                                                                                p3.get_position(simulation.initial_state.x),
                                                                                p4.get_position(simulation.initial_state.x));
-    FEM_ElementParameters FEM_paramters(mu, lambda, ds_dx);
-    simulation.energies.fem_elements_3d.emplace_back(p1, p2, p3, p4, FEM_paramters);
+    MaterialType FEM_paramters(mu, lambda);
+    FEM_Element3D<MaterialType> fem_element(p1, p2, p3, p4, ds_dx, FEM_paramters);
+    add_FEM_element(simulation.energies, fem_element);
   }
 
   // Displace original position

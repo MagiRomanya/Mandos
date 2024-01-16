@@ -1,5 +1,6 @@
 #include <vector>
 
+#include "fem_unit.hpp"
 #include "simulation.hpp"
 #include "hard_constraints.hpp"
 #include "integrators.hpp"
@@ -19,12 +20,14 @@ void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, c
     INERTIAL_ENERGY_MEMBERS
 #undef X
 
+#define MAT(type, name) X(std::vector<FEM_Element3D<type>>, fem_elements_##name)
 #define X(type, energy) \
     for (size_t i = 0; i < energies.energy.size(); i++) { \
         energies.energy[i].compute_energy_and_derivatives(TimeStep, state, out); \
     }
     POTENTIAL_ENERGY_MEMBERS
 #undef X
+#undef MAT
 }
 
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out) {
@@ -85,4 +88,20 @@ void update_simulation_state(const Simulables& simulables, const Vec& dx, Vec& x
     for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
         simulables.rigid_bodies[i].update_state(dx, x);
     }
+}
+
+#define MAT(type, name) template void add_FEM_element(Energies& energies, FEM_Element3D<type> element);
+FEM_MATERIAL_MEMBERS
+#undef MAT
+
+template <typename MaterialType>
+void add_FEM_element(Energies& energies, FEM_Element3D<MaterialType> element) {
+#define MAT(type, name)                                     \
+        if constexpr (std::is_same<MaterialType, type>()) { \
+            energies.fem_elements_##name.push_back(element); \
+        }
+
+    FEM_MATERIAL_MEMBERS
+
+#undef MAT
 }

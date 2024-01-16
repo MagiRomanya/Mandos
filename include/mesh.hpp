@@ -6,7 +6,6 @@
 #include "linear_algebra.hpp"
 
 struct SimulationMesh;
-
 /*
 ** Mesh description with repeated vertices, along with normals and texture coordinates.
 **
@@ -39,6 +38,11 @@ struct SimulationMesh {
     std::vector<unsigned int> indices;
 };
 
+/*
+** Tetrahedron mesh with no repeated vertices.
+**
+** The tetrahedrons are described by the vector of indices which has a size of nTetrahedrons * 4.
+ */
 struct TetrahedronMesh {
     std::vector<float> vertices;
     std::vector<unsigned int> indices;
@@ -63,8 +67,13 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& ou
 void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices,
                                  std::vector<unsigned int>& out_tetrahedron_indices, std::vector<float>& out_tetrahedron_vertices);
 
+/**
+ * Compute a tetrahedron volumetric mesh from a triangle surface mesh.
+ *
+ * @param triangle_indices, triangle_vertices description of the mesh with no repeated vertices.
+ * @param tmesh Outputs of the computed tetrahedron mesh.
+ */
 void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices, TetrahedronMesh& tmesh);
-
 
 /**
  * Compute the volume of the mesh (units of the vertices).
@@ -95,6 +104,12 @@ void mesh_boundary(const std::vector<Scalar>& vertices,
 
 std::array<unsigned int, 2> count_springs(const std::vector<Scalar>& vertices, const std::vector<unsigned int>& indices);
 
+/**
+ * Centers the mesh to the specified position, modifying the values of the vertices.
+ *
+ * @param mesh the simulation mesh we want to center
+ * @param com the center of mass of the given mesh
+ */
 void recenter_mesh(SimulationMesh& mesh, const Vec3& com);
 
 #endif // MESH_H_

@@ -29,9 +29,10 @@ struct Simulables {
     X(std::vector<LinearInertia>, linear_inertias) \
     X(std::vector<RotationalInertia>, rotational_inertias)
 
+#define MAT(type, name) X(std::vector<FEM_Element3D<type>>, fem_elements_##name)
 #define POTENTIAL_ENERGY_MEMBERS \
     X(std::vector<ParticleSpring>, particle_springs) \
-    X(std::vector<FEM_Element3D>, fem_elements_3d) \
+    FEM_MATERIAL_MEMBERS \
     X(std::vector<Gravity>, gravities)
 
 struct Energies {
@@ -39,7 +40,11 @@ struct Energies {
     INERTIAL_ENERGY_MEMBERS
     POTENTIAL_ENERGY_MEMBERS
 #undef X
+#undef MAT
 };
+
+template <typename MaterialType>
+void add_FEM_element(Energies& energies, FEM_Element3D<MaterialType> element);
 
 struct Simulation {
     Simulables simulables;

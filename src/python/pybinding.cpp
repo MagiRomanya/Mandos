@@ -17,6 +17,7 @@ PYBIND11_MODULE(pymandos, m) {
     py::class_<Simulation>(m, "Simulation")
         .def(py::init())
         .def_readonly("initial_state", &Simulation::initial_state)
+        .def_readwrite("TimeStep", &Simulation::TimeStep)
         ;
 
     py::class_<PhysicsState>(m, "PhysicsState")

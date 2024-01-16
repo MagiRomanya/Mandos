@@ -12,6 +12,7 @@
 #include "clock.hpp"
 #include "rigid_body.hpp"
 #include "spring.hpp"
+#include "utility_functions.hpp"
 
 Camera3D create_camera(unsigned int FPS) {
     // Define the camera to look into our 3d world
@@ -25,7 +26,6 @@ Camera3D create_camera(unsigned int FPS) {
     SetTargetFPS(FPS);
 
     // Make the window resizable
-    SetWindowState(FLAG_WINDOW_RESIZABLE);
     rlDisableBackfaceCulling();
     return camera;
 }
@@ -217,18 +217,22 @@ void simulation_render_energies(const Energies& energies, const PhysicsState& st
     }
     // DRAW FEM TETRAHEDRONS
     //----------------------------------------------------------------------------------
-    for (unsigned int i = 0; i < energies.fem_elements_3d.size(); i++) {
-        const FEM_Element3D& e = energies.fem_elements_3d[i];
-        const Vec3& x1 = e.p1.get_position(state.x);
-        const Vec3& x2 = e.p2.get_position(state.x);
-        const Vec3& x3 = e.p3.get_position(state.x);
-        const Vec3& x4 = e.p4.get_position(state.x);
-
-        DrawLine3D(Vector3{x1.x(), x1.y(), x1.z()}, Vector3{x2.x(), x2.y(), x2.z()}, BLUE);
-        DrawLine3D(Vector3{x1.x(), x1.y(), x1.z()}, Vector3{x3.x(), x3.y(), x3.z()}, BLUE);
-        DrawLine3D(Vector3{x1.x(), x1.y(), x1.z()}, Vector3{x4.x(), x4.y(), x4.z()}, BLUE);
-        DrawLine3D(Vector3{x4.x(), x4.y(), x4.z()}, Vector3{x2.x(), x2.y(), x2.z()}, BLUE);
-        DrawLine3D(Vector3{x4.x(), x4.y(), x4.z()}, Vector3{x3.x(), x3.y(), x3.z()}, BLUE);
-        DrawLine3D(Vector3{x2.x(), x2.y(), x2.z()}, Vector3{x3.x(), x3.y(), x3.z()}, BLUE);
+#define MAT(type, name)                                                 \
+    for (unsigned int i = 0; i < energies.fem_elements_##name.size(); i++) { \
+        const FEM_Element3D<type>& e = energies.fem_elements_##name[i]; \
+        const Vec3& x1 = e.p1.get_position(state.x);                    \
+        const Vec3& x2 = e.p2.get_position(state.x);                    \
+        const Vec3& x3 = e.p3.get_position(state.x);                    \
+        const Vec3& x4 = e.p4.get_position(state.x);                    \
+                                                                        \
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x2), BLUE); \
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x3), BLUE); \
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x4), BLUE); \
+        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x2), BLUE); \
+        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x3), BLUE); \
+        DrawLine3D(vector3_eigen_to_raylib(x2), vector3_eigen_to_raylib(x3), BLUE); \
     }
+
+    FEM_MATERIAL_MEMBERS
+#undef MAT
 }

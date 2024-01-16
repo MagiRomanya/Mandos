@@ -1,4 +1,5 @@
 #include "mandos.hpp"
+#include "fem_unit.hpp"
 #include "utility_functions.hpp"
 #include "gravity.hpp"
 #include "particle_rigid_body_copuling.hpp"
@@ -191,7 +192,7 @@ FEMHandle::FEMHandle(Simulation& simulation,
                      const std::vector<unsigned int>& tetrahedron_indices,
                      Scalar TotalMass, Scalar poisson_ratio, Scalar young_modulus)
     : TotalMass(TotalMass),
-      bounds(generate_FEM3D_from_tetrahedron_mesh(simulation, 3 *TotalMass / tetrahedron_vertices.size(), poisson_ratio, young_modulus, tetrahedron_indices, tetrahedron_vertices)),
+      bounds(generate_FEM3D_from_tetrahedron_mesh<FEM_NeoHookeanMaterial>(simulation, 3 *TotalMass / tetrahedron_vertices.size(), poisson_ratio, young_modulus, tetrahedron_indices, tetrahedron_vertices)),
       simulation(simulation)
 {}
 
