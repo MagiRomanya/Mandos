@@ -45,7 +45,7 @@ void main()
     Light light;
 
     light.enabled = 1;
-    light.type = LIGHT_POINT;
+    light.type = LIGHT_DIRECTIONAL;
     light.position = vec3(0, 8, 4);
     light.target = vec3(0, 0, 0);
     light.color = vec4(1); // white light

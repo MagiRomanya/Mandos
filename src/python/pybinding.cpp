@@ -16,14 +16,14 @@ PYBIND11_MODULE(pymandos, m) {
     // -----------------------------------------------------------------------------
     py::class_<Simulation>(m, "Simulation")
         .def(py::init())
-        .def_readonly("initial_state", &Simulation::initial_state)
+        .def_readwrite("initial_state", &Simulation::initial_state)
         .def_readwrite("TimeStep", &Simulation::TimeStep)
         ;
 
     py::class_<PhysicsState>(m, "PhysicsState")
         .def(py::init())
-        .def_readonly("x", &PhysicsState::x)
-        .def_readonly("x_old", &PhysicsState::x_old)
+        .def_readwrite("x", &PhysicsState::x)
+        .def_readwrite("x_old", &PhysicsState::x_old)
         .def("copy",  [](const PhysicsState &self) {
             return PhysicsState(self);
         })

@@ -25,7 +25,6 @@ Camera3D create_camera(unsigned int FPS = 200) {
     camera.up = Vector3( 0.0f, 1.0f, 0.0f );          // Camera up vector (rotation towards target)
     camera.fovy = 45.0f;                                // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type    return camera;
-
     return camera;
 }
 
@@ -158,7 +157,8 @@ Material createMaterialFromShader(Shader shader) {
 
 MandosViewer::MandosViewer() {
     InitWindow(initialScreenWidth, initialScreenHeight, "Mandos");
-    ClearWindowState(FLAG_WINDOW_RESIZABLE);
+    SetWindowState(FLAG_WINDOW_RESIZABLE);
+    rlDisableBackfaceCulling();
     camera = create_camera();
     sphere_model = LoadModelFromMesh(GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS));
     SetTargetFPS(200);
@@ -210,7 +210,7 @@ void MandosViewer::begin_ImGUI_mode() { ImGuiBeginDrawing(); }
 void MandosViewer::end_ImGUI_mode() { ImGuiEndDrawing(); }
 
 void MandosViewer::update_camera() {
-    // UpdateCamera(&camera, CAMERA_FREE);
+    UpdateCamera(&camera, CAMERA_FREE);
 
     // Update the shader with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
     float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
