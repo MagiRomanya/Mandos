@@ -1,7 +1,6 @@
 #ifndef UTILITY_FUNCTIONS_H_
 #define UTILITY_FUNCTIONS_H_
 
-#include <raylib.h>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -37,25 +36,7 @@ Scalar compute_tetrahedron_volume(const Vec3& AB, const Vec3& AC, const Vec3& AD
  */
 Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta);
 
-Mesh LoadMeshTinyOBJ(std::string inputfile);
-
-inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
-    Matrix r = {
-    m(0,0), m(0,1), m(0, 2), m(0, 3),
-    m(1,0), m(1,1), m(1, 2), m(1, 3),
-    m(2,0), m(2,1), m(2, 2), m(2, 3),
-    m(3,0), m(3,1), m(3, 2), m(3, 3),
-    };
-    return r;
-}
-
-inline Vector3 vector3_eigen_to_raylib(const Vec3& v) {
-    return Vector3{v.x(), v.y(), v.z()};
-}
-
 inline Vec3 cross(const Vec3& v, const Vec3& u) {
     return Vec3(v.y() * u.z() - v.z() * u.y(), v.z() * u.x() - v.x() * u.z(), v.x() * u.y() - v.y() * u.x());
 }
-
-
 #endif // UTILITY_FUNCTIONS_H_

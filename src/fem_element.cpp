@@ -8,13 +8,13 @@
 FEM_MATERIAL_MEMBERS
 #undef MAT
 
-// F == deformation tensor
+// F == deformation tensor / deformation gradient
 // epsilon == strain tensor
 // sigma == stress tensor
 
 // Given a square DxD matrix mat, return a vector of D² components
-// A  B
-// C  D  ->  vec = A, B, C, D
+// 1  3
+// 2  4  ->  vec = 1, 2, 3, 4
 template<unsigned int D>
 Eigen::Vector<Scalar, D*D> vectorize_matrix(const Eigen::Matrix<Scalar,D,D>& mat) {
   Eigen::Vector<Scalar, D*D> result = Eigen::Vector<Scalar, D*D>::Zero();
