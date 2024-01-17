@@ -13,7 +13,7 @@ void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const Physic
 
     // Compute the energy derivatives
     // ---------------------------------------------------------------
-    const Scalar energy = 1.0 / (2.0*h2) * (x - x_guess).transpose() * Mass * (x - x_guess);
+    const Scalar energy = 1.0 / (2.0 * h2) * (x - x_guess).transpose() * Mass * (x - x_guess);
     const Vec3 gradient = 1.0 / h2 * Mass * (x - x_guess);
     const Mat3 hessian = 1.0 / h2 * Mass;
 
@@ -39,7 +39,8 @@ void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const Ph
 
     const Mat3 deltaR = R - R_guess;
     const Mat3 rot_inertia = R * inertia_tensor * R_guess.transpose();
-    const Mat3 S = (rot_inertia + rot_inertia.transpose()) / 2;
+    // const Mat3 S = (rot_inertia + rot_inertia.transpose()) / 2; // Exact hessian
+    const Mat3 S = R * inertia_tensor * R.transpose(); // Linear approximation
     const Mat3 A = (rot_inertia - rot_inertia.transpose()) / 2;
     const Scalar h2 = TimeStep * TimeStep;
 

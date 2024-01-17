@@ -1,5 +1,8 @@
 #include "mandos.hpp"
+#include "fem_unit.hpp"
+#include "utility_functions.hpp"
 #include "gravity.hpp"
+#include "particle_rigid_body_copuling.hpp"
 #include "spring.hpp"
 
 RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const std::vector<Scalar> vertices)
@@ -42,8 +45,8 @@ RigidBodyHandle RigidBodyHandle::set_COM_initial_velocity(Vec3 vel) const {
     return *this;
 }
 
-RigidBodyHandle RigidBodyHandle::set_initial_angluar_velocity(Vec3 omega) const {
-    set_angular_velocity(simulation.initial_state, simulation.TimeStep, rb.index, omega);
+RigidBodyHandle RigidBodyHandle::set_initial_angular_velocity(Vec3 omega) const {
+    set_angular_velocity(simulation.initial_state, simulation.TimeStep, rb.index+3, omega);
     return *this;
 }
 
@@ -73,12 +76,6 @@ Mat4 RigidBodyHandle::get_transformation_matrix(const PhysicsState& state) const
     transformation.translation() = rb.get_COM_position(state.x);
     return transformation.matrix();
 }
-
-#ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
-void join_rigid_bodies(Simulation& simulation, RigidBodyHandle rbA, Vec3 pA, RigidBodyHandle rbB, Vec3 pB) {
-    simulation.constraints.rb_point_constraints.emplace_back(count_constraints(simulation.constraints), rbA.rb, rbB.rb, pA, pB);
-}
-#endif //ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
 
 MassSpringHandle::MassSpringHandle(Simulation& simulation,
                                    const std::vector<Scalar>& vertices,
@@ -114,10 +111,17 @@ MassSpringHandle MassSpringHandle::set_initial_COM_position(const Vec3& position
 
 MassSpringHandle MassSpringHandle::freeze_particles(const std::vector<unsigned int>& particle_indices) const {
     for (unsigned int i = 0; i < particle_indices.size(); i++) {
-        const Particle& p = simulation.simulables.particles[i];
-        simulation.frozen_dof.push_back(p.index+0);
-        simulation.frozen_dof.push_back(p.index+1);
-        simulation.frozen_dof.push_back(p.index+2);
+        unsigned int index = particle_indices[i];
+        simulation.frozen_dof.push_back(3*index+0 + bounds.dof_index);
+        simulation.frozen_dof.push_back(3*index+1 + bounds.dof_index);
+        simulation.frozen_dof.push_back(3*index+2 + bounds.dof_index);
+    }
+    return *this;
+}
+
+MassSpringHandle MassSpringHandle::add_gravity(Scalar gravity) const {
+    for (unsigned int i = 0; i <bounds.nDoF/3; i++) {
+        simulation.energies.gravities.push_back(Gravity(bounds.dof_index+3*i+1, GravityParameters(gravity)));
     }
     return *this;
 }
@@ -182,7 +186,7 @@ FEMHandle::FEMHandle(Simulation& simulation,
                      const std::vector<unsigned int>& tetrahedron_indices,
                      Scalar TotalMass, Scalar poisson_ratio, Scalar young_modulus)
     : TotalMass(TotalMass),
-      bounds(generate_FEM3D_from_tetrahedron_mesh(simulation, 3 *TotalMass / tetrahedron_vertices.size(), poisson_ratio, young_modulus, tetrahedron_indices, tetrahedron_vertices)),
+      bounds(generate_FEM3D_from_tetrahedron_mesh<FEM_NeoHookeanMaterial>(simulation, 3 *TotalMass / tetrahedron_vertices.size(), poisson_ratio, young_modulus, tetrahedron_indices, tetrahedron_vertices)),
       simulation(simulation)
 {}
 
@@ -199,10 +203,23 @@ Vec3 FEMHandle::compute_center_of_mass(const PhysicsState& state) const {
 
 FEMHandle FEMHandle::freeze_particles(const std::vector<unsigned int>& particle_indices) const {
     for (unsigned int i = 0; i < particle_indices.size(); i++) {
-        const Particle& p = simulation.simulables.particles[i];
-        simulation.frozen_dof.push_back(p.index+0);
-        simulation.frozen_dof.push_back(p.index+1);
-        simulation.frozen_dof.push_back(p.index+2);
+        unsigned int index = particle_indices[i];
+        simulation.frozen_dof.push_back(3*index+0 + bounds.dof_index);
+        simulation.frozen_dof.push_back(3*index+1 + bounds.dof_index);
+        simulation.frozen_dof.push_back(3*index+2 + bounds.dof_index);
     }
     return *this;
+}
+
+
+FEMHandle FEMHandle::add_gravity(Scalar gravity) const {
+    for (unsigned int i = 0; i <bounds.nDoF/3; i++) {
+        simulation.energies.gravities.push_back(Gravity(bounds.dof_index+3*i+1, GravityParameters(gravity)));
+    }
+    return *this;
+}
+
+void join_rigid_body_with_particle(Simulation& sim, RigidBodyHandle rb, ParticleHandle p) {
+    ParticleRigidBodyCopuling copuling = ParticleRigidBodyCopuling(rb.rb, p.particle, p.particle.get_position(sim.initial_state.x));
+    sim.copulings.add_copuling(copuling);
 }

@@ -8,6 +8,7 @@
 #include <raylib.h>
 
 #include "linear_algebra.hpp"
+#include "rigid_body.hpp"
 #include "utility_functions.hpp"
 #include "mesh.hpp"
 
@@ -80,6 +81,7 @@ Mesh LoadMeshTinyOBJ(std::string inputfile) {
 
 SimulationMesh::SimulationMesh(std::string filename) {
     LoadVerticesAndIndicesTinyOBJ(filename, vertices, indices);
+    recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
 }
 
 struct h_vec3 {

@@ -46,9 +46,9 @@ void main()
 
     light.enabled = 1;
     light.type = LIGHT_POINT;
-    light.position = vec3(1, 3, 0);
+    light.position = vec3(0, 8, 4);
     light.target = vec3(0, 0, 0);
-    light.color = vec4(1.0); // white light
+    light.color = vec4(1); // white light
 
     if (light.enabled == 1){
       vec3 light_vec = vec3(0.0);
@@ -72,7 +72,7 @@ void main()
     }
 
     finalColor = (texelColor*((colDiffuse + vec4(specular, 1.0))*vec4(lightDot, 1.0)));
-    finalColor += texelColor*(ambient/10.0)*colDiffuse;
+    finalColor += texelColor*(ambient)*colDiffuse;
 
     // Gamma correction
     finalColor = pow(finalColor, vec4(1.0/2.2));

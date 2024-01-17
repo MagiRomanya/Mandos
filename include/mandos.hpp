@@ -42,7 +42,7 @@ class RigidBodyHandle {
          *
          * @param omega The angular velocity given in axis angle notation
          */
-        RigidBodyHandle set_initial_angluar_velocity(Vec3 omega) const;
+        RigidBodyHandle set_initial_angular_velocity(Vec3 omega) const;
 
         /**
          * Make this Rigid Body affected by gravity
@@ -81,11 +81,6 @@ class RigidBodyHandle {
         Simulation& simulation;
 };
 
-#ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
-void join_rigid_bodies(Simulation& simulation, RigidBodyHandle rbA, Vec3 pA, RigidBodyHandle rbB, Vec3 pB);
-#endif //ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
-
-
 class MassSpringHandle {
     public:
         MassSpringHandle(Simulation& simulation,
@@ -99,14 +94,15 @@ class MassSpringHandle {
 
         MassSpringHandle freeze_particles(const std::vector<unsigned int>& particle_indices) const;
 
-        inline unsigned int get_n_particles() const { return bounds.n_particles; }
+        MassSpringHandle add_gravity(const Scalar gravity) const;
 
+        inline unsigned int get_n_particles() const { return bounds.n_particles; }
 
         void get_dof_vector(const PhysicsState& state, std::vector<float>& out_dofs) const;
 
         const Scalar TotalMass;
-    private:
         const SimulableBounds bounds;
+    private:
         Simulation& simulation;
 };
 
@@ -133,6 +129,8 @@ class ParticleHandle {
 
 void join_particles_with_spring(Simulation& simulation, const ParticleHandle& p1, const ParticleHandle& p2, Scalar k, Scalar damping);
 
+void join_rigid_body_with_particle(Simulation& sim, RigidBodyHandle rbA, ParticleHandle p);
+
 class FEMHandle {
     public:
         FEMHandle(Simulation& simulation,
@@ -143,6 +141,8 @@ class FEMHandle {
         Vec3 compute_center_of_mass(const PhysicsState& state) const;
 
         FEMHandle freeze_particles(const std::vector<unsigned int>& particle_indices) const;
+
+        FEMHandle add_gravity(Scalar gravity) const;
 
         inline unsigned int get_n_particles() const { return bounds.n_particles; }
 

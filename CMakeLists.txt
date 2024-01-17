@@ -29,26 +29,22 @@ file(GLOB SOURCE_FILES
   src/*.cpp
   src/simulation_generators/*.cpp
 )
-file(GLOB EDITOR_SOURCE_FILES
-  src/editor/*.cpp
-)
 
 set(CMAKE_BUILD_TYPE Debug)
-# set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON) # Necessary for pybind11 dynamic lib
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/eigen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/)
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON) # Necessary for pybind11 dynamic lib
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
 
 add_library(libmandos STATIC ${SOURCE_FILES})
 set_target_properties(libmandos PROPERTIES OUTPUT_NAME mandos)
 
 add_executable(${PROJECT_NAME} src/standalone/main.cpp)
-add_executable(mandos_gui ${EDITOR_SOURCE_FILES})
 
 target_include_directories(libmandos PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/
@@ -68,7 +64,6 @@ target_link_libraries(libmandos
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC libmandos)
-target_link_libraries(mandos_gui PUBLIC libmandos)
 
 # Creating the pyhon library
 find_package(Python 3.6 COMPONENTS Interpreter Development REQUIRED)

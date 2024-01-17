@@ -53,5 +53,9 @@ inline Vector3 vector3_eigen_to_raylib(const Vec3& v) {
     return Vector3{v.x(), v.y(), v.z()};
 }
 
+inline Vec3 cross(const Vec3& v, const Vec3& u) {
+    return Vec3(v.y() * u.z() - v.z() * u.y(), v.z() * u.x() - v.x() * u.z(), v.x() * u.y() - v.y() * u.x());
+}
+
 
 #endif // UTILITY_FUNCTIONS_H_

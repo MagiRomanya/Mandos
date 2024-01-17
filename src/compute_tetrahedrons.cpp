@@ -1,7 +1,12 @@
+#include "mesh.hpp"
 #include <vector>
+// #define TETLIBRARY
 #include <tetgen.h>
 
-#include "utility_functions.hpp"
+
+void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices, TetrahedronMesh& tmesh) {
+    tetgen_compute_tetrahedrons(triangle_indices, triangle_vertices, tmesh.indices, tmesh.vertices);
+}
 
 void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices,
                                  std::vector<unsigned int>& out_tetrahedron_indices, std::vector<float>& out_tetrahedron_vertices) {
@@ -34,7 +39,7 @@ void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indic
         facet->numberofholes = 0;
         facet->holelist = nullptr;
 
-        polygon = &facet->polygonlist[0];
+        polygon = &facet->polygonlist[0]; // The triangle in the facet
         polygon->numberofvertices = 3; // The polygon is a triangle
         polygon->vertexlist = new int[polygon->numberofvertices];
         polygon->vertexlist[0] = triangle_indices[3*i+0];
@@ -43,11 +48,12 @@ void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indic
     }
 
     // Generate the tetrahedron mesh
-    tetgenbehavior behaviour;
-    behaviour.plc = 1;
-    behaviour.quality = 1;
-    // behaviour.minratio = 1.414;
-    tetrahedralize(&behaviour, &in, &out);
+    tetgenbehavior behavior;
+    behavior.plc = 1;
+    behavior.quality = 1;
+    behavior.nobisect = 1; // preserve Surface mesh
+    // behavior.minratio = 1.414;
+    tetrahedralize(&behavior, &in, &out);
 
     // Extract the tetrahedra information from "out"
     out_tetrahedron_indices.clear();

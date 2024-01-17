@@ -5,6 +5,8 @@
 #include "mesh.hpp"
 #include "physics_state.hpp"
 #include "memory_pool.hpp"
+#include "simulation.hpp"
+#include <vector>
 
 enum KeyboardKeys {
     Key_NULL            = 0,        // Key: NULL, used for no key pressed
@@ -157,7 +159,17 @@ struct MandosViewer {
 
     void draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh);
 
+    void draw_particles(const Simulation& simulation, const PhysicsState& state);
+
+    void draw_FEM(const FEMHandle& fem, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh);
+
+    void draw_MassSpring(const MassSpringHandle& mass_spring, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh);
+
     void draw_mesh(const Mat4& transform, const MeshGPU& mesh);
+
+    void draw_springs(const Simulation& simulation, const PhysicsState& state);
+
+    void draw_FEM_tetrahedrons(const Simulation& simulation, const PhysicsState& state);
 };
 
 #endif // VIEWMANDOS_H_

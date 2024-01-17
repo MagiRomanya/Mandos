@@ -1,7 +1,5 @@
 #include "inertia_energies.hpp"
 #include "mesh.hpp"
-#include "particle.hpp"
-#include "rigid_body.hpp"
 #include "simulable_generator.hpp"
 
 SimulableBounds generate_RigidBody_tennis_racket_effect(Simulation& simulation) {

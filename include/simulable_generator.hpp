@@ -18,8 +18,10 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
                                      Scalar k_bending,
                                      Scalar damping);
 
+template <typename MaterialType>
 SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus);
 
+template <typename MaterialType>
 SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,
                                                      const std::vector<unsigned int>& tet_indices, const std::vector<float>& tet_vertices);
 
