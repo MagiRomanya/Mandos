@@ -102,7 +102,6 @@ class MassSpringHandle {
 
         inline unsigned int get_n_particles() const { return bounds.n_particles; }
 
-
         void get_dof_vector(const PhysicsState& state, std::vector<float>& out_dofs) const;
 
         const Scalar TotalMass;

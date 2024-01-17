@@ -170,21 +170,6 @@ struct MandosViewer {
     void draw_springs(const Simulation& simulation, const PhysicsState& state);
 
     void draw_FEM_tetrahedrons(const Simulation& simulation, const PhysicsState& state);
-
-    // void register_mesh(const ParticleHandle& particle);
-
-    // void register_mesh(const ParticleHandle& particle, RenderMesh render_mesh);
-
-    // void register_mesh(const RigidBodyHandle& rb, RenderMesh render_mesh);
-
-    // void register_mesh(const MassSpringHandle& mass_spring, SimulationMesh sim_mesh, RenderMesh render_mesh);
-
-    // void register_mesh(const FEMHandle& fem, SimulationMesh sim_mesh, RenderMesh render_mesh);
-
-    // void update_simulable_meshes(const PhysicsState& state);
-
-    // void draw_registered_meshes();
-
 };
 
 #endif // VIEWMANDOS_H_
