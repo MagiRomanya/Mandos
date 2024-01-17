@@ -2,7 +2,6 @@
 
 #include "fem_unit.hpp"
 #include "simulation.hpp"
-#include "hard_constraints.hpp"
 #include "integrators.hpp"
 #include "linear_algebra.hpp"
 #include "particle.hpp"
@@ -35,36 +34,20 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     const unsigned int nDoF = simulation.initial_state.x.size();
     EnergyAndDerivatives f(0);
 
-#ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
-    const unsigned int nConstraints = count_constraints(simulation.constraints);
-    ConstraintsAndJacobians c(0);
-#endif // ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
     const PhysicsState state0 = state;
 
     for (unsigned int i = 0; i < 1; i++) {
         f = EnergyAndDerivatives(nDoF);
-#ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
-        c = ConstraintsAndJacobians(nConstraints);
-#endif // ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
 
         // Compute energy and derivatives from the energies
         // -----------------------------------------------------------------------------------------
         compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
 
-#ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
-        // Compute constrainrs and Jacobians from the Hard Constraints
-        // -----------------------------------------------------------------------------------------
-        compute_constraints_and_jacobians(simulation.constraints, state, c);
-#endif // ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
 
         // Integration step
         // -----------------------------------------------------------------------------------------
         Vec dx;
-#ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
-        integrate_implicit_euler(simulation, state, f, c, dx);
-#else
         integrate_implicit_euler(simulation, state, f, dx);
-#endif // ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
 
         // Update state
         // -----------------------------------------------------------------------------------------

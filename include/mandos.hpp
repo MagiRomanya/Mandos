@@ -81,10 +81,6 @@ class RigidBodyHandle {
         Simulation& simulation;
 };
 
-#ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
-void join_rigid_bodies(Simulation& simulation, RigidBodyHandle rbA, Vec3 pA, RigidBodyHandle rbB, Vec3 pB);
-#endif //ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
-
 class MassSpringHandle {
     public:
         MassSpringHandle(Simulation& simulation,

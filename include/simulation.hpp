@@ -6,7 +6,6 @@
 #include <cassert>
 
 #include "gravity.hpp"
-#include "hard_constraints.hpp"
 #include "inertia_energies.hpp"
 #include "linear_algebra.hpp"
 #include "particle_rigid_body_copuling.hpp"
@@ -57,10 +56,6 @@ struct Simulation {
     PhysicsState initial_state;
     std::vector<unsigned int> frozen_dof;
     Copulings copulings;
-
-#ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
-    HardConstraints constraints;
-#endif
 };
 
 void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out);

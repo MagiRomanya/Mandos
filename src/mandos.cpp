@@ -77,12 +77,6 @@ Mat4 RigidBodyHandle::get_transformation_matrix(const PhysicsState& state) const
     return transformation.matrix();
 }
 
-#ifdef ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
-void join_rigid_bodies(Simulation& simulation, RigidBodyHandle rbA, Vec3 pA, RigidBodyHandle rbB, Vec3 pB) {
-    simulation.constraints.rb_point_constraints.emplace_back(count_constraints(simulation.constraints), rbA.rb, rbB.rb, pA, pB);
-}
-#endif //ENABLE_LAGRANGE_MULTIPLIER_CONSTRAINTS
-
 MassSpringHandle::MassSpringHandle(Simulation& simulation,
                                    const std::vector<Scalar>& vertices,
                                    const std::vector<unsigned int>& indices,
