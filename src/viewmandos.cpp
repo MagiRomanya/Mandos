@@ -13,7 +13,7 @@
 #include "viewmandos.hpp"
 
 #define RB_COLOR YELLOW
-#define FEM_COLOR (Color){ 255, 109, 194, 255 }
+#define FEM_COLOR PINK
 #define PARTICLE_COLOR BLUE
 #define MASS_SPRING_COLOR GREEN
 #define FROZEN_PARTICLE_COLOR WHITE
@@ -148,7 +148,7 @@ Material createMaterialFromShader(Shader shader) {
     material.shader = shader;
 
     // Using rlgl default texture (1x1 pixel, UNCOMPRESSED_R8G8B8A8, 1 mipmap)
-    material.maps[MATERIAL_MAP_DIFFUSE].texture = (Texture2D){ rlGetTextureIdDefault(), 1, 1, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 };
+    material.maps[MATERIAL_MAP_DIFFUSE].texture = Texture2D( rlGetTextureIdDefault(), 1, 1, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 );
 
     material.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;    // Diffuse color
     material.maps[MATERIAL_MAP_SPECULAR].color = WHITE;   // Specular color
