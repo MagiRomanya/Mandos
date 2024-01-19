@@ -137,6 +137,7 @@ PYBIND11_MODULE(pymandos, m) {
         .def("draw_springs", &MandosViewer::draw_springs)
         .def("draw_particles", &MandosViewer::draw_particles)
         .def("draw_FEM_tetrahedrons", &MandosViewer::draw_FEM_tetrahedrons)
+        .def("draw_particle_indices", &MandosViewer::draw_particle_indices)
         ;
 
 }

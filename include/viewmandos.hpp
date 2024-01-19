@@ -170,6 +170,8 @@ struct MandosViewer {
     void draw_springs(const Simulation& simulation, const PhysicsState& state);
 
     void draw_FEM_tetrahedrons(const Simulation& simulation, const PhysicsState& state);
+
+    void draw_particle_indices(const Simulation& simulation, const PhysicsState& state);
 };
 
 #endif // VIEWMANDOS_H_

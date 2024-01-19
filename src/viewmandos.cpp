@@ -1,5 +1,8 @@
 #include <cassert>
 #include <cstddef>
+#include <cstdio>
+#include <string>
+#include <stdlib.h>
 
 #include "fem_unit.hpp"
 #include "mandos.hpp"
@@ -7,6 +10,7 @@
 #include "mesh.hpp"
 #include "raylib.h"
 #include "raylib_imgui.hpp"
+#include "raymath.h"
 #include "rlgl.h"
 #include "spring.hpp"
 #include "utility_functions.hpp"
@@ -152,6 +156,7 @@ static Material base_material;
 static Shader base_shader;
 static Shader normals_shader;
 static Shader diffuse_shader;
+static Texture2D texture;
 
 Material createMaterialFromShader(Shader shader) {
     Material material = { 0 };
@@ -179,11 +184,17 @@ MandosViewer::MandosViewer() {
 
     // Load basic lighting shader
     base_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/lighting.fs");
-    normals_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/normals.fs");
-    diffuse_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/picker.fs");
-    // Get some required shader locations
     base_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(base_shader, "viewPos");
     base_material = createMaterialFromShader(base_shader);
+
+    // Other shaders
+    normals_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/normals.fs");
+    diffuse_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/picker.fs");
+
+    // Texture loading
+    texture = LoadTexture("resources/textures/slab.png");
+    // SetMaterialTexture(&base_material, MATERIAL_MAP_DIFFUSE, texture);
+    // Get some required shader locations
     sphere_model.materialCount = 1;
     sphere_model.materials[0] = base_material;
 
@@ -194,6 +205,7 @@ MandosViewer::~MandosViewer() {
     UnloadShader(base_shader);
     UnloadShader(normals_shader);
     UnloadShader(diffuse_shader);
+    UnloadTexture(texture);
     CloseWindow();
 }
 
@@ -329,4 +341,19 @@ void MandosViewer::draw_FEM_tetrahedrons(const Simulation& simulation, const Phy
     }
     FEM_MATERIAL_MEMBERS
 #undef MAT
+}
+
+void MandosViewer::draw_particle_indices(const Simulation& simulation, const PhysicsState& state) {
+    for (size_t i = 0; i < simulation.simulables.particles.size(); i++) {
+        const Particle particle = simulation.simulables.particles[i];
+        const Vector3 position = vector3_eigen_to_raylib(particle.get_position(state.x));
+        Color color = PARTICLE_COLOR;
+        const unsigned int index = particle.index / 3;
+        const Matrix matView = MatrixLookAt(camera.position, camera.target, camera.up);
+        const Vector3 particleCamPos = Vector3Transform(position, matView);
+        if (particleCamPos.z > 0.0f or particleCamPos.z < -5.0f) continue;
+        Vector2 particleScreenSpacePosition = GetWorldToScreen(position, camera);
+        DrawText(std::to_string(index).c_str(), (int)particleScreenSpacePosition.x - MeasureText(std::to_string(index).c_str(), 20)/2, (int)particleScreenSpacePosition.y, 20, BLACK);
+        DrawModel(sphere_model, position, 1, color);
+    }
 }

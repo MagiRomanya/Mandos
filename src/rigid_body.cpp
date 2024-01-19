@@ -172,7 +172,7 @@ Vec3 update_axis_angle(const Vec3& theta, const Vec3& omega) {
 
 void RigidBody::update_state(const Vec& dx, Vec& x) const {
     // Update COM position
-    x.segment(index, 3) += dx.segment(index, 3);
+    x.segment<3>(index) += dx.segment<3>(index);
 
     // Update axis-angle rotation
     const Vec3 theta = x.segment(index+3,3);

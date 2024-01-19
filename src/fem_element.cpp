@@ -103,12 +103,8 @@ FEM_NeoHookeanMaterial::FEM_NeoHookeanMaterial(Scalar mu_lame, Scalar lambda_lam
   // mu = 4/3 mu_lame && lambda = lambda_lame + 5/6 mu_lame (eq 16 https://dl.acm.org/doi/pdf/10.1145/3180491)
   : mu(1.33333333333333f * mu_lame), lambda(lambda_lame + 0.833333333333333f * mu_lame)
 {
-  const Scalar nu = (lambda - 5.0f / 8.0f *mu) / (2*lambda + mu/4.0f);
-  // DEBUG_LOG(nu);
-  // DEBUG_LOG(mu_lame);
-  // DEBUG_LOG(lambda_lame);
-  // DEBUG_LOG(mu);
-  // DEBUG_LOG(lambda);
+  // Poisson ratio from the neo hookean material parameters
+  // const Scalar nu = (lambda - 5.0f / 8.0f *mu) / (2*lambda + mu/4.0f);
 }
 
 Mat3 FEM_NeoHookeanMaterial::compute_strain_tensor(const Mat3& F) const {
@@ -124,8 +120,6 @@ Scalar FEM_NeoHookeanMaterial::get_phi(const Mat3& F) const {
   const Scalar alpha = 1.0f + mu / lambda - mu / (4.0f * lambda);
   // const Scalar offset = 9.0f / 32.0f * mu*mu / lambda - mu * std::log(2); // Energy with no deformation
   const Scalar phi = 0.5f * mu * (IC - 3.0f) + 0.5f * lambda * (J - alpha) * (J - alpha) - 0.5f * mu * std::log(IC + 1.0f);
-  // const Scalar phi = 0.5f * mu * (IC - 3.0f) - 0.5f * mu * std::log(IC + 1.0f);
-  // const Scalar phi = + 0.5f * lambda * (J - alpha) * (J - alpha);
   return phi;
 }
 
@@ -173,8 +167,6 @@ Mat3 FEM_NeoHookeanMaterial::compute_stress_tensor(const Mat3& F) const {
   // First Piola-kirchoff Stress (eq 18 https://dl.acm.org/doi/pdf/10.1145/3180491)
   const Mat3 dJ_dF = determinant_derivative(F);
   const Mat3 PK1 = mu * (1.f - 1.f / (IC + 1.f)) * F + lambda * (J - alpha) * dJ_dF;
-  // const Mat3 PK1 = mu * (1.f - 1.f / (IC + 1.f)) * F.transpose();
-  // const Mat3 PK1 = + lambda * (J - alpha) * dJ_dF;
   return PK1;
 }
 
@@ -209,6 +201,17 @@ Eigen::Matrix<Scalar, 9, 9> FEM_NeoHookeanMaterial::get_phi_hessian(const Mat3& 
   dvecSigma_dvecF += lambda * vec_G * vec_G.transpose();
   dvecSigma_dvecF += lambda * (J - alpha) * vec_H;
 
+  const Eigen::SelfAdjointEigenSolver<Eigen::Matrix<Scalar,9,9>> eigs(dvecSigma_dvecF);
+  Eigen::Vector<Scalar, 9> eigenvalues = eigs.eigenvalues();
+  Eigen::Matrix<Scalar,9,9> eigenvectors = eigs.eigenvectors();
+
+  for (int i = 0; i < 9; i++) {
+    if (eigenvalues(i) < 0.0) {
+      eigenvalues(i) = 0.0;
+    }
+  }
+
+  dvecSigma_dvecF = eigenvectors * eigenvalues.asDiagonal() * eigenvectors.transpose();
   return dvecSigma_dvecF;
 }
 
@@ -220,6 +223,24 @@ FEM_Element3D<MaterialType>::FEM_Element3D(Particle p1,Particle p2, Particle p3,
 template <typename MaterialType>
 Scalar FEM_Element3D<MaterialType>::compute_volume(const Vec3& x1, const Vec3& x2, const Vec3& x3, const Vec3& x4) const {
   return compute_tetrahedron_volume(x2-x1, x3-x1, x4-x1);
+}
+
+template <typename MaterialType>
+Scalar FEM_Element3D<MaterialType>::compute_energy(Scalar TimeStep, const PhysicsState& state) const {
+  // Get the relevant sate
+  // ---------------------------------------------------------------
+  const Vec3& x1 = p1.get_position(state.x);
+  const Vec3& x2 = p2.get_position(state.x);
+  const Vec3& x3 = p3.get_position(state.x);
+  const Vec3& x4 = p4.get_position(state.x);
+
+  const Mat3 F = compute_deformation_tensor(dvecF_dx, x1, x2, x3, x4);
+
+  // Compute the energy derivatives
+  // ---------------------------------------------------------------
+  const Scalar volume = abs(compute_volume(x1, x2, x3, x4));
+  const Scalar energy = volume * material.get_phi(F);
+  return energy;
 }
 
 template <typename MaterialType>
@@ -255,6 +276,7 @@ void FEM_Element3D<MaterialType>::compute_energy_and_derivatives(Scalar TimeStep
   for (unsigned int i = 0; i < 3; i++) {
     for (unsigned int j = 0; j < 3; j++) {
       // REVIEW This matrix triplets may be transposed
+      // -> Not relevant as the hessian should be symmetric
       // First row
       out.hessian_triplets.emplace_back(p1.index+i, p1.index+j, hess(3*0+i, 3*0+j));
       out.hessian_triplets.emplace_back(p1.index+i, p2.index+j, hess(3*0+i, 3*1+j));

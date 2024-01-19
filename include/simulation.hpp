@@ -58,6 +58,8 @@ struct Simulation {
     Copulings copulings;
 };
 
+Scalar compute_energy(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0);
+
 void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out);
 
 void simulation_step(const Simulation& simulation, PhysicsState& state);

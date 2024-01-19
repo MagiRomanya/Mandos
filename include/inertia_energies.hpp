@@ -13,12 +13,15 @@ struct LinearInertia {
     const Mat3 Mass;
     const Particle p;
 
+    Scalar compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const;
     void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const;
 };
 
 struct RotationalInertia {
     RotationalInertia(RigidBody rb) : rb(rb) {}
     const RigidBody rb;
+
+    Scalar compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const;
     void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const;
 };
 

@@ -21,6 +21,7 @@ struct ParticleSpring {
     const Particle p2;
     const SpringParameters parameters;
 
+    Scalar compute_energy(Scalar TimeStep, const PhysicsState& state) const;
     void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const;
 };
 

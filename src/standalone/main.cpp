@@ -31,8 +31,8 @@ int main(void) {
     const Scalar poisson_ratio = 0.2;
     const FEMHandle fem1 = FEMHandle(simulation, tet_vertices, tet_indices, MASS, poisson_ratio, young_modulus)
         .add_gravity(GRAVITY)
-        // .freeze_particles({0,1,4,5})
-        .freeze_particles({0})
+        .freeze_particles({0,1,4,5})
+        // .freeze_particles({0})
         ;
     //--------------------------------------------------------------------------------------
 

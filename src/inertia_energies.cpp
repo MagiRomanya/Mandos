@@ -2,6 +2,17 @@
 #include "particle.hpp"
 #include "simulation.hpp"
 
+Scalar LinearInertia::compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const {
+    const Vec3 x = p.get_position(state.x);
+    const Vec3 x0 = p.get_position(state0.x);
+    const Vec3 v0 = p.get_velocity(state0, TimeStep);
+    const Vec3 x_guess = x0 + TimeStep * v0;
+    const Scalar h2 = TimeStep*TimeStep;
+
+    const Scalar energy = 1.0 / (2.0 * h2) * (x - x_guess).transpose() * Mass * (x - x_guess);
+    return energy;
+}
+
 void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
     // Get the relevant sate
     // ---------------------------------------------------------------
@@ -28,6 +39,22 @@ void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const Physic
     }
 }
 
+Scalar RotationalInertia::compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const {
+    const Mat3 inertia_tensor = rb.J_inertia_tensor0;
+    const Mat3 R = rb.compute_rotation_matrix(state.x);
+    const Mat3 R0 = rb.compute_rotation_matrix(state0.x);
+    const Mat3 R0old = rb.compute_rotation_matrix(state0.x_old);
+    const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
+    const Mat3 deltaR = R - R_guess;
+    const Scalar h2 = TimeStep * TimeStep;
+
+    // Compute the energy derivatives
+    // ---------------------------------------------------------------
+    const Scalar KE = (deltaR * rb.J_inertia_tensor0 * deltaR.transpose()).trace() / h2;
+    return KE;
+
+}
+
 void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
     // Get the relevant sate
     // ---------------------------------------------------------------
@@ -46,7 +73,7 @@ void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const Ph
 
     // Compute the energy derivatives
     // ---------------------------------------------------------------
-    const Scalar KE = (deltaR * rb.J_inertia_tensor0 * deltaR.transpose()).trace();
+    const Scalar KE = (deltaR * rb.J_inertia_tensor0 * deltaR.transpose()).trace() / h2;
     const Vec3 gradient = 2 * Vec3(-A(1,2), A(0,2), -A(0,1)) / h2;                 // v s.t. A = skew(v)
     const Mat3 hessian = 1.0 / h2 * (S.trace() * Mat3::Identity() - S);
 

@@ -1,6 +1,15 @@
 #include "spring.hpp"
 #include "linear_algebra.hpp"
 
+Scalar ParticleSpring::compute_energy(Scalar TimeStep, const PhysicsState& state) const {
+    const Vec3 x1 = p1.get_position(state.x);
+    const Vec3 x2 = p2.get_position(state.x);
+    const Scalar L = (x1 - x2).norm();
+
+    const Scalar energy = parameters.get_energy(L);
+    return  energy;
+}
+
 void ParticleSpring::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const {
     // Get the relevant sate
     // ---------------------------------------------------------------

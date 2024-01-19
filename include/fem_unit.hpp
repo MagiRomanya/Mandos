@@ -55,6 +55,7 @@ struct FEM_Element3D {
     // Shape derivative (in the form of a block matrix)
     const Eigen::Matrix<Scalar,9,12> dvecF_dx;
 
+    Scalar compute_energy(Scalar TimeStep, const PhysicsState& state) const;
     void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const;
 
     Scalar compute_volume(const Vec3& x1, const Vec3& x2, const Vec3& x3, const Vec3& x4) const;
