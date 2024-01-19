@@ -1,10 +1,13 @@
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <string>
 #include <stdlib.h>
+#include <Eigen/Core>
 
 #include "fem_unit.hpp"
+#include "linear_algebra.hpp"
 #include "mandos.hpp"
 #include "memory_pool.hpp"
 #include "mesh.hpp"
@@ -13,8 +16,8 @@
 #include "raymath.h"
 #include "rlgl.h"
 #include "spring.hpp"
-#include "utility_functions.hpp"
 #include "viewmandos.hpp"
+#include "utility_functions.hpp"
 
 #define RB_COLOR YELLOW
 #define FEM_COLOR PINK
@@ -36,7 +39,7 @@ inline Vector3 vector3_eigen_to_raylib(const Vec3& v) {
     return Vector3{v.x(), v.y(), v.z()};
 }
 
-Camera3D create_camera(unsigned int FPS = 200) {
+Camera3D create_camera() {
     Camera3D camera = { 0 };
     camera.position = Vector3( 0.0f, 5.0f, 20.0f );  // Camera position
     camera.target = Vector3( 0.0f, 0.0f, 0.0f );      // Camera looking at point
@@ -156,7 +159,9 @@ static Material base_material;
 static Shader base_shader;
 static Shader normals_shader;
 static Shader diffuse_shader;
+static Shader axis_shader;
 static Texture2D texture;
+static MeshGPU* axis3D = nullptr;
 
 Material createMaterialFromShader(Shader shader) {
     Material material = { 0 };
@@ -190,10 +195,16 @@ MandosViewer::MandosViewer() {
     // Other shaders
     normals_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/normals.fs");
     diffuse_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/picker.fs");
+    axis_shader = LoadShader("resources/shaders/axis.vs", "resources/shaders/axis.fs");
 
     // Texture loading
     texture = LoadTexture("resources/textures/slab.png");
     // SetMaterialTexture(&base_material, MATERIAL_MAP_DIFFUSE, texture);
+
+    // Axis 3D
+    RenderMesh axis3Drender = RenderMesh("resources/obj/axis.obj");
+    axis3D = new MeshGPU(axis3Drender);
+
     // Get some required shader locations
     sphere_model.materialCount = 1;
     sphere_model.materials[0] = base_material;
@@ -205,8 +216,11 @@ MandosViewer::~MandosViewer() {
     UnloadShader(base_shader);
     UnloadShader(normals_shader);
     UnloadShader(diffuse_shader);
+    UnloadShader(axis_shader);
     UnloadTexture(texture);
-    CloseWindow();
+    delete axis3D;
+
+    CloseWindow(); // Destroys the opengl context
 }
 
 bool MandosViewer::window_should_close() {
@@ -229,7 +243,58 @@ void MandosViewer::begin_3D_mode() {
     DrawGrid(30, 1.0f);
 }
 
-void MandosViewer::end_3D_mode() { EndMode3D(); }
+void draw_mesh_color(const Mat4& transform, const MeshGPU& mesh, MemoryPool& mem_pool, Color color) {
+    base_material.maps[MATERIAL_MAP_DIFFUSE].color = color;
+    Mesh raymesh = MeshGPUtoRaymesh(mesh, mem_pool);
+    DrawMesh(raymesh, base_material, matrix_eigen_to_raylib(transform));
+    base_material.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+}
+
+void getPitchYaw(const Camera3D& camera, float& pitch, float& yaw) {
+    // Calculate forward, right, and up vectors
+    Vector3 forward = Vector3Subtract(camera.target, camera.position);
+    forward = Vector3Normalize(forward);
+
+    Vector3 right = Vector3CrossProduct(camera.up, forward);
+    right = Vector3Normalize(right);
+
+    // Calculate pitch
+    pitch = asin(-forward.y);
+
+    // Calculate yaw
+    yaw = atan2(right.x, right.z);
+}
+
+void DrawAxis3D(MemoryPool& mem_pool) {
+    Vector3 axisPosition = Vector3(30.0f, 15.0f, 0.0f);
+    Camera3D axisCam = create_camera();
+    axisCam.position = Vector3(0.0f, 0.0f, 10.0f);
+    axisCam.projection = CAMERA_ORTHOGRAPHIC;
+    Mat3 transform = Mat3::Identity()*2.f;
+    Scalar pitch, yaw;
+    getPitchYaw(camera, pitch, yaw);
+    const Eigen::AngleAxis<Scalar> pitchRotation(pitch, Vec3(1.0f,0.0f,0.0f));
+    const Eigen::AngleAxis<Scalar> yawRotation(-yaw - M_PI_2, Vec3(camera.up.x,camera.up.y,camera.up.z));
+    transform = pitchRotation.toRotationMatrix() * yawRotation.toRotationMatrix() * transform;
+    Mesh raymesh = MeshGPUtoRaymesh(*axis3D, mem_pool);
+
+    Matrix rayTransform = {
+    transform(0,0), transform(0,1), transform(0, 2), axisPosition.x,
+    transform(1,0), transform(1,1), transform(1, 2), axisPosition.y,
+    transform(2,0), transform(2,1), transform(2, 2), axisPosition.z,
+    0.0f ,0.0f ,0.0f , 1.0f,
+    };
+    BeginMode3D(axisCam);
+    base_material.shader = axis_shader;
+    DrawMesh(raymesh, base_material, rayTransform);
+    base_material.shader = base_shader;
+    EndMode3D();
+}
+
+void MandosViewer::end_3D_mode() {
+    EndMode3D();
+    DrawAxis3D(mem_pool);
+}
 
 void MandosViewer::begin_ImGUI_mode() { ImGuiBeginDrawing(); }
 
@@ -248,13 +313,6 @@ bool MandosViewer::is_key_pressed(int Key) { return IsKeyPressed(Key); }
 void MandosViewer::draw_particle(const ParticleHandle& particle, const PhysicsState& state) {
     const Vec3 position = particle.particle.get_position(state.x);
     DrawModel(sphere_model, vector3_eigen_to_raylib(position), 1, PARTICLE_COLOR);
-}
-
-void draw_mesh_color(const Mat4& transform, const MeshGPU& mesh, MemoryPool& mem_pool, Color color) {
-    base_material.maps[MATERIAL_MAP_DIFFUSE].color = color;
-    Mesh raymesh = MeshGPUtoRaymesh(mesh, mem_pool);
-    DrawMesh(raymesh, base_material, matrix_eigen_to_raylib(transform));
-    base_material.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
 }
 
 void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh) {
@@ -349,7 +407,7 @@ void MandosViewer::draw_particle_indices(const Simulation& simulation, const Phy
         const Vector3 position = vector3_eigen_to_raylib(particle.get_position(state.x));
         Color color = PARTICLE_COLOR;
         const unsigned int index = particle.index / 3;
-        const Matrix matView = MatrixLookAt(camera.position, camera.target, camera.up);
+        const Matrix matView = GetCameraMatrix(camera);
         const Vector3 particleCamPos = Vector3Transform(position, matView);
         if (particleCamPos.z > 0.0f or particleCamPos.z < -5.0f) continue;
         Vector2 particleScreenSpacePosition = GetWorldToScreen(position, camera);
