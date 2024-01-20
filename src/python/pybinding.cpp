@@ -40,8 +40,9 @@ PYBIND11_MODULE(pymandos, m) {
         .def(py::init<std::string>())
         .def("updateFromSimulationMesh", &RenderMesh::updateFromSimulationMesh)
         .def_readonly("vertices", &RenderMesh::vertices)
-        .def_readonly("texcoord", &RenderMesh::texcoord)
+        .def_readonly("texcoords", &RenderMesh::texcoords)
         .def_readonly("normals", &RenderMesh::normals)
+        .def_readonly("tangents", &RenderMesh::tangents)
         ;
 
     py::class_<SimulationMesh>(m, "SimulationMesh")

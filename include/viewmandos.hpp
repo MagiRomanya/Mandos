@@ -125,8 +125,8 @@ struct MeshGPU {
     ~MeshGPU();
     void updateData(const RenderMesh& mesh);
     int nVertices;
-    unsigned int verticesVBO, texcoordsVBO, normalsVBO, VAO;
-    float *vertices, *texcoords, *normals;
+    unsigned int verticesVBO, texcoordsVBO, normalsVBO, tangentsVBO, VAO;
+    float *vertices, *texcoords, *normals, *tangents;
 };
 
 struct MandosViewer {

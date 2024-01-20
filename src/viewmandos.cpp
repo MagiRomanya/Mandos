@@ -49,45 +49,50 @@ Camera3D create_camera() {
     return camera;
 }
 
-Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh, MemoryPool& pool) {
-    std::vector<unsigned short> indices = std::vector<unsigned short>(sim_mesh.indices.begin(), sim_mesh.indices.end());
-    Mesh mesh = {0};
-    mesh.vertexCount = sim_mesh.vertices.size() / 3;
-    mesh.triangleCount = indices.size() / 3;
-    mesh.vertices = (float *)std::memcpy(pool.allocate(sim_mesh.vertices.size() * sizeof(float)), sim_mesh.vertices.data(), sim_mesh.vertices.size() * sizeof(float));
-    mesh.texcoords = NULL;
-    mesh.normals = NULL;
-    mesh.indices = (unsigned short *)std::memcpy(pool.allocate(indices.size() * sizeof(unsigned short)), indices.data(), indices.size() * sizeof(unsigned short));
-    UploadMesh(&mesh, false);
-    return mesh;
-}
+// DEPRECATED
+// Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh, MemoryPool& pool) {
+//     std::vector<unsigned short> indices = std::vector<unsigned short>(sim_mesh.indices.begin(), sim_mesh.indices.end());
+//     Mesh mesh = {0};
+//     mesh.vertexCount = sim_mesh.vertices.size() / 3;
+//     mesh.triangleCount = indices.size() / 3;
+//     mesh.vertices = (float *)std::memcpy(pool.allocate(sim_mesh.vertices.size() * sizeof(float)), sim_mesh.vertices.data(), sim_mesh.vertices.size() * sizeof(float));
+//     mesh.texcoords = NULL;
+//     mesh.normals = NULL;
+//     mesh.indices = (unsigned short *)std::memcpy(pool.allocate(indices.size() * sizeof(unsigned short)), indices.data(), indices.size() * sizeof(unsigned short));
+//     UploadMesh(&mesh, false);
+//     return mesh;
+// }
 
-Mesh RenderMesh_to_RaylibMesh(const RenderMesh& render_mesh, MemoryPool& pool) {
-    Mesh mesh = {0};
-    mesh.vertexCount = render_mesh.vertices.size() / 3; // 3 coordinates per vertex
-    mesh.triangleCount = mesh.vertexCount / 3; // 3 vertices per triangle
-    mesh.vertices = (float *)std::memcpy(pool.allocate(render_mesh.vertices.size() * sizeof(float)), render_mesh.vertices.data(), render_mesh.vertices.size() * sizeof(float));
-    mesh.texcoords = (float *)std::memcpy(pool.allocate(render_mesh.texcoord.size() * sizeof(float)), render_mesh.texcoord.data(), render_mesh.texcoord.size() * sizeof(float));
-    mesh.normals = (float *)std::memcpy(pool.allocate(render_mesh.normals.size() * sizeof(float)), render_mesh.normals.data(), render_mesh.normals.size() * sizeof(float));
-    mesh.indices = NULL;
-    UploadMesh(&mesh, false);
-    return mesh;
-}
+// DEPRECATED
+// Mesh RenderMesh_to_RaylibMesh(const RenderMesh& render_mesh, MemoryPool& pool) {
+//     Mesh mesh = {0};
+//     mesh.vertexCount = render_mesh.vertices.size() / 3; // 3 coordinates per vertex
+//     mesh.triangleCount = mesh.vertexCount / 3; // 3 vertices per triangle
+//     mesh.vertices = (float *)std::memcpy(pool.allocate(render_mesh.vertices.size() * sizeof(float)), render_mesh.vertices.data(), render_mesh.vertices.size() * sizeof(float));
+//     mesh.texcoords = (float *)std::memcpy(pool.allocate(render_mesh.texcoords.size() * sizeof(float)), render_mesh.texcoords.data(), render_mesh.texcoords.size() * sizeof(float));
+//     mesh.normals = (float *)std::memcpy(pool.allocate(render_mesh.normals.size() * sizeof(float)), render_mesh.normals.data(), render_mesh.normals.size() * sizeof(float));
+//     mesh.indices = NULL;
+//     UploadMesh(&mesh, false);
+//     return mesh;
+// }
 
 MeshGPU::MeshGPU(const RenderMesh& mesh) {
     // Allocate resources
     vertices = (float*) calloc(sizeof(float), mesh.vertices.size());
-    texcoords = (float*) calloc(sizeof(float), mesh.texcoord.size());
+    texcoords = (float*) calloc(sizeof(float), mesh.texcoords.size());
     normals = (float*) calloc(sizeof(float), mesh.normals.size());
+    tangents = (float*) calloc(sizeof(float), mesh.tangents.size());
 
     // Copy the data
     nVertices = mesh.vertices.size() / 3;
     vertices = (float *) std::memcpy(vertices, mesh.vertices.data(), mesh.vertices.size()*sizeof(float));
-    texcoords = (float *) std::memcpy(texcoords, mesh.texcoord.data(), mesh.texcoord.size()*sizeof(float));
+    texcoords = (float *) std::memcpy(texcoords, mesh.texcoords.data(), mesh.texcoords.size()*sizeof(float));
     normals = (float *) std::memcpy(normals, mesh.normals.data(), mesh.normals.size()*sizeof(float));
+    tangents = (float *) std::memcpy(tangents, mesh.tangents.data(), mesh.tangents.size()*sizeof(float));
     if (!vertices) std::cerr << "MeshGPU::MeshGPU: vertices null" << std::endl;
     if (!texcoords) std::cerr << "MeshGPU::MeshGPU: texcoord null" << std::endl;
     if (!normals) std::cerr << "MeshGPU::MeshGPU: normals null" << std::endl;
+    if (!tangents) std::cerr << "MeshGPU::MeshGPU: tangents null" << std::endl;
 
     // Uload the mesh to GPU
     Mesh raymesh = {0};
@@ -96,33 +101,52 @@ MeshGPU::MeshGPU(const RenderMesh& mesh) {
     raymesh.vertices = vertices;
     raymesh.texcoords = texcoords;
     raymesh.normals = normals;
+    raymesh.tangents = tangents;
     UploadMesh(&raymesh, true);
+    // VBO indices handled by raylib
     verticesVBO = raymesh.vboId[0];
     texcoordsVBO = raymesh.vboId[1];
     normalsVBO = raymesh.vboId[2];
+    // vboId[3] are colors which we do not support
+    tangentsVBO = raymesh.vboId[4];
     VAO = raymesh.vaoId;
     RL_FREE(raymesh.vboId);
 }
 
 void MeshGPU::updateData(const RenderMesh& mesh) {
+    // Copy the data from the render mesh
     vertices = (float*) std::memcpy(vertices, mesh.vertices.data(), mesh.vertices.size()*sizeof(float));
     normals = (float*) std::memcpy(normals, mesh.normals.data(), mesh.normals.size()*sizeof(float));
+    tangents = (float*) std::memcpy(tangents, mesh.tangents.data(), mesh.tangents.size()*sizeof(float));
+
+    // Update the VBOs in the GPU
     rlUpdateVertexBuffer(verticesVBO, vertices, mesh.vertices.size() * sizeof(float), 0);
     rlUpdateVertexBuffer(normalsVBO, normals, mesh.normals.size() * sizeof(float), 0);
+    rlUpdateVertexBuffer(tangentsVBO, tangents, mesh.tangents.size() * sizeof(float), 0);
 }
 
 MeshGPU::~MeshGPU() {
+    // Deallocate CPU resources
     free(vertices);
     free(texcoords);
     free(normals);
+    free(tangents);
 
-    // Unload the mesh buffers
+    // Unload the mesh buffers (deallocate in GPU)
     rlUnloadVertexArray(VAO);
     rlUnloadVertexBuffer(verticesVBO);
     rlUnloadVertexBuffer(texcoordsVBO);
     rlUnloadVertexBuffer(normalsVBO);
+    rlUnloadVertexBuffer(tangentsVBO);
 }
 
+/**
+ * MeshGPU handles the CPU and GPU memory for us, we use raylib's Mesh as a vector to
+ * use raylib functionality of drawing meshes.
+ *
+ * Calling this function does not have a real cost as we are just copying data from one structure
+ * to another and no memory management is being done.
+ */
 Mesh MeshGPUtoRaymesh(const MeshGPU& mesh, MemoryPool& pool) {
     Mesh raymesh = {0};
     raymesh.vertexCount = mesh.nVertices;
@@ -130,29 +154,37 @@ Mesh MeshGPUtoRaymesh(const MeshGPU& mesh, MemoryPool& pool) {
     raymesh.vertices = mesh.vertices;
     raymesh.texcoords = mesh.texcoords;
     raymesh.normals = mesh.normals;
-    // Copy the vaos
+    // Copy the VAOs
     raymesh.vaoId = mesh.VAO;
     raymesh.vboId = (unsigned int*) pool.allocate(sizeof(unsigned int) * 3);
     raymesh.vboId[0] = mesh.verticesVBO;
     raymesh.vboId[1] = mesh.texcoordsVBO;
     raymesh.vboId[2] = mesh.normalsVBO;
+    raymesh.vboId[4] = mesh.tangentsVBO;
 
     return raymesh;
 }
 
-void UnloadGPUMesh(const Mesh& mesh) {
+// void UnloadGPUMesh(const Mesh& mesh) {
+//     // Unload rlgl VAO and allocated VBOs
+//     rlUnloadVertexArray(mesh.vaoId);
 
-    // Unload rlgl mesh vboId data
-    rlUnloadVertexArray(mesh.vaoId);
+//     #define MAX_MESH_VERTEX_BUFFERS 7
+//     if (mesh.vboId != NULL) for (int i = 0; i < MAX_MESH_VERTEX_BUFFERS; i++) rlUnloadVertexBuffer(mesh.vboId[i]);
+//     RL_FREE(mesh.vboId);
+//     #undef MAX_MESH_VERTEX_BUFFERS
+// }
 
-    #define MAX_MESH_VERTEX_BUFFERS 7
-    if (mesh.vboId != NULL) for (int i = 0; i < MAX_MESH_VERTEX_BUFFERS; i++) rlUnloadVertexBuffer(mesh.vboId[i]);
-    RL_FREE(mesh.vboId);
-    #undef MAX_MESH_VERTEX_BUFFERS
-}
+/**
+ * INFO Global data for our renderer that will be used throughout the runtime of the application.
+ *
+ * NOTE We can not hold this variables inside of MandosViewer class, as they depend on raylib and MandosViewer should
+ * be renderer agnostic by design.
+ * REVIEW if this section goes out of hand, we should wrap all this variables in a struct and only have a global pointer to
+ * a dinamically allocated instance of this struct. Memory handling should be done by MandosViewer.
+ */
 
 static Camera3D camera;
-
 #define SPHERE_SUBDIVISIONS 30
 static Model sphere_model;
 static Material base_material;

@@ -6,11 +6,11 @@
 #include "linear_algebra.hpp"
 
 struct SimulationMesh;
-/*
-** Mesh description with repeated vertices, along with normals and texture coordinates.
-**
-** The vertices are stored as a vector of floats. The vector has size nVertices * 3. The number of triangles is nVertices / 3.
-** The normals and texture coordinates are also stored as vector of floats with sizes nVertices*3 and nVertices*2 respectivly.
+/**
+ * Mesh description with repeated vertices, along with normals and texture coordinates.
+ *
+ * The vertices are stored as a vector of floats. The vector has size nVertices * 3. The number of triangles is nVertices / 3.
+ * The normals, tangents and texture coordinates are also stored as vector of floats with sizes nVertices*3 (normals and tangens) and nVertices*2 (texture coordinates).
  */
 struct RenderMesh {
     RenderMesh() {};
@@ -20,14 +20,15 @@ struct RenderMesh {
 
     std::vector<float> vertices;
     std::vector<float> normals;
-    std::vector<float> texcoord;
+    std::vector<float> tangents;
+    std::vector<float> texcoords;
 };
 
-/*
-** Mesh description with no repeated vertices.
-**
-** The vertices are stored as a vector of floats. The vector has size nVertices * 3.
-** The indices are stored as a vector of unsigned integers. The vector has size nTriangles * 3.
+/**
+ * Mesh description with no repeated vertices.
+ *
+ * The vertices are stored as a vector of floats. The vector has size nVertices * 3.
+ * The indices are stored as a vector of unsigned integers. The vector has size nTriangles * 3.
  */
 struct SimulationMesh {
     SimulationMesh() {};
@@ -38,10 +39,10 @@ struct SimulationMesh {
     std::vector<unsigned int> indices;
 };
 
-/*
-** Tetrahedron mesh with no repeated vertices.
-**
-** The tetrahedrons are described by the vector of indices which has a size of nTetrahedrons * 4.
+/**
+ * Tetrahedron mesh with no repeated vertices.
+ *
+ * The tetrahedrons are described by the vector of indices which has a size of nTetrahedrons * 4.
  */
 struct TetrahedronMesh {
     std::vector<float> vertices;
@@ -54,7 +55,7 @@ struct TetrahedronMesh {
  * @param inputfile directory of the obj file
  * @param out_vertices output vector of vertices (no repetition)
  * @param out_indices output vector of indices
-*/
+ */
 void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& out_vertices, std::vector<unsigned int>& out_indices);
 
 /**
@@ -102,6 +103,12 @@ void mesh_boundary(const std::vector<Scalar>& vertices,
                    std::vector<Edge> &externalEdges);
 
 
+/**
+ * Computes the external and internal edges of the mesh to count the springs it should have.
+ *
+ * @param vertices, indices description of the indexed mesh (no vertex repetition)
+ * @return The number of tension springs and the number of bending springs
+ */
 std::array<unsigned int, 2> count_springs(const std::vector<Scalar>& vertices, const std::vector<unsigned int>& indices);
 
 /**

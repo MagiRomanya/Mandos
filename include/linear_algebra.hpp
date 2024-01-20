@@ -7,6 +7,7 @@
 typedef float Scalar;
 
 // STATIC VECTORS AND MATRICES
+typedef Eigen::Vector2<Scalar> Vec2;
 typedef Eigen::Vector3<Scalar> Vec3;
 typedef Eigen::Matrix3<Scalar> Mat3;
 typedef Eigen::Vector4<Scalar> Vec4;

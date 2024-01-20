@@ -17,68 +17,6 @@
 // #define TINYOBJLOADER_USE_MAPBOX_EARCUT
 #include "tiny_obj_loader.h"
 
-Mesh LoadMeshFromVectors(std::vector<unsigned short>& indices, const std::vector<float>& vertices, const std::vector<float>& normals, const std::vector<float>& texcoords) {
-    Mesh mesh = {0};
-    mesh.vertexCount = vertices.size() / 3;
-    mesh.triangleCount = indices.size() / 3;
-    mesh.vertices = (float *)std::memcpy(RL_MALLOC(vertices.size() * sizeof(float)), vertices.data(), vertices.size() * sizeof(float));
-    mesh.texcoords = (float *)std::memcpy(RL_MALLOC(texcoords.size() * sizeof(float)), texcoords.data(), texcoords.size() * sizeof(float));
-    mesh.normals = (float *)std::memcpy(RL_MALLOC(normals.size() * sizeof(float)), normals.data(), normals.size() * sizeof(float));
-    mesh.indices = (unsigned short *)std::memcpy(RL_MALLOC(indices.size() * sizeof(unsigned short)), indices.data(), indices.size() * sizeof(unsigned short));
-    UploadMesh(&mesh, false);
-    return mesh;
-}
-
-Mesh LoadMeshTinyOBJ(std::string inputfile) {
-    tinyobj::ObjReaderConfig reader_config;
-    tinyobj::ObjReader reader;
-    if (!reader.ParseFromFile(inputfile, reader_config)) {
-        if (!reader.Error().empty()) {
-            std::cerr << "TinyObjReader: " << reader.Error();
-        }
-        else {
-            std::cerr << "TinyObjReader: unknown cause"<< std::endl;
-        }
-        exit(1);
-    }
-
-    auto& attrib = reader.GetAttrib();
-    auto& shapes = reader.GetShapes();
-
-    std::vector<unsigned short> indices;
-    std::vector<float> vertices;
-    std::vector<float> normals;
-    std::vector<float> texcoords;
-
-    texcoords.resize(attrib.vertices.size() / 3 * 2, 0);
-    normals.resize(attrib.vertices.size());
-
-    for (size_t s = 0; s < shapes.size(); s++) {
-        const tinyobj::shape_t& shape = shapes[s];
-        for (size_t i = 0; i < shape.mesh.indices.size(); i++){
-            size_t index = shape.mesh.indices[i].vertex_index;
-            indices.push_back(index);
-
-            // Align the vertex attributes with the vertices, so that vertex indeces will
-            // also point to the correct vertex attributes.
-            // NOTE This is not perfect as it assigns one and only one attribute to each vertex,
-            // which can translate to not ideal normals and texture coordinates.
-            size_t uv_index = shape.mesh.indices[i].texcoord_index;
-            texcoords[index*2] = attrib.texcoords[2*uv_index];
-            texcoords[index*2+1] = attrib.texcoords[2*uv_index+1];
-
-            size_t normal_index = shape.mesh.indices[i].normal_index;
-            normals[index*3] = attrib.normals[3*normal_index];
-            normals[index*3+1] = attrib.normals[3*normal_index+1];
-            normals[index*3+2] = attrib.normals[3*normal_index+2];
-        }
-    }
-
-    vertices = attrib.vertices;
-    return LoadMeshFromVectors(indices, vertices, normals, texcoords);
-}
-
-
 SimulationMesh::SimulationMesh(std::string filename) {
     LoadVerticesAndIndicesTinyOBJ(filename, vertices, indices);
     recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
@@ -112,7 +50,6 @@ namespace std {
         }
     };
 }
-
 
 /**
  * Initialize the simulation mesh from a render mesh.
@@ -180,9 +117,8 @@ SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
     }
 }
 
-void LoadVerticesAndIndicesTinyOBJ(std::string inputfile,
+void LoadRenderMeshTinyOBJ(std::string inputfile,
                                    std::vector<float> &out_vertices,
-                                   std::vector<unsigned int> &out_indices,
                                    std::vector<float> &out_normals,
                                    std::vector<float> &out_tex_coord) {
     tinyobj::ObjReaderConfig reader_config;
@@ -224,15 +160,11 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile,
               out_vertices.push_back(vy);
               out_vertices.push_back(vz);
 
-              // Check if `normal_index` is zero or positive. negative = no
-              // normal data
+              // Check if `normal_index` is zero or positive. negative = no normal data
               if (idx.normal_index >= 0) {
-                tinyobj::real_t nx =
-                    attrib.normals[3 * size_t(idx.normal_index) + 0];
-                tinyobj::real_t ny =
-                    attrib.normals[3 * size_t(idx.normal_index) + 1];
-                tinyobj::real_t nz =
-                    attrib.normals[3 * size_t(idx.normal_index) + 2];
+                tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
+                tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
+                tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
                 out_normals.push_back(nx);
                 out_normals.push_back(ny);
                 out_normals.push_back(nz);
@@ -248,16 +180,62 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile,
                 out_tex_coord.push_back(tx);
                     out_tex_coord.push_back(ty);
               }
-              out_indices.push_back(out_indices.size());
             }
             index_offset += fv;
         }
     }
 }
 
+inline Vec3 compute_tangent_vector(const Vec3& edge1, const Vec3& edge2, const Vec2& deltaUV1, const Vec2& deltaUV2) {
+    Vec3 tangent;
+    const float denominator = 1.0f / (deltaUV1.x() * deltaUV2.y() - deltaUV1.y() * deltaUV2.x());
+    // First vertex tangent
+    tangent.x() = denominator * (deltaUV2.y() * edge1.x() - deltaUV1.y() * edge2.x());
+    tangent.y() = denominator * (deltaUV2.y() * edge1.y() - deltaUV1.y() * edge2.y());
+    tangent.z() = denominator * (deltaUV2.y() * edge1.z() - deltaUV1.y() * edge2.z());
+    return tangent;
+}
+
+inline void computeRenderMeshTangentVectors(RenderMesh& mesh) {
+    mesh.tangents.resize(mesh.vertices.size());
+    const unsigned int nTriangles = mesh.vertices.size() / 9;
+    for (unsigned int i = 0; i < nTriangles; ++i) {
+        // Triangle edges
+        const Vec3 x1 = Vec3(mesh.vertices[9*i + 3*0 + 0], mesh.vertices[9*i + 3*0 + 1], mesh.vertices[9*i + 3*0 + 2]);
+        const Vec3 x2 = Vec3(mesh.vertices[9*i + 3*1 + 0], mesh.vertices[9*i + 3*1 + 1], mesh.vertices[9*i + 3*1 + 2]);
+        const Vec3 x3 = Vec3(mesh.vertices[9*i + 3*2 + 0], mesh.vertices[9*i + 3*2 + 1], mesh.vertices[9*i + 3*2 + 2]);
+
+        // Texture coordinates
+        const Vec2 uv1 = Vec2(mesh.texcoords[6*i + 2*0 + 0], mesh.texcoords[6*i + 2*0 + 1]);
+        const Vec2 uv2 = Vec2(mesh.texcoords[6*i + 2*1 + 0], mesh.texcoords[6*i + 2*1 + 1]);
+        const Vec2 uv3 = Vec2(mesh.texcoords[6*i + 2*2 + 0], mesh.texcoords[6*i + 2*2 + 1]);
+
+        const Vec3 edge1 = x2 - x1;
+        const Vec3 edge2 = x3 - x1;
+        const Vec2 deltaUV1 = uv2 - uv1;
+        const Vec2 deltaUV2 = uv3 - uv1;
+        const Vec3 tangent = compute_tangent_vector(edge1, edge2, deltaUV1, deltaUV2);
+
+        // First vertex tangent
+        mesh.tangents[9 * i + 3 * 0 + 0] = tangent.x();
+        mesh.tangents[9 * i + 3 * 0 + 1] = tangent.y();
+        mesh.tangents[9 * i + 3 * 0 + 2] = tangent.z();
+
+        // Second vertex tangent
+        mesh.tangents[9 * i + 3 * 1 + 0] = tangent.x();
+        mesh.tangents[9 * i + 3 * 1 + 1] = tangent.y();
+        mesh.tangents[9 * i + 3 * 1 + 2] = tangent.z();
+
+        // Third vertex tangent
+        mesh.tangents[9 * i + 3 * 2 + 0] = tangent.x();
+        mesh.tangents[9 * i + 3 * 2 + 1] = tangent.y();
+        mesh.tangents[9 * i + 3 * 2 + 2] = tangent.z();
+    }
+}
+
 RenderMesh::RenderMesh(std::string filename) {
-    std::vector<unsigned int> indices;
-    LoadVerticesAndIndicesTinyOBJ(filename, vertices, indices, normals, texcoord);
+    LoadRenderMeshTinyOBJ(filename, vertices, normals, texcoords);
+    computeRenderMeshTangentVectors(*this);
 }
 
 void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& out_vertices, std::vector<unsigned int>& out_indices) {
@@ -287,25 +265,6 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& ou
     }
 }
 
-// Mesh RenderMesh_to_RaylibMesh(const RenderMesh& render_mesh) {
-//     std::vector<unsigned short> indices = std::vector<unsigned short>(render_mesh.indices.begin(), render_mesh.indices.end());
-//     return LoadMeshFromVectors(indices, render_mesh.vertices, render_mesh.normals, render_mesh.texcoord);
-// }
-
-
-// Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh) {
-//     std::vector<unsigned short> indices = std::vector<unsigned short>(sim_mesh.indices.begin(), sim_mesh.indices.end());
-//     Mesh mesh = {0};
-//     mesh.vertexCount = sim_mesh.vertices.size() / 3;
-//     mesh.triangleCount = indices.size() / 3;
-//     mesh.vertices = (float *)std::memcpy(RL_MALLOC(sim_mesh.vertices.size() * sizeof(float)), sim_mesh.vertices.data(), sim_mesh.vertices.size() * sizeof(float));
-//     mesh.texcoords = NULL;
-//     mesh.normals = NULL;
-//     mesh.indices = (unsigned short *)std::memcpy(RL_MALLOC(indices.size() * sizeof(unsigned short)), indices.data(), indices.size() * sizeof(unsigned short));
-//     UploadMesh(&mesh, false);
-//     return mesh;
-// }
-
 void recenter_mesh(SimulationMesh& mesh, const Vec3& com) {
     for (unsigned int i = 0; i < mesh.vertices.size() / 3; i++) {
         mesh.vertices[3*i+0] -= com.x();
@@ -316,19 +275,33 @@ void recenter_mesh(SimulationMesh& mesh, const Vec3& com) {
 
 void RenderMesh::updateFromSimulationMesh(const SimulationMesh& sim_mesh) {
     // The number of triangles of both meshes must be the same
-    assert(sim_mesh.indices.size() / 3 == vertices.size() / 9);
+    assert(sim_mesh.indices.size() / 3 == mesh.vertices.size() / 9);
+    if (tangents.size() == 0)
+        tangents.resize(vertices.size());
 
-    for (unsigned int i = 0; i < sim_mesh.indices.size() / 3; i++) { // Iterate triangles
-        // each triangle has 3 vertices -> 9 coordinates
+    const unsigned int nTriangles = sim_mesh.indices.size() / 3;
+    for (unsigned int i = 0; i < nTriangles; i++) {
+        // each triangle has 3 mesh.vertices -> 9 coordinates
         const Vec3 x1 = Vec3(sim_mesh.vertices[3*sim_mesh.indices[3*i+0] + 0], sim_mesh.vertices[3*sim_mesh.indices[3*i+0] + 1] , sim_mesh.vertices[3*sim_mesh.indices[3*i+0] + 2]);
         const Vec3 x2 = Vec3(sim_mesh.vertices[3*sim_mesh.indices[3*i+1] + 0], sim_mesh.vertices[3*sim_mesh.indices[3*i+1] + 1] , sim_mesh.vertices[3*sim_mesh.indices[3*i+1] + 2]);
         const Vec3 x3 = Vec3(sim_mesh.vertices[3*sim_mesh.indices[3*i+2] + 0], sim_mesh.vertices[3*sim_mesh.indices[3*i+2] + 1] , sim_mesh.vertices[3*sim_mesh.indices[3*i+2] + 2]);
-        const Vec3 x21 = (x2 - x1).normalized();
-        const Vec3 x31 = (x3 - x1).normalized();
-        const Vec3 normal = skew(x21) * x31;
+
+        // Compute the normal vector ( the same for all the mesh.vertices in the triangle )
+        const Vec3 edge1 = (x2 - x1).normalized();
+        const Vec3 edge2 = (x3 - x1).normalized();
+        const Vec3 normal = cross(edge1, edge2);
+
+        // Compute the tangent vector ( the same for all the mesh.vertices in the triangle )
+        const Vec2 uv1 = Vec2(texcoords[6*i + 2*0 + 0], texcoords[6*i + 2*0 + 1]);
+        const Vec2 uv2 = Vec2(texcoords[6*i + 2*1 + 0], texcoords[6*i + 2*1 + 1]);
+        const Vec2 uv3 = Vec2(texcoords[6*i + 2*2 + 0], texcoords[6*i + 2*2 + 1]);
+        const Vec2 deltaUV1 = uv2 - uv1;
+        const Vec2 deltaUV2 = uv3 - uv1;
+        const Vec3 tangent = compute_tangent_vector(edge1, edge2, deltaUV1, deltaUV2);
+
         for (unsigned int j = 0; j < 3; j++) {
-            unsigned int index = 3*sim_mesh.indices[3*i+j];
-            // Update the vertices
+            const unsigned int index = 3*sim_mesh.indices[3*i+j];
+            // Update the mesh.vertices
             vertices[9*i + 3*j + 0] = sim_mesh.vertices[index + 0]; // x
             vertices[9*i + 3*j + 1] = sim_mesh.vertices[index + 1]; // y
             vertices[9*i + 3*j + 2] = sim_mesh.vertices[index + 2]; // z
@@ -337,6 +310,11 @@ void RenderMesh::updateFromSimulationMesh(const SimulationMesh& sim_mesh) {
             normals[9*i + 3*j + 0] = normal.x();
             normals[9*i + 3*j + 1] = normal.y();
             normals[9*i + 3*j + 2] = normal.z();
+
+            // Update the tangents
+            tangents[9*i + 3*j + 0] = tangent.x();
+            tangents[9*i + 3*j + 1] = tangent.y();
+            tangents[9*i + 3*j + 2] = tangent.z();
         }
 
     }
