@@ -17,8 +17,8 @@ int main(void) {
     const Scalar MASS = 10.0;
     const Scalar GRAVITY = -1.0;
 
-    RenderMesh render_mesh = RenderMesh("resources/obj/bar.obj");
-    SimulationMesh sim_mesh = SimulationMesh("resources/obj/bar.obj");
+    RenderMesh render_mesh = RenderMesh("resources/obj/bunny.obj");
+    SimulationMesh sim_mesh = SimulationMesh("resources/obj/bunny.obj");
 
     const Mat3 inertia_tensor = compute_initial_inertia_tensor_PARTICLES(MASS, sim_mesh.vertices);
     const Vec3 center_of_mass = compute_COM_position_PARTICLES(sim_mesh.vertices);

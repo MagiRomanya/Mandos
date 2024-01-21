@@ -43,9 +43,9 @@ void main()
     vec3 viewD = normalize(viewPos - fragPosition);
     vec3 specular = vec3(0.0);
 
-    normal = texture(texture2, fragTexCoord).rgb;
-    normal = normal * 2.0 - 1.0;
-    normal = normalize(TBN * normal);
+    // normal = texture(texture2, fragTexCoord).rgb;
+    // normal = normal * 2.0 - 1.0;
+    // normal = normalize(TBN * normal);
 
     Light light;
 

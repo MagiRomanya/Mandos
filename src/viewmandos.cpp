@@ -202,7 +202,7 @@ static Model sphere_model;
 static Material base_material;
 static Shader base_shader;
 static Shader normals_shader;
-static Shader diffuse_shader;
+static Shader pbr_shader;
 static Shader axis_shader;
 static Texture2D texture;
 static Texture2D normalMapTexture;
@@ -239,14 +239,15 @@ MandosViewer::MandosViewer() {
 
     // Other shaders
     normals_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/normals.fs");
-    diffuse_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/picker.fs");
+    pbr_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/pbr.fs");
+    pbr_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(base_shader, "viewPos");
     axis_shader = LoadShader("resources/shaders/axis.vs", "resources/shaders/axis.fs");
 
     // Texture loading
-    texture = LoadTexture("resources/textures/slab.png");
+    texture = LoadTexture("resources/textures/terracota.png");
     normalMapTexture = LoadTexture("resources/textures/NormalMap.png");
     // SetMaterialTexture(&base_material, MATERIAL_MAP_DIFFUSE, texture);
-    SetMaterialTexture(&base_material, MATERIAL_MAP_NORMAL, normalMapTexture);
+    // SetMaterialTexture(&base_material, MATERIAL_MAP_NORMAL, normalMapTexture);
 
     // Axis 3D
     RenderMesh axis3Drender = RenderMesh("resources/obj/axis.obj");
@@ -262,7 +263,7 @@ MandosViewer::~MandosViewer() {
     UnloadModel(sphere_model); // Unloads also the material maps
     UnloadShader(base_shader);
     UnloadShader(normals_shader);
-    UnloadShader(diffuse_shader);
+    UnloadShader(pbr_shader);
     UnloadShader(axis_shader);
     UnloadTexture(texture);
     UnloadTexture(normalMapTexture);
@@ -354,6 +355,7 @@ void MandosViewer::update_camera() {
     // Update the shader with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
     float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
     SetShaderValue(base_shader, base_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
+    SetShaderValue(pbr_shader, pbr_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
 }
 
 bool MandosViewer::is_key_pressed(int Key) { return IsKeyPressed(Key); }
