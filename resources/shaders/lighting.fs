@@ -4,11 +4,14 @@
 // Input vertex attributes (from vertex shader)
 in vec3 fragPosition;
 in vec2 fragTexCoord;
-//in vec4 fragColor;
+in vec4 fragColor;
 in vec3 fragNormal;
+in vec3 fragTangent;
+in mat3 TBN;
 
 // Input uniform values
 uniform sampler2D texture0;
+uniform sampler2D texture2;
 uniform vec4 colDiffuse;
 
 // Output fragment color
@@ -40,7 +43,9 @@ void main()
     vec3 viewD = normalize(viewPos - fragPosition);
     vec3 specular = vec3(0.0);
 
-    // NOTE: Implement here your fragment shader code
+    normal = texture(texture2, fragTexCoord).rgb;
+    normal = normal * 2.0 - 1.0;
+    normal = normalize(TBN * normal);
 
     Light light;
 
@@ -76,5 +81,6 @@ void main()
 
     // Gamma correction
     finalColor = pow(finalColor, vec4(1.0/2.2));
-    // finalColor = vec4(normal, 1.0);
+    // finalColor = vec4(0.5*fragTangent + 0.5, 1.0);
+    // finalColor = vec4(fragTexCoord,1.0, 1.0);
 }

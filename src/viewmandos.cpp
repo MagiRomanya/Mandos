@@ -5,6 +5,7 @@
 #include <string>
 #include <stdlib.h>
 #include <Eigen/Core>
+#include <vector>
 
 #include "fem_unit.hpp"
 #include "linear_algebra.hpp"
@@ -76,25 +77,34 @@ Camera3D create_camera() {
 //     return mesh;
 // }
 
+void copy_tangents_as_vec_4(float* dest, const std::vector<float>& tangents) {
+    for (unsigned int i = 0; i < tangents.size() / 3; i++) {
+        dest[4*i+0] = tangents[3 * i + 0]; // x
+        dest[4*i+1] = tangents[3 * i + 1]; // y
+        dest[4*i+2] = tangents[3 * i + 2]; // z
+        dest[4*i+3] = 0.0f;                // w
+    }
+}
+
 MeshGPU::MeshGPU(const RenderMesh& mesh) {
     // Allocate resources
     vertices = (float*) calloc(sizeof(float), mesh.vertices.size());
     texcoords = (float*) calloc(sizeof(float), mesh.texcoords.size());
     normals = (float*) calloc(sizeof(float), mesh.normals.size());
-    tangents = (float*) calloc(sizeof(float), mesh.tangents.size());
+    tangents = (float*) calloc(sizeof(float), 4 * mesh.tangents.size() / 3);
 
     // Copy the data
     nVertices = mesh.vertices.size() / 3;
     vertices = (float *) std::memcpy(vertices, mesh.vertices.data(), mesh.vertices.size()*sizeof(float));
     texcoords = (float *) std::memcpy(texcoords, mesh.texcoords.data(), mesh.texcoords.size()*sizeof(float));
     normals = (float *) std::memcpy(normals, mesh.normals.data(), mesh.normals.size()*sizeof(float));
-    tangents = (float *) std::memcpy(tangents, mesh.tangents.data(), mesh.tangents.size()*sizeof(float));
+    copy_tangents_as_vec_4(tangents, mesh.tangents);
     if (!vertices) std::cerr << "MeshGPU::MeshGPU: vertices null" << std::endl;
     if (!texcoords) std::cerr << "MeshGPU::MeshGPU: texcoord null" << std::endl;
     if (!normals) std::cerr << "MeshGPU::MeshGPU: normals null" << std::endl;
     if (!tangents) std::cerr << "MeshGPU::MeshGPU: tangents null" << std::endl;
 
-    // Uload the mesh to GPU
+    // Upload the mesh to GPU
     Mesh raymesh = {0};
     raymesh.vertexCount = mesh.vertices.size() / 3; // 3 coordinates per vertex
     raymesh.triangleCount = raymesh.vertexCount / 3; // 3 vertices per triangle
@@ -117,7 +127,7 @@ void MeshGPU::updateData(const RenderMesh& mesh) {
     // Copy the data from the render mesh
     vertices = (float*) std::memcpy(vertices, mesh.vertices.data(), mesh.vertices.size()*sizeof(float));
     normals = (float*) std::memcpy(normals, mesh.normals.data(), mesh.normals.size()*sizeof(float));
-    tangents = (float*) std::memcpy(tangents, mesh.tangents.data(), mesh.tangents.size()*sizeof(float));
+    copy_tangents_as_vec_4(tangents, mesh.tangents);
 
     // Update the VBOs in the GPU
     rlUpdateVertexBuffer(verticesVBO, vertices, mesh.vertices.size() * sizeof(float), 0);
@@ -154,6 +164,8 @@ Mesh MeshGPUtoRaymesh(const MeshGPU& mesh, MemoryPool& pool) {
     raymesh.vertices = mesh.vertices;
     raymesh.texcoords = mesh.texcoords;
     raymesh.normals = mesh.normals;
+    raymesh.tangents = mesh.tangents;
+
     // Copy the VAOs
     raymesh.vaoId = mesh.VAO;
     raymesh.vboId = (unsigned int*) pool.allocate(sizeof(unsigned int) * 3);
@@ -193,6 +205,7 @@ static Shader normals_shader;
 static Shader diffuse_shader;
 static Shader axis_shader;
 static Texture2D texture;
+static Texture2D normalMapTexture;
 static MeshGPU* axis3D = nullptr;
 
 Material createMaterialFromShader(Shader shader) {
@@ -231,7 +244,9 @@ MandosViewer::MandosViewer() {
 
     // Texture loading
     texture = LoadTexture("resources/textures/slab.png");
+    normalMapTexture = LoadTexture("resources/textures/NormalMap.png");
     // SetMaterialTexture(&base_material, MATERIAL_MAP_DIFFUSE, texture);
+    SetMaterialTexture(&base_material, MATERIAL_MAP_NORMAL, normalMapTexture);
 
     // Axis 3D
     RenderMesh axis3Drender = RenderMesh("resources/obj/axis.obj");
@@ -250,6 +265,7 @@ MandosViewer::~MandosViewer() {
     UnloadShader(diffuse_shader);
     UnloadShader(axis_shader);
     UnloadTexture(texture);
+    UnloadTexture(normalMapTexture);
     delete axis3D;
 
     CloseWindow(); // Destroys the opengl context
@@ -437,13 +453,16 @@ void MandosViewer::draw_particle_indices(const Simulation& simulation, const Phy
     for (size_t i = 0; i < simulation.simulables.particles.size(); i++) {
         const Particle particle = simulation.simulables.particles[i];
         const Vector3 position = vector3_eigen_to_raylib(particle.get_position(state.x));
-        Color color = PARTICLE_COLOR;
+
         const unsigned int index = particle.index / 3;
         const Matrix matView = GetCameraMatrix(camera);
         const Vector3 particleCamPos = Vector3Transform(position, matView);
-        if (particleCamPos.z > 0.0f or particleCamPos.z < -5.0f) continue;
+
+        // Filter out tags that are too far away or behind the camera
+        const float thresholdDistance = 5.0f;
+        if (particleCamPos.z > 0.0f or particleCamPos.z < -thresholdDistance) continue;
+
         Vector2 particleScreenSpacePosition = GetWorldToScreen(position, camera);
         DrawText(std::to_string(index).c_str(), (int)particleScreenSpacePosition.x - MeasureText(std::to_string(index).c_str(), 20)/2, (int)particleScreenSpacePosition.y, 20, BLACK);
-        DrawModel(sphere_model, position, 1, color);
     }
 }

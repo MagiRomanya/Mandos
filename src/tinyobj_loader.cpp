@@ -193,7 +193,7 @@ inline Vec3 compute_tangent_vector(const Vec3& edge1, const Vec3& edge2, const V
     tangent.x() = denominator * (deltaUV2.y() * edge1.x() - deltaUV1.y() * edge2.x());
     tangent.y() = denominator * (deltaUV2.y() * edge1.y() - deltaUV1.y() * edge2.y());
     tangent.z() = denominator * (deltaUV2.y() * edge1.z() - deltaUV1.y() * edge2.z());
-    return tangent;
+    return tangent.normalized();
 }
 
 inline void computeRenderMeshTangentVectors(RenderMesh& mesh) {
