@@ -39,13 +39,13 @@ inline void set_angular_velocity(PhysicsState& state, Scalar TimeStep, unsigned 
     const Scalar angle = theta.norm();
 
     if (theta.norm() == 0) {
-        state.x_old.segment<3>(index) = -omega;
+        state.x_old.segment<3>(index) = -omega * TimeStep;
         return;
     }
     const Vec3 axis = theta / theta.norm();
     typedef Eigen::Quaternion<Scalar> Quat;
     const Quat q = Quat(Eigen::AngleAxis<Scalar>(angle, axis));
-    const Quat q_omega = Quat(0, -0.5 * omega);
+    const Quat q_omega = Quat(0, -0.5 * omega * TimeStep);
     const Quat q_dot = q_omega * q;
     const Quat q_new = Quat(q.w() + q_dot.w(), q.vec() + q_dot.vec());
     const Eigen::AngleAxis<Scalar> angle_axis(q_new);

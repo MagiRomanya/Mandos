@@ -176,8 +176,8 @@ void RigidBody::update_state(const Vec& dx, Vec& x) const {
 
     // Update axis-angle rotation
     const Vec3 theta = x.segment(index+3,3);
-    const Vec3 omega = dx.segment(index+3,3);
-    const Vec3 axis_angle = update_axis_angle(theta, omega);
+    const Vec3 dtheta = dx.segment(index+3,3); // omega * TimeStep
+    const Vec3 axis_angle = update_axis_angle(theta, dtheta);
     x.segment(index+3, 3) = axis_angle;
 }
 

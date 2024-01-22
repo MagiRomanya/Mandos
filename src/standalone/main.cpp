@@ -22,8 +22,9 @@ int main(void) {
 
     const Mat3 inertia_tensor = compute_initial_inertia_tensor_PARTICLES(MASS, sim_mesh.vertices);
     const Vec3 center_of_mass = compute_COM_position_PARTICLES(sim_mesh.vertices);
-
     recenter_mesh(sim_mesh, center_of_mass);
+
+    // Compute the tetrahedron mesh
     std::vector<unsigned int> tet_indices;
     std::vector<float> tet_vertices;
     tetgen_compute_tetrahedrons(sim_mesh.indices, sim_mesh.vertices, tet_indices, tet_vertices);
@@ -63,7 +64,6 @@ int main(void) {
             simulation_step(simulation, state, f);
             std::cout << "Energy " << f.energy << std::endl;
             // std::cout << "Simulation time " << simulation_time << " (ms)" << std::endl;
-
         }
         //----------------------------------------------------------------------------------
 

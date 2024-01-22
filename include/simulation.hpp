@@ -34,13 +34,13 @@ struct Simulables {
     FEM_MATERIAL_MEMBERS \
     X(std::vector<Gravity>, gravities)
 
-struct Energies {
 #define X(type, name) type name;
+struct Energies {
     INERTIAL_ENERGY_MEMBERS
     POTENTIAL_ENERGY_MEMBERS
+};
 #undef X
 #undef MAT
-};
 
 template <typename MaterialType>
 void add_FEM_element(Energies& energies, FEM_Element3D<MaterialType> element);
