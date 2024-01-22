@@ -90,9 +90,9 @@ void main()
 
     /// PBR
     //Material definition
-    vec3 albedo = colDiffuse.xyz;
-    const float metallic = 0.8;
-    const float roughness = 0.6;
+    vec3 albedo = colDiffuse.rgb;
+    const float metallic = 0.0;
+    const float roughness = 1.0;
     const float ambientOclusion = 1.0;
 
     // Necessary vectors

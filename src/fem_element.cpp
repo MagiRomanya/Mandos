@@ -201,17 +201,20 @@ Eigen::Matrix<Scalar, 9, 9> FEM_NeoHookeanMaterial::get_phi_hessian(const Mat3& 
   dvecSigma_dvecF += lambda * vec_G * vec_G.transpose();
   dvecSigma_dvecF += lambda * (J - alpha) * vec_H;
 
-  const Eigen::SelfAdjointEigenSolver<Eigen::Matrix<Scalar,9,9>> eigs(dvecSigma_dvecF);
-  Eigen::Vector<Scalar, 9> eigenvalues = eigs.eigenvalues();
-  Eigen::Matrix<Scalar,9,9> eigenvectors = eigs.eigenvectors();
+  const bool enableSemiPositiveProjection = false;
+  if (enableSemiPositiveProjection) {
+    const Eigen::SelfAdjointEigenSolver<Eigen::Matrix<Scalar, 9, 9>> eigs(dvecSigma_dvecF);
+    Eigen::Vector<Scalar, 9> eigenvalues = eigs.eigenvalues();
+    Eigen::Matrix<Scalar, 9, 9> eigenvectors = eigs.eigenvectors();
 
-  for (int i = 0; i < 9; i++) {
-    if (eigenvalues(i) < 0.0) {
-      eigenvalues(i) = 0.0;
+    for (int i = 0; i < 9; i++) {
+      if (eigenvalues(i) < 0.0) {
+        eigenvalues(i) = 0.0;
+      }
     }
-  }
 
-  dvecSigma_dvecF = eigenvectors * eigenvalues.asDiagonal() * eigenvectors.transpose();
+    dvecSigma_dvecF = eigenvectors * eigenvalues.asDiagonal() * eigenvectors.transpose();
+  }
   return dvecSigma_dvecF;
 }
 

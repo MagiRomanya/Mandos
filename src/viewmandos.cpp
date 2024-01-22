@@ -16,6 +16,7 @@
 #include "raylib_imgui.hpp"
 #include "raymath.h"
 #include "rlgl.h"
+#include "rcamera.h"
 #include "spring.hpp"
 #include "viewmandos.hpp"
 #include "utility_functions.hpp"
@@ -46,7 +47,7 @@ Camera3D create_camera() {
     camera.target = Vector3( 0.0f, 0.0f, 0.0f );      // Camera looking at point
     camera.up = Vector3( 0.0f, 1.0f, 0.0f );          // Camera up vector (rotation towards target)
     camera.fovy = 45.0f;                                // Camera field-of-view Y
-    camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type    return camera;
+    camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
     return camera;
 }
 
@@ -177,16 +178,6 @@ Mesh MeshGPUtoRaymesh(const MeshGPU& mesh, MemoryPool& pool) {
     return raymesh;
 }
 
-// void UnloadGPUMesh(const Mesh& mesh) {
-//     // Unload rlgl VAO and allocated VBOs
-//     rlUnloadVertexArray(mesh.vaoId);
-
-//     #define MAX_MESH_VERTEX_BUFFERS 7
-//     if (mesh.vboId != NULL) for (int i = 0; i < MAX_MESH_VERTEX_BUFFERS; i++) rlUnloadVertexBuffer(mesh.vboId[i]);
-//     RL_FREE(mesh.vboId);
-//     #undef MAX_MESH_VERTEX_BUFFERS
-// }
-
 /**
  * INFO Global data for our renderer that will be used throughout the runtime of the application.
  *
@@ -307,10 +298,7 @@ void getPitchYaw(const Camera3D& camera, float& pitch, float& yaw) {
     Vector3 right = Vector3CrossProduct(camera.up, forward);
     right = Vector3Normalize(right);
 
-    // Calculate pitch
     pitch = asin(-forward.y);
-
-    // Calculate yaw
     yaw = atan2(right.x, right.z);
 }
 
@@ -349,10 +337,28 @@ void MandosViewer::begin_ImGUI_mode() { ImGuiBeginDrawing(); }
 
 void MandosViewer::end_ImGUI_mode() { ImGuiEndDrawing(); }
 
-void MandosViewer::update_camera() {
-    UpdateCamera(&camera, CAMERA_FREE);
+void myUpdateCamera(Camera3D& camera) {
+    const float CAMERA_SENSITIVITY = 0.01f;
+    const float CAMERA_MOVE_SPEED = 0.01f;
+    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+        const Vector2 delta = GetMouseDelta();
+        if (IsKeyDown(KEY_LEFT_SHIFT)) {
+            CameraMoveRight(&camera, -CAMERA_MOVE_SPEED*delta.x, true);
+            CameraMoveUp(&camera, CAMERA_MOVE_SPEED*delta.y);
+        }
+        else {
+            CameraYaw(&camera, -delta.x*CAMERA_SENSITIVITY, true);
+            CameraPitch(&camera, -delta.y*CAMERA_SENSITIVITY, true, true, false);
+        }
+    }
+    // Zoom target distance
+    CameraMoveToTarget(&camera, -GetMouseWheelMove());
+}
 
-    // Update the shader with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
+void MandosViewer::update_camera() {
+    myUpdateCamera(camera);
+
+    // Update the shaders with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
     float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
     SetShaderValue(base_shader, base_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
     SetShaderValue(pbr_shader, pbr_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
