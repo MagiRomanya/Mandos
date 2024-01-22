@@ -147,10 +147,6 @@ struct MandosViewer {
 
     void end_3D_mode();
 
-    void begin_ImGUI_mode();
-
-    void end_ImGUI_mode();
-
     void update_camera();
 
     bool is_key_pressed(int Key);

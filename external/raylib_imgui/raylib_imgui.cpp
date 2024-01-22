@@ -5,12 +5,12 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 
-void ImGui_initialize() {
+void ImGuiInitialize() {
     GLFWwindow *glfwWindow = (GLFWwindow *)GetWindowHandle();
     if (glfwWindow == nullptr)
         std::cerr << "ERROR::IMGUI_INITIALIZE: no GLFW window!" << std::endl;
     glfwMakeContextCurrent(glfwWindow);
-    glfwSwapInterval(1); // Enable vsync
+    // glfwSwapInterval(1); // Enable vsync
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();

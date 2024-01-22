@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "fem_unit.hpp"
+#include "imgui.h"
 #include "linear_algebra.hpp"
 #include "mandos.hpp"
 #include "memory_pool.hpp"
@@ -21,11 +22,11 @@
 #include "viewmandos.hpp"
 #include "utility_functions.hpp"
 
-#define RB_COLOR YELLOW
-#define FEM_COLOR PINK
-#define PARTICLE_COLOR BLUE
-#define MASS_SPRING_COLOR GREEN
-#define FROZEN_PARTICLE_COLOR WHITE
+Color RB_COLOR = YELLOW;
+Color FEM_COLOR = PINK;
+Color PARTICLE_COLOR = BLUE;
+Color MASS_SPRING_COLOR  = GREEN;
+Color FROZEN_PARTICLE_COLOR = WHITE;
 
 inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
     Matrix r = {
@@ -183,21 +184,26 @@ Mesh MeshGPUtoRaymesh(const MeshGPU& mesh, MemoryPool& pool) {
  *
  * NOTE We can not hold this variables inside of MandosViewer class, as they depend on raylib and MandosViewer should
  * be renderer agnostic by design.
- * REVIEW if this section goes out of hand, we should wrap all this variables in a struct and only have a global pointer to
- * a dinamically allocated instance of this struct. Memory handling should be done by MandosViewer.
  */
 
-static Camera3D camera;
 #define SPHERE_SUBDIVISIONS 30
-static Model sphere_model;
-static Material base_material;
-static Shader base_shader;
-static Shader normals_shader;
-static Shader pbr_shader;
-static Shader axis_shader;
-static Texture2D texture;
-static Texture2D normalMapTexture;
-static MeshGPU* axis3D = nullptr;
+struct RenderState {
+    Camera3D camera;
+    Model sphere_model;
+    Material base_material;
+
+    Shader base_shader;
+    Shader normals_shader;
+    Shader pbr_shader;
+    Shader axis_shader;
+
+    Texture2D diffuseTexture;
+    Texture2D normalMapTexture;
+
+    MeshGPU* axis3D = nullptr;
+};
+
+static RenderState* renderState = nullptr;
 
 Material createMaterialFromShader(Shader shader) {
     Material material = { 0 };
@@ -218,48 +224,53 @@ Material createMaterialFromShader(Shader shader) {
 MandosViewer::MandosViewer() {
     InitWindow(initialScreenWidth, initialScreenHeight, "Mandos");
     SetWindowState(FLAG_WINDOW_RESIZABLE);
+    ImGuiInitialize();
     rlDisableBackfaceCulling();
-    camera = create_camera();
-    sphere_model = LoadModelFromMesh(GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS));
+
+    // Set up the render state
+    renderState = new RenderState;
+    renderState->camera = create_camera();
+    renderState->sphere_model = LoadModelFromMesh(GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS));
     SetTargetFPS(200);
 
     // Load basic lighting shader
-    base_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/lighting.fs");
-    base_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(base_shader, "viewPos");
-    base_material = createMaterialFromShader(base_shader);
+    renderState->base_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/lighting.fs");
+    renderState->base_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->base_shader, "viewPos");
+    renderState->base_material = createMaterialFromShader(renderState->base_shader);
 
     // Other shaders
-    normals_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/normals.fs");
-    pbr_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/pbr.fs");
-    pbr_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(base_shader, "viewPos");
-    axis_shader = LoadShader("resources/shaders/axis.vs", "resources/shaders/axis.fs");
+    renderState->normals_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/normals.fs");
+    renderState->pbr_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/pbr.fs");
+    renderState->pbr_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->base_shader, "viewPos");
+    renderState->axis_shader = LoadShader("resources/shaders/axis.vs", "resources/shaders/axis.fs");
 
     // Texture loading
-    texture = LoadTexture("resources/textures/terracota.png");
-    normalMapTexture = LoadTexture("resources/textures/NormalMap.png");
-    // SetMaterialTexture(&base_material, MATERIAL_MAP_DIFFUSE, texture);
-    // SetMaterialTexture(&base_material, MATERIAL_MAP_NORMAL, normalMapTexture);
+    renderState->diffuseTexture = LoadTexture("resources/textures/terracota.png");
+    renderState->normalMapTexture = LoadTexture("resources/textures/NormalMap.png");
+    // SetMaterialTexture(&renderState->base_material, MATERIAL_MAP_DIFFUSE, renderState->diffuseTexture);
+    // SetMaterialTexture(&renderState->base_material, MATERIAL_MAP_NORMAL, renderState->normalMapTexture);
 
     // Axis 3D
     RenderMesh axis3Drender = RenderMesh("resources/obj/axis.obj");
-    axis3D = new MeshGPU(axis3Drender);
+    renderState->axis3D = new MeshGPU(axis3Drender);
 
     // Get some required shader locations
-    sphere_model.materialCount = 1;
-    sphere_model.materials[0] = base_material;
+    renderState->sphere_model.materialCount = 1;
+    renderState->sphere_model.materials[0] = renderState->base_material;
 
 }
 
 MandosViewer::~MandosViewer() {
-    UnloadModel(sphere_model); // Unloads also the material maps
-    UnloadShader(base_shader);
-    UnloadShader(normals_shader);
-    UnloadShader(pbr_shader);
-    UnloadShader(axis_shader);
-    UnloadTexture(texture);
-    UnloadTexture(normalMapTexture);
-    delete axis3D;
+    UnloadModel(renderState->sphere_model); // Unloads also the material maps
+    UnloadShader(renderState->base_shader);
+    UnloadShader(renderState->normals_shader);
+    UnloadShader(renderState->pbr_shader);
+    UnloadShader(renderState->axis_shader);
+    UnloadTexture(renderState->diffuseTexture);
+    UnloadTexture(renderState->normalMapTexture);
+    delete renderState->axis3D;
 
+    ImGuiDeinitialize();
     CloseWindow(); // Destroys the opengl context
 }
 
@@ -274,20 +285,41 @@ void MandosViewer::begin_drawing() {
 }
 
 void MandosViewer::end_drawing() {
-    DrawFPS(10, 10);
+    ImGuiBeginDrawing();
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("Render")) {
+            // Add menu items for "File"
+            if (ImGui::MenuItem("New")) {
+                // Handle "New" action
+            }
+            if (ImGui::MenuItem("Open")) {
+                // Handle "Open" action
+            }
+            if (ImGui::MenuItem("Save")) {
+                // Handle "Save" action
+            }
+            ImGui::EndMenu();
+        }
+
+        // Add more menus as needed...
+
+        ImGui::EndMainMenuBar();
+    }
+    ImGuiEndDrawing();
+    DrawFPS(GetScreenWidth()*0.95, GetScreenHeight()*0.05);
     EndDrawing();
 }
 
 void MandosViewer::begin_3D_mode() {
-    BeginMode3D(camera);
+    BeginMode3D(renderState->camera);
     DrawGrid(30, 1.0f);
 }
 
 void draw_mesh_color(const Mat4& transform, const MeshGPU& mesh, MemoryPool& mem_pool, Color color) {
-    base_material.maps[MATERIAL_MAP_DIFFUSE].color = color;
+    renderState->base_material.maps[MATERIAL_MAP_DIFFUSE].color = color;
     Mesh raymesh = MeshGPUtoRaymesh(mesh, mem_pool);
-    DrawMesh(raymesh, base_material, matrix_eigen_to_raylib(transform));
-    base_material.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+    DrawMesh(raymesh, renderState->base_material, matrix_eigen_to_raylib(transform));
+    renderState->base_material.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
 }
 
 void getPitchYaw(const Camera3D& camera, float& pitch, float& yaw) {
@@ -309,11 +341,11 @@ void DrawAxis3D(MemoryPool& mem_pool) {
     axisCam.projection = CAMERA_ORTHOGRAPHIC;
     Mat3 transform = Mat3::Identity()*2.f;
     Scalar pitch, yaw;
-    getPitchYaw(camera, pitch, yaw);
+    getPitchYaw(renderState->camera, pitch, yaw);
     const Eigen::AngleAxis<Scalar> pitchRotation(pitch, Vec3(1.0f,0.0f,0.0f));
-    const Eigen::AngleAxis<Scalar> yawRotation(-yaw - M_PI_2, Vec3(camera.up.x,camera.up.y,camera.up.z));
+    const Eigen::AngleAxis<Scalar> yawRotation(-yaw - M_PI_2, Vec3(renderState->camera.up.x,renderState->camera.up.y,renderState->camera.up.z));
     transform = pitchRotation.toRotationMatrix() * yawRotation.toRotationMatrix() * transform;
-    Mesh raymesh = MeshGPUtoRaymesh(*axis3D, mem_pool);
+    Mesh raymesh = MeshGPUtoRaymesh(*renderState->axis3D, mem_pool);
 
     Matrix rayTransform = {
     transform(0,0), transform(0,1), transform(0, 2), axisPosition.x,
@@ -322,9 +354,9 @@ void DrawAxis3D(MemoryPool& mem_pool) {
     0.0f ,0.0f ,0.0f , 1.0f,
     };
     BeginMode3D(axisCam);
-    base_material.shader = axis_shader;
-    DrawMesh(raymesh, base_material, rayTransform);
-    base_material.shader = base_shader;
+    renderState->base_material.shader = renderState->axis_shader;
+    DrawMesh(raymesh, renderState->base_material, rayTransform);
+    renderState->base_material.shader = renderState->base_shader;
     EndMode3D();
 }
 
@@ -332,10 +364,6 @@ void MandosViewer::end_3D_mode() {
     EndMode3D();
     DrawAxis3D(mem_pool);
 }
-
-void MandosViewer::begin_ImGUI_mode() { ImGuiBeginDrawing(); }
-
-void MandosViewer::end_ImGUI_mode() { ImGuiEndDrawing(); }
 
 void myUpdateCamera(Camera3D& camera) {
     const float CAMERA_SENSITIVITY = 0.01f;
@@ -356,19 +384,19 @@ void myUpdateCamera(Camera3D& camera) {
 }
 
 void MandosViewer::update_camera() {
-    myUpdateCamera(camera);
+    myUpdateCamera(renderState->camera);
 
     // Update the shaders with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
-    float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
-    SetShaderValue(base_shader, base_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
-    SetShaderValue(pbr_shader, pbr_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
+    float cameraPos[3] = { renderState->camera.position.x, renderState->camera.position.y, renderState->camera.position.z };
+    SetShaderValue(renderState->base_shader, renderState->base_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
+    SetShaderValue(renderState->pbr_shader, renderState->pbr_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
 }
 
 bool MandosViewer::is_key_pressed(int Key) { return IsKeyPressed(Key); }
 
 void MandosViewer::draw_particle(const ParticleHandle& particle, const PhysicsState& state) {
     const Vec3 position = particle.particle.get_position(state.x);
-    DrawModel(sphere_model, vector3_eigen_to_raylib(position), 1, PARTICLE_COLOR);
+    DrawModel(renderState->sphere_model, vector3_eigen_to_raylib(position), 1, PARTICLE_COLOR);
 }
 
 void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh) {
@@ -399,7 +427,7 @@ void MandosViewer::draw_particles(const Simulation& simulation, const PhysicsSta
                 break;
             }
         }
-        DrawModel(sphere_model, vector3_eigen_to_raylib(position), 1, color);
+        DrawModel(renderState->sphere_model, vector3_eigen_to_raylib(position), 1, color);
     }
 }
 
@@ -463,14 +491,14 @@ void MandosViewer::draw_particle_indices(const Simulation& simulation, const Phy
         const Vector3 position = vector3_eigen_to_raylib(particle.get_position(state.x));
 
         const unsigned int index = particle.index / 3;
-        const Matrix matView = GetCameraMatrix(camera);
+        const Matrix matView = GetCameraMatrix(renderState->camera);
         const Vector3 particleCamPos = Vector3Transform(position, matView);
 
         // Filter out tags that are too far away or behind the camera
         const float thresholdDistance = 5.0f;
         if (particleCamPos.z > 0.0f or particleCamPos.z < -thresholdDistance) continue;
 
-        Vector2 particleScreenSpacePosition = GetWorldToScreen(position, camera);
+        Vector2 particleScreenSpacePosition = GetWorldToScreen(position, renderState->camera);
         DrawText(std::to_string(index).c_str(), (int)particleScreenSpacePosition.x - MeasureText(std::to_string(index).c_str(), 20)/2, (int)particleScreenSpacePosition.y, 20, BLACK);
     }
 }

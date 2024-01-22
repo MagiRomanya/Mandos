@@ -1,7 +1,7 @@
 #ifndef RAYLIB_IMGUI_H_
 #define RAYLIB_IMGUI_H_
 
-void ImGui_initialize();
+void ImGuiInitialize();
 
 void ImGuiBeginDrawing();
 
