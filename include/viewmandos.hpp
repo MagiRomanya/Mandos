@@ -173,9 +173,14 @@ struct MandosViewer {
 
 private:
     void drawGUI();
+    bool enable_draw_particle_indices = false;
+    bool enable_draw_simulable_meshes = true;
     bool enable_draw_particles = false;
     bool enable_draw_springs = false;
     bool enable_draw_fem_tetrahedrons = false;
+
+    const Simulation* SavedSim = nullptr;
+    const PhysicsState* SavedState = nullptr;
 };
 
 #endif // VIEWMANDOS_H_

@@ -193,11 +193,12 @@ Mesh MeshGPUtoRaymesh(const MeshGPU& mesh, MemoryPool& pool) {
     SHADER(pbr_shader, "resources/shaders/lighting.vs", "resources/shaders/pbr.fs") \
     SHADER(bling_phong_shader, "resources/shaders/lighting.vs", "resources/shaders/lighting.fs") \
     SHADER(bling_phong_texture_shader, "resources/shaders/lighting.vs", "resources/shaders/bling-phong-textures.fs") \
-    SHADER(axis_shader, "resources/shaders/axis.vs", "resources/shaders/axis.fs")
+    SHADER(axis_shader, "resources/shaders/axis.vs", "resources/shaders/axis.fs") \
+    SHADER(instancing_shader, "resources/shaders/lighting_instancing.vs", "resources/shaders/lighting.fs")
 
 struct RenderState {
     Camera3D camera;
-    Model sphere_model;
+    Mesh sphere_mesh;
     Material base_material;
 
     Shader base_shader; // DO NOT INITIALIZE OR DESTROY
@@ -268,16 +269,22 @@ MandosViewer::MandosViewer() {
     // Set up the render state
     renderState = new RenderState;
     renderState->camera = create_camera();
-    renderState->sphere_model = LoadModelFromMesh(GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS));
+    renderState->sphere_mesh = GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS);
     SetTargetFPS(200);
 
 
     // Other shaders
-#define SHADER(var, vspath, fspath) \
-    renderState->var = LoadShader(vspath, fspath);      \
-    renderState->var.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->var, "viewPos");
+#define SHADER(var, vspath, fspath) renderState->var = LoadShader(vspath, fspath);
     SHADER_LIST
 #undef SHADER
+
+    // Shaders expect viewPos as a uniform
+    renderState->bling_phong_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->bling_phong_shader, "viewPos");
+    renderState->bling_phong_texture_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->bling_phong_texture_shader, "viewPos");
+    renderState->pbr_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->pbr_shader, "viewPos");
+    renderState->instancing_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->instancing_shader, "viewPos");
+    renderState->instancing_shader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(renderState->instancing_shader, "instanceTransform");
+
     renderState->base_shader = renderState->bling_phong_shader;
     // Load basic lighting shader
     renderState->base_material = createMaterialFromShader(renderState->base_shader);
@@ -291,15 +298,10 @@ MandosViewer::MandosViewer() {
     // Axis 3D
     RenderMesh axis3Drender = RenderMesh("resources/obj/axis.obj");
     renderState->axis3D = new MeshGPU(axis3Drender);
-
-    // Get some required shader locations
-    renderState->sphere_model.materialCount = 1;
-    renderState->sphere_model.materials[0] = renderState->base_material;
-
 }
 
 MandosViewer::~MandosViewer() {
-    UnloadModel(renderState->sphere_model); // Unloads also the material maps
+    UnloadMesh(renderState->sphere_mesh);
 
 #define SHADER(var, vspath, fspath) UnloadShader(renderState->var);
     SHADER_LIST
@@ -422,23 +424,26 @@ void MandosViewer::drawGUI() {
         GUI_control_color(MASS_SPRING_COLOR, "Mass spring color");
         GUI_control_color(FEM_COLOR, "FEM color");
 
-        ImGui::SeparatorText("Change simulable shaders");
-        if (ImGui::Button("Bling Phong shader")) {
+        ImGui::SeparatorText("Simulable shaders");
+        ImVec2 buttonBox = ImVec2(ImGui::GetContentRegionAvail().x, 30);
+        if (ImGui::Button("Bling Phong shader", buttonBox)) {
             renderState->base_shader = renderState->bling_phong_shader;
         }
-        if (ImGui::Button("Bling Phong texture shader")) {
+        if (ImGui::Button("Bling Phong texture shader", buttonBox)) {
             renderState->base_shader = renderState->bling_phong_texture_shader;
         }
-        if (ImGui::Button("PBR")) {
+        if (ImGui::Button("PBR", buttonBox)) {
             renderState->base_shader = renderState->pbr_shader;
         }
-        if (ImGui::Button("Normals shader")) {
+        if (ImGui::Button("Normals shader", buttonBox)) {
             renderState->base_shader = renderState->normals_shader;
         }
         ImGui::SeparatorText("Simulation state visualization");
+        ImGui::Checkbox("Render simulable meshes", &enable_draw_simulable_meshes);
         ImGui::Checkbox("Render particles", &enable_draw_particles);
         ImGui::Checkbox("Render springs", &enable_draw_springs);
         ImGui::Checkbox("Render FEM tetrahedrons", &enable_draw_fem_tetrahedrons);
+        ImGui::Checkbox("Render particle indices", &enable_draw_particle_indices);
         ImGui::End();
     }
     if (renderState->ImGuiLogsOpen) {
@@ -461,7 +466,7 @@ void MandosViewer::end_drawing() {
 
 void MandosViewer::begin_3D_mode() {
     BeginMode3D(renderState->camera);
-    DrawGrid(30, 1.0f);
+    DrawGrid(100, 1.0f);
 }
 
 void draw_mesh_color(const Mat4& transform, const MeshGPU& mesh, MemoryPool& mem_pool, Color color) {
@@ -512,6 +517,9 @@ void DrawAxis3D(MemoryPool& mem_pool) {
 void MandosViewer::end_3D_mode() {
     EndMode3D();
     DrawAxis3D(mem_pool);
+    if (enable_draw_particle_indices && SavedSim && SavedState) {
+        draw_particle_indices(*SavedSim, *SavedState);
+    }
 }
 
 void myUpdateCamera(Camera3D& camera) {
@@ -539,20 +547,24 @@ void MandosViewer::update_camera() {
     // Update the shaders with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
     float cameraPos[3] = { renderState->camera.position.x, renderState->camera.position.y, renderState->camera.position.z };
     SetShaderValue(renderState->base_shader, renderState->base_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
-    SetShaderValue(renderState->pbr_shader, renderState->pbr_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
+    SetShaderValue(renderState->instancing_shader, renderState->instancing_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
 }
 
 bool MandosViewer::is_key_pressed(int Key) { return IsKeyPressed(Key); }
 
 void MandosViewer::draw_particle(const ParticleHandle& particle, const PhysicsState& state) {
+    if (!enable_draw_simulable_meshes) return;
     const Vec3 position = particle.particle.get_position(state.x);
-    DrawModel(renderState->sphere_model, vector3_eigen_to_raylib(position), 1, PARTICLE_COLOR);
+    Matrix transform = MatrixTranslate(position.x(), position.y(), position.z());
+    DrawMesh(renderState->sphere_mesh, renderState->base_material, transform);
 }
 
 void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh) {
+    if (!enable_draw_simulable_meshes) return;
     draw_mesh_color(rb.get_transformation_matrix(state), mesh, mem_pool, RB_COLOR);
 }
 void MandosViewer::draw_mesh(const Mat4& transform, const MeshGPU& mesh) {
+    if (!enable_draw_simulable_meshes) return;
     draw_mesh_color(transform, mesh, mem_pool, WHITE);
 }
 
@@ -566,22 +578,23 @@ void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState
 }
 
 void MandosViewer::draw_particles(const Simulation& simulation, const PhysicsState& state) {
+    std::vector<Matrix> transforms;
+    transforms.reserve(simulation.simulables.particles.size());
+
     for (size_t i = 0; i < simulation.simulables.particles.size(); i++) {
         Particle particle = simulation.simulables.particles[i];
         Vec3 position = particle.get_position(state.x);
-        Color color = PARTICLE_COLOR;
-        for (unsigned int i = 0; i < simulation.frozen_dof.size(); i++) {
-            unsigned int frozen_index = simulation.frozen_dof[i];
-            if (frozen_index == particle.index) {
-                color = WHITE;
-                break;
-            }
-        }
-        DrawModel(renderState->sphere_model, vector3_eigen_to_raylib(position), 1, color);
+        Matrix transform = MatrixTranslate(position.x(), position.y(), position.z());
+        transforms.push_back(transform);
     }
+    Material matInstances = LoadMaterialDefault();
+    matInstances.shader = renderState->instancing_shader;
+    matInstances.maps[MATERIAL_MAP_DIFFUSE].color = PARTICLE_COLOR;
+    DrawMeshInstanced(renderState->sphere_mesh, matInstances, transforms.data(), transforms.size());
 }
 
 void MandosViewer::draw_FEM(const FEMHandle& fem, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh) {
+    if (!enable_draw_simulable_meshes) return;
     const unsigned int dof_index = fem.bounds.dof_index;
     const unsigned int nDoF = fem.bounds.nDoF;
 
@@ -598,6 +611,7 @@ void MandosViewer::draw_FEM(const FEMHandle& fem, const PhysicsState& state, Mes
 }
 
 void MandosViewer::draw_MassSpring(const MassSpringHandle& mass_spring, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh) {
+    if (!enable_draw_simulable_meshes) return;
     const unsigned int dof_index = mass_spring.bounds.dof_index;
     const unsigned int nDoF = mass_spring.bounds.nDoF;
 
@@ -655,6 +669,8 @@ void MandosViewer::draw_particle_indices(const Simulation& simulation, const Phy
 }
 
 void MandosViewer::draw_simulation_state(const Simulation& simulation, const PhysicsState& state) {
+    SavedSim = &simulation;
+    SavedState = &state;
     if (enable_draw_springs)
         draw_springs(simulation, state);
     if (enable_draw_particles)
