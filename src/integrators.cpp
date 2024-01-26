@@ -8,6 +8,7 @@
 #include "particle_rigid_body_copuling.hpp"
 #include "physics_state.hpp"
 #include "simulation.hpp"
+#include "utility_functions.hpp"
 
 void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, Vec& dx) {
     const unsigned int nDoF = state.get_nDoF();

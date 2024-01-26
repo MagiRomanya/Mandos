@@ -150,12 +150,9 @@ void LoadRenderMeshTinyOBJ(std::string inputfile,
             for (size_t v = 0; v < fv; v++) {
               // access to vertex
               tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-              tinyobj::real_t vx =
-                  attrib.vertices[3 * size_t(idx.vertex_index) + 0];
-              tinyobj::real_t vy =
-                  attrib.vertices[3 * size_t(idx.vertex_index) + 1];
-              tinyobj::real_t vz =
-                  attrib.vertices[3 * size_t(idx.vertex_index) + 2];
+              tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
+              tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
+              tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
               out_vertices.push_back(vx);
               out_vertices.push_back(vy);
               out_vertices.push_back(vz);
@@ -169,16 +166,20 @@ void LoadRenderMeshTinyOBJ(std::string inputfile,
                 out_normals.push_back(ny);
                 out_normals.push_back(nz);
               }
+              else {
+                  std::cerr << "ERROR: Mesh does not have Normals!" << std::endl;
+              }
 
               // Check if `texcoord_index` is zero or positive. negative = no
               // texcoord data
               if (idx.texcoord_index >= 0) {
-                tinyobj::real_t tx =
-                    attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
-                tinyobj::real_t ty =
-                    attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
+                tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
+                tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
                 out_tex_coord.push_back(tx);
-                    out_tex_coord.push_back(ty);
+                out_tex_coord.push_back(ty);
+              }
+              else {
+                  std::cerr << "ERROR: Mesh does not have texture coordinates!" << std::endl;
               }
             }
             index_offset += fv;
@@ -275,7 +276,7 @@ void recenter_mesh(SimulationMesh& mesh, const Vec3& com) {
 
 void RenderMesh::updateFromSimulationMesh(const SimulationMesh& sim_mesh) {
     // The number of triangles of both meshes must be the same
-    assert(sim_mesh.indices.size() / 3 == mesh.vertices.size() / 9);
+    assert(sim_mesh.indices.size() / 3 == vertices.size() / 9);
     if (tangents.size() == 0)
         tangents.resize(vertices.size());
 

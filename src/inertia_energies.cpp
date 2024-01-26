@@ -50,7 +50,7 @@ Scalar RotationalInertia::compute_energy(Scalar TimeStep, const PhysicsState& st
 
     // Compute the energy derivatives
     // ---------------------------------------------------------------
-    const Scalar KE = (deltaR * rb.J_inertia_tensor0 * deltaR.transpose()).trace() / h2;
+    const Scalar KE = (deltaR * rb.J_inertia_tensor0 * deltaR.transpose()).trace() / (2.0f*h2);
     return KE;
 
 }
@@ -73,14 +73,14 @@ void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const Ph
 
     // Compute the energy derivatives
     // ---------------------------------------------------------------
-    const Scalar KE = (deltaR * rb.J_inertia_tensor0 * deltaR.transpose()).trace() / h2;
-    const Vec3 gradient = 2 * Vec3(-A(1,2), A(0,2), -A(0,1)) / h2;                 // v s.t. A = skew(v)
-    const Mat3 hessian = 1.0 / h2 * (S.trace() * Mat3::Identity() - S);
+    const Scalar KE = (deltaR * rb.J_inertia_tensor0 * deltaR.transpose()).trace() / (2.0f*h2);
+    const Vec3 gradient = 2.0f * Vec3(-A(1,2), A(0,2), -A(0,1)) / h2;                 // v s.t. A = skew(v)
+    const Mat3 hessian = 1.0f / h2 * (S.trace() * Mat3::Identity() - S);
 
     // Add the energy derivatives to the global structure
     // ---------------------------------------------------------------
     f.energy += KE;
-    f.gradient.segment<3>(rb.index +3) += gradient;
+    f.gradient.segment<3>(rb.index + 3) += gradient;
     for (unsigned int i = 0; i < 3; i++) {
         for (unsigned int j = 0; j < 3; j++) {
             f.hessian_triplets.emplace_back(rb.index + 3 + i, rb.index + 3 + j, hessian(i, j));

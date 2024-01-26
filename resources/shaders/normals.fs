@@ -18,5 +18,5 @@ out vec4 finalColor;
 void main()
 {
     vec3 normal = normalize(fragNormal);
-    finalColor = vec4(normal, 1.0);
+    finalColor = vec4(0.5 * normal + 0.5, 1.0);
 }

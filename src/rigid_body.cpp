@@ -62,7 +62,7 @@ Mat3 RigidBody::compute_rotation_matrix(const Vec& x) const {
 }
 
 Scalar compute_tetrahedron_volume(const Vec3& AB, const Vec3& AC, const Vec3& AD) {
-    return (skew(AB) * AC).dot(AD) / 6.;
+    return cross(AB, AC).dot(AD) / 6.;
 }
 
 // Computethe volume of the mesh in the same units as the vertex positions.

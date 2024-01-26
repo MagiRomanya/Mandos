@@ -42,7 +42,6 @@ struct Copulings {
     void compute_dof_index_to_copuling();
 
     inline ParticleRigidBodyCopuling get_copuling(unsigned int dof_index) const {return copulings[dof_index_to_copuling.at(dof_index)];}
-
 };
 
 void compute_copuling_jacobian(const Copulings& copulings, const PhysicsState& state, SparseMat& copuling_jacobian);

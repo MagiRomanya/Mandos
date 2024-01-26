@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <stdlib.h>
 #include <Eigen/Core>
@@ -187,20 +188,34 @@ Mesh MeshGPUtoRaymesh(const MeshGPU& mesh, MemoryPool& pool) {
  */
 
 #define SPHERE_SUBDIVISIONS 30
+#define SHADER_LIST \
+    SHADER(normals_shader, "resources/shaders/lighting.vs", "resources/shaders/normals.fs") \
+    SHADER(pbr_shader, "resources/shaders/lighting.vs", "resources/shaders/pbr.fs") \
+    SHADER(bling_phong_shader, "resources/shaders/lighting.vs", "resources/shaders/lighting.fs") \
+    SHADER(bling_phong_texture_shader, "resources/shaders/lighting.vs", "resources/shaders/bling-phong-textures.fs") \
+    SHADER(axis_shader, "resources/shaders/axis.vs", "resources/shaders/axis.fs")
+
 struct RenderState {
     Camera3D camera;
     Model sphere_model;
     Material base_material;
 
-    Shader base_shader;
-    Shader normals_shader;
-    Shader pbr_shader;
-    Shader axis_shader;
+    Shader base_shader; // DO NOT INITIALIZE OR DESTROY
+#define SHADER(var, vspath, fspath) Shader var;
+    SHADER_LIST
+#undef SHADER
 
     Texture2D diffuseTexture;
     Texture2D normalMapTexture;
 
     MeshGPU* axis3D = nullptr;
+
+    // GUI
+    bool renderFrameOpen = false;
+    bool cameraFrameOpen = false;
+    bool ImGuiLogsOpen = false;
+    bool RaylibLogsOpen = false;
+    std::vector<std::pair<int, std::string>> raylibLogs;
 };
 
 static RenderState* renderState = nullptr;
@@ -221,10 +236,33 @@ Material createMaterialFromShader(Shader shader) {
     return material;
 }
 
+void raylib_to_imgui_tracelog_callback(int logLevel, const char *text, va_list args) {
+    std::string logString;
+    switch (logLevel)
+    {
+        case LOG_TRACE: logString = "TRACE: "; break;
+        case LOG_DEBUG: logString = "DEBUG: "; break;
+        case LOG_INFO: logString = "INFO: "; break;
+        case LOG_WARNING: logString = "WARNING: "; break;
+        case LOG_ERROR: logString = "ERROR: "; break;
+        case LOG_FATAL: logString = "FATAL: "; break;
+        default: break;
+    }
+    const int bufferSize = 512;
+    char buffer[bufferSize];
+    vsnprintf(buffer, bufferSize, text, args);
+    logString += std::string(buffer);
+    logString += "\n";
+
+    renderState->raylibLogs.emplace_back(logLevel, logString);
+    std::cout << logString << std::flush;
+}
+
 MandosViewer::MandosViewer() {
     InitWindow(initialScreenWidth, initialScreenHeight, "Mandos");
-    SetWindowState(FLAG_WINDOW_RESIZABLE);
     ImGuiInitialize();
+    SetTraceLogCallback(raylib_to_imgui_tracelog_callback);
+    SetWindowState(FLAG_WINDOW_RESIZABLE);
     rlDisableBackfaceCulling();
 
     // Set up the render state
@@ -233,22 +271,22 @@ MandosViewer::MandosViewer() {
     renderState->sphere_model = LoadModelFromMesh(GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS));
     SetTargetFPS(200);
 
-    // Load basic lighting shader
-    renderState->base_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/lighting.fs");
-    renderState->base_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->base_shader, "viewPos");
-    renderState->base_material = createMaterialFromShader(renderState->base_shader);
 
     // Other shaders
-    renderState->normals_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/normals.fs");
-    renderState->pbr_shader = LoadShader("resources/shaders/lighting.vs", "resources/shaders/pbr.fs");
-    renderState->pbr_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->base_shader, "viewPos");
-    renderState->axis_shader = LoadShader("resources/shaders/axis.vs", "resources/shaders/axis.fs");
+#define SHADER(var, vspath, fspath) \
+    renderState->var = LoadShader(vspath, fspath);      \
+    renderState->var.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->var, "viewPos");
+    SHADER_LIST
+#undef SHADER
+    renderState->base_shader = renderState->bling_phong_shader;
+    // Load basic lighting shader
+    renderState->base_material = createMaterialFromShader(renderState->base_shader);
 
     // Texture loading
     renderState->diffuseTexture = LoadTexture("resources/textures/terracota.png");
     renderState->normalMapTexture = LoadTexture("resources/textures/NormalMap.png");
-    // SetMaterialTexture(&renderState->base_material, MATERIAL_MAP_DIFFUSE, renderState->diffuseTexture);
-    // SetMaterialTexture(&renderState->base_material, MATERIAL_MAP_NORMAL, renderState->normalMapTexture);
+    SetMaterialTexture(&renderState->base_material, MATERIAL_MAP_DIFFUSE, renderState->diffuseTexture);
+    SetMaterialTexture(&renderState->base_material, MATERIAL_MAP_NORMAL, renderState->normalMapTexture);
 
     // Axis 3D
     RenderMesh axis3Drender = RenderMesh("resources/obj/axis.obj");
@@ -262,10 +300,12 @@ MandosViewer::MandosViewer() {
 
 MandosViewer::~MandosViewer() {
     UnloadModel(renderState->sphere_model); // Unloads also the material maps
-    UnloadShader(renderState->base_shader);
-    UnloadShader(renderState->normals_shader);
-    UnloadShader(renderState->pbr_shader);
-    UnloadShader(renderState->axis_shader);
+
+#define SHADER(var, vspath, fspath) UnloadShader(renderState->var);
+    SHADER_LIST
+#undef SHADER
+
+
     UnloadTexture(renderState->diffuseTexture);
     UnloadTexture(renderState->normalMapTexture);
     delete renderState->axis3D;
@@ -284,29 +324,138 @@ void MandosViewer::begin_drawing() {
     ClearBackground(RAYWHITE);
 }
 
-void MandosViewer::end_drawing() {
+inline void getFloatsFromColor(float* fc, Color color) {
+    fc[0] = (float) color.r / 255.f;
+    fc[1] = (float) color.g / 255.f;
+    fc[2] = (float) color.b / 255.f;
+    fc[3] = (float) color.a / 255.f;
+}
+
+inline Color getColorFromFloats(float* fc) {
+    return Color((unsigned char) 255.f * fc[0], (unsigned char) 255.f * fc[1], (unsigned char) 255.f * fc[2], (unsigned char) 255.f * fc[3]);
+}
+
+inline void GUI_control_color(Color& color, std::string name) {
+    float floatColor[4];
+    getFloatsFromColor(floatColor, color);
+    if (ImGui::ColorEdit4(name.c_str(), floatColor)) {
+        color = getColorFromFloats(floatColor);
+    }
+}
+
+inline void GUI_ShowRaylibLogs() {
+    enum myTraceLevel {
+    myLOG_NONE = 0,
+    myLOG_WARNING = 1 << 1,
+    myLOG_INFO = 1 << 2,
+    myLOG_DEBUG = 1 << 3,
+    myLOG_ERROR = 1 << 4,
+    myLOG_ALL = myLOG_WARNING | myLOG_INFO | myLOG_DEBUG | myLOG_ERROR,
+    };
+    static int traceLevel = 0;
+    ImGui::CheckboxFlags("All", &traceLevel, myLOG_ALL);
+    ImGui::SameLine(); ImGui::CheckboxFlags("Warning", &traceLevel, myLOG_WARNING);
+    ImGui::SameLine(); ImGui::CheckboxFlags("Info",  &traceLevel, myLOG_INFO);
+    ImGui::SameLine(); ImGui::CheckboxFlags("Debug", &traceLevel, myLOG_DEBUG);
+    ImGui::SameLine(); ImGui::CheckboxFlags("Error", &traceLevel, myLOG_ERROR);
+
+    ImGui::BeginChild("##log", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Border, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
+    ImGuiListClipper clipper;
+    clipper.Begin(renderState->raylibLogs.size(), ImGui::GetTextLineHeightWithSpacing());
+    while (clipper.Step()) {
+        for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+
+            myTraceLevel currentLevel = (myTraceLevel)traceLevel;
+            if (currentLevel == myLOG_ALL) {
+                ImGui::Text("%s", renderState->raylibLogs[i].second.c_str());
+            }
+            else {
+                if ((currentLevel & myLOG_WARNING) && renderState->raylibLogs[i].first == LOG_WARNING) {
+                    ImGui::Text("%s", renderState->raylibLogs[i].second.c_str());
+                }
+                if ((currentLevel & myLOG_INFO) && renderState->raylibLogs[i].first == LOG_INFO) {
+                    ImGui::Text("%s", renderState->raylibLogs[i].second.c_str());
+                }
+
+                if ((currentLevel & myLOG_DEBUG) && renderState->raylibLogs[i].first == LOG_DEBUG) {
+                    ImGui::Text("%s", renderState->raylibLogs[i].second.c_str());
+                }
+                if ((currentLevel & myLOG_ERROR) && renderState->raylibLogs[i].first == LOG_ERROR) {
+                    ImGui::Text("%s", renderState->raylibLogs[i].second.c_str());
+                }
+
+            }
+        }
+    }
+    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+        ImGui::SetScrollHereY(1.0f);
+    ImGui::EndChild();
+}
+
+void MandosViewer::drawGUI() {
     ImGuiBeginDrawing();
     if (ImGui::BeginMainMenuBar()) {
-        if (ImGui::BeginMenu("Render")) {
-            // Add menu items for "File"
-            if (ImGui::MenuItem("New")) {
-                // Handle "New" action
+        if (ImGui::BeginMenu("Menu")) {
+            if (ImGui::MenuItem("Render")) {
+                renderState->renderFrameOpen = true;
             }
-            if (ImGui::MenuItem("Open")) {
-                // Handle "Open" action
+            if (ImGui::MenuItem("Camera")) {
+                renderState->cameraFrameOpen = true;
             }
-            if (ImGui::MenuItem("Save")) {
-                // Handle "Save" action
+            if (ImGui::BeginMenu("Logs")) {
+                if (ImGui::MenuItem("Raylib Logs"))
+                    renderState->RaylibLogsOpen = true;
+                if (ImGui::MenuItem("ImGui Logs"))
+                    renderState->ImGuiLogsOpen = true;
+                ImGui::EndMenu();
             }
             ImGui::EndMenu();
         }
-
-        // Add more menus as needed...
-
         ImGui::EndMainMenuBar();
     }
+    if (renderState->renderFrameOpen) {
+        ImGui::Begin("Render", &renderState->renderFrameOpen);
+
+        ImGui::SeparatorText("Simulable colors");
+        GUI_control_color(PARTICLE_COLOR, "Particle color");
+        GUI_control_color(RB_COLOR, "Rigid Body color");
+        GUI_control_color(MASS_SPRING_COLOR, "Mass spring color");
+        GUI_control_color(FEM_COLOR, "FEM color");
+
+        ImGui::SeparatorText("Change simulable shaders");
+        if (ImGui::Button("Bling Phong shader")) {
+            renderState->base_shader = renderState->bling_phong_shader;
+        }
+        if (ImGui::Button("Bling Phong texture shader")) {
+            renderState->base_shader = renderState->bling_phong_texture_shader;
+        }
+        if (ImGui::Button("PBR")) {
+            renderState->base_shader = renderState->pbr_shader;
+        }
+        if (ImGui::Button("Normals shader")) {
+            renderState->base_shader = renderState->normals_shader;
+        }
+        ImGui::SeparatorText("Simulation state visualization");
+        ImGui::Checkbox("Render particles", &enable_draw_particles);
+        ImGui::Checkbox("Render springs", &enable_draw_springs);
+        ImGui::Checkbox("Render FEM tetrahedrons", &enable_draw_fem_tetrahedrons);
+        ImGui::End();
+    }
+    if (renderState->ImGuiLogsOpen) {
+        ImGui::ShowDebugLogWindow(&renderState->ImGuiLogsOpen);
+    }
+    if (renderState->RaylibLogsOpen) {
+        ImGui::Begin("Raylib Logs", &renderState->RaylibLogsOpen);
+        GUI_ShowRaylibLogs();
+        ImGui::End();
+    }
+
     ImGuiEndDrawing();
     DrawFPS(GetScreenWidth()*0.95, GetScreenHeight()*0.05);
+}
+
+void MandosViewer::end_drawing() {
+    drawGUI();
     EndDrawing();
 }
 
@@ -366,6 +515,7 @@ void MandosViewer::end_3D_mode() {
 }
 
 void myUpdateCamera(Camera3D& camera) {
+    if (ImGui::GetIO().WantCaptureMouse) return;
     const float CAMERA_SENSITIVITY = 0.01f;
     const float CAMERA_MOVE_SPEED = 0.01f;
     if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
@@ -473,13 +623,14 @@ void MandosViewer::draw_FEM_tetrahedrons(const Simulation& simulation, const Phy
         const Vec3& x2 = e.p2.get_position(state.x);                    \
         const Vec3& x3 = e.p3.get_position(state.x);                    \
         const Vec3& x4 = e.p4.get_position(state.x);                    \
-                                                                        \
-        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x2), BLUE); \
-        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x3), BLUE); \
-        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x4), BLUE); \
-        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x2), BLUE); \
-        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x3), BLUE); \
-        DrawLine3D(vector3_eigen_to_raylib(x2), vector3_eigen_to_raylib(x3), BLUE); \
+        Color lineColor = BLUE;                                         \
+        if (is_tetrahedron_inverted(x1, x2, x3, x4)) lineColor = RED;   \
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x2), lineColor); \
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x3), lineColor); \
+        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x4), lineColor); \
+        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x2), lineColor); \
+        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x3), lineColor); \
+        DrawLine3D(vector3_eigen_to_raylib(x2), vector3_eigen_to_raylib(x3), lineColor); \
     }
     FEM_MATERIAL_MEMBERS
 #undef MAT
@@ -501,4 +652,13 @@ void MandosViewer::draw_particle_indices(const Simulation& simulation, const Phy
         Vector2 particleScreenSpacePosition = GetWorldToScreen(position, renderState->camera);
         DrawText(std::to_string(index).c_str(), (int)particleScreenSpacePosition.x - MeasureText(std::to_string(index).c_str(), 20)/2, (int)particleScreenSpacePosition.y, 20, BLACK);
     }
+}
+
+void MandosViewer::draw_simulation_state(const Simulation& simulation, const PhysicsState& state) {
+    if (enable_draw_springs)
+        draw_springs(simulation, state);
+    if (enable_draw_particles)
+        draw_particles(simulation, state);
+    if (enable_draw_fem_tetrahedrons)
+        draw_FEM_tetrahedrons(simulation, state);
 }

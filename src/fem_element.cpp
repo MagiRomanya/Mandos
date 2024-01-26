@@ -12,36 +12,6 @@ FEM_MATERIAL_MEMBERS
 // epsilon == strain tensor
 // sigma == stress tensor
 
-// Given a square DxD matrix mat, return a vector of D² components
-// 1  3
-// 2  4  ->  vec = 1, 2, 3, 4
-template<unsigned int D>
-Eigen::Vector<Scalar, D*D> vectorize_matrix(const Eigen::Matrix<Scalar,D,D>& mat) {
-  Eigen::Vector<Scalar, D*D> result = Eigen::Vector<Scalar, D*D>::Zero();
-  for (unsigned int i = 0; i< D; i++) {
-    for (unsigned int j = 0; j< D; j++) {
-      result(D*j+i) = mat(i,j);
-    }
-  }
-  return result;
-}
-
-// Given a NxM matrix, return a 3Nx3M matrix where each matrix component m_i_j becomes now m_i_j*I
-// where I is the 3x3 identity matrix
-// A  B            A* I, B*I
-// C  D  ->  mat = C* I, D*I
-template<unsigned int N, unsigned int M>
-Eigen::Matrix<Scalar, 3*N, 3*M> block_matrix(const Eigen::Matrix<Scalar,N,M>& mat) {
-  Eigen::Matrix<Scalar, 3*N, 3*M> result = Eigen::Matrix<Scalar, 3*N, 3*M>::Zero();
-  for (unsigned int i = 0; i< N; i++) {
-    for (unsigned int j = 0; j< M; j++) {
-      // Wierd syntax we have to use because of templates
-      // It just means result.block...
-      result.template block<3,3>(i*3, j*3) = mat(i, j) * Mat3::Identity();
-    }
-  }
-  return result;
-}
 
 Mat3 compute_deformation_tensor(const Eigen::Matrix<Scalar,9,12>& dvecF_dx, const Vec3& x1, const Vec3& x2, const Vec3& x3, const Vec3& x4) {
   // X_vec is a 12 component column vector organized as X_vec = x1, x2, x3, x4
@@ -201,7 +171,7 @@ Eigen::Matrix<Scalar, 9, 9> FEM_NeoHookeanMaterial::get_phi_hessian(const Mat3& 
   dvecSigma_dvecF += lambda * vec_G * vec_G.transpose();
   dvecSigma_dvecF += lambda * (J - alpha) * vec_H;
 
-  const bool enableSemiPositiveProjection = false;
+  const bool enableSemiPositiveProjection = true;
   if (enableSemiPositiveProjection) {
     const Eigen::SelfAdjointEigenSolver<Eigen::Matrix<Scalar, 9, 9>> eigs(dvecSigma_dvecF);
     Eigen::Vector<Scalar, 9> eigenvalues = eigs.eigenvalues();
@@ -318,4 +288,11 @@ Eigen::Matrix<Scalar,4,3> compute_shape_function_derivative(const Vec3& x1, cons
   B << x2-x1, x3-x1, x4-x1;
 
   return ds_dp * B.inverse();
+}
+
+bool is_tetrahedron_inverted(const Vec3& v1, const Vec3& v2, const Vec3& v3, const Vec3& v4) {
+  const Vec3 AB = v2 - v1;
+  const Vec3 AC = v3 - v1;
+  const Vec3 AD = v4 - v1;
+  return cross(AB, AC).dot(AD) < 0;
 }

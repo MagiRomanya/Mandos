@@ -163,11 +163,19 @@ struct MandosViewer {
 
     void draw_mesh(const Mat4& transform, const MeshGPU& mesh);
 
+    void draw_simulation_state(const Simulation& simulation, const PhysicsState& state);
+
     void draw_springs(const Simulation& simulation, const PhysicsState& state);
 
     void draw_FEM_tetrahedrons(const Simulation& simulation, const PhysicsState& state);
 
     void draw_particle_indices(const Simulation& simulation, const PhysicsState& state);
+
+private:
+    void drawGUI();
+    bool enable_draw_particles = false;
+    bool enable_draw_springs = false;
+    bool enable_draw_fem_tetrahedrons = false;
 };
 
 #endif // VIEWMANDOS_H_

@@ -100,4 +100,6 @@ struct FEM_Element3D {
     Scalar compute_volume(const Vec3& x1, const Vec3& x2, const Vec3& x3, const Vec3& x4) const;
 };
 
+bool is_tetrahedron_inverted(const Vec3& v1, const Vec3& v2, const Vec3& v3, const Vec3& v4);
+
 #endif // FEM_UNIT_H_

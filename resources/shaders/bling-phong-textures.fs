@@ -36,10 +36,16 @@ uniform vec3 viewPos;
 
 void main()
 {
+    // Texel color fetching from texture sampler
+    vec4 texelColor = texture(texture0, fragTexCoord);
     vec3 lightDot = vec3(0.0);
     vec3 normal = normalize(fragNormal);
     vec3 viewD = normalize(viewPos - fragPosition);
     vec3 specular = vec3(0.0);
+
+    normal = texture(texture2, fragTexCoord).rgb;
+    normal = normal * 2.0 - 1.0;
+    normal = normalize(TBN * normal);
 
     Light light;
 
@@ -70,8 +76,8 @@ void main()
       specular += specCo;
     }
 
-    finalColor = (colDiffuse + vec4(specular, 1.0))*vec4(lightDot, 1.0);
-    finalColor += (ambient)*colDiffuse;
+    finalColor = (texelColor*((colDiffuse + vec4(specular, 1.0))*vec4(lightDot, 1.0)));
+    finalColor += texelColor*(ambient)*colDiffuse;
 
     // Gamma correction
     finalColor = pow(finalColor, vec4(1.0/2.2));

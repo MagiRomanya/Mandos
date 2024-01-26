@@ -23,4 +23,58 @@ typedef Eigen::Triplet<Scalar> Triplet;
 typedef Eigen::SparseMatrix<Scalar> SparseMat;
 
 
+// Given a square DxD matrix mat, return a vector of D² components
+// 1  3
+// 2  4  ->  vec = 1, 2, 3, 4
+template<int D>
+inline Eigen::Vector<Scalar, D*D> vectorize_matrix(const Eigen::Matrix<Scalar,D,D>& mat) {
+  Eigen::Vector<Scalar, D*D> result = Eigen::Vector<Scalar, D*D>::Zero();
+  for (unsigned int i = 0; i< D; i++) {
+    for (unsigned int j = 0; j< D; j++) {
+      result(D*j+i) = mat(i,j);
+    }
+  }
+  return result;
+}
+
+template<int D>
+inline Eigen::Vector<Scalar, D*D> vectorize_matrix_rowwise(const Eigen::Matrix<Scalar,D,D>& mat) {
+  Eigen::Vector<Scalar, D*D> result = Eigen::Vector<Scalar, D*D>::Zero();
+  for (unsigned int i = 0; i< D; i++) {
+    for (unsigned int j = 0; j< D; j++) {
+      result(D*j+i) = mat(j,i);
+    }
+  }
+  return result;
+}
+
+// Given a NxM matrix, return a 3Nx3M matrix where each matrix component m_i_j becomes now m_i_j*I
+// where I is the 3x3 identity matrix
+// A  B            A* I, B*I
+// C  D  ->  mat = C* I, D*I
+template<int N, int M>
+inline Eigen::Matrix<Scalar, 3*N, 3*M> block_matrix(const Eigen::Matrix<Scalar,N,M>& mat) {
+  Eigen::Matrix<Scalar, 3*N, 3*M> result = Eigen::Matrix<Scalar, 3*N, 3*M>::Zero();
+  for (unsigned int i = 0; i< N; i++) {
+    for (unsigned int j = 0; j< M; j++) {
+      // Wierd syntax we have to use because of templates
+      // It just means result.block...
+      result.template block<3,3>(i*3, j*3) = mat(i, j) * Mat3::Identity();
+    }
+  }
+  return result;
+}
+
+/**
+ * https://en.wikipedia.org/wiki/Levi-Civita_symbol#Three_dimensions
+ */
+inline Eigen::Matrix<Scalar, 3, 9> vectorized_levi_civita() {
+    Eigen::Matrix<Scalar, 3, 9> e;
+    e << 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,-1.0f, 0.0f,
+         0.0f, 0.0f,-1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+         0.0f, 1.0f, 0.0f,-1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f;
+    return e;
+}
+
+
 #endif // LINEAR_ALGEBRA_H_

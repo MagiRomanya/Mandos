@@ -1,3 +1,4 @@
+#include <cmath>
 #include <vector>
 
 #include "fem_unit.hpp"
@@ -58,21 +59,21 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     EnergyAndDerivatives f(0);
 
     const PhysicsState state0 = state;
-    // const Vec dx0 = (state.x - state.x_old); // h * v
-    // update_simulation_state(simulation.simulables, dx0, state.x);
-    // update_simulation_state(simulation.simulables, dx0, state.x_old);
 
-    for (unsigned int i = 0; i < 1; i++) {
+    const unsigned int maxIter = 1;
+    const float gradientMinThreshold = nDoF * 1.0;
+    for (unsigned int i = 0; i < maxIter; i++) {
 
         // Compute energy and derivatives from the energies
         // -----------------------------------------------------------------------------------------
         f = EnergyAndDerivatives(nDoF);
         compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
+        if (nDoF * f.gradient.norm() < gradientMinThreshold) break;
         Scalar energy = f.energy;
 
         // Integration step
         // -----------------------------------------------------------------------------------------
-        Vec dx;
+        static Vec dx; // Allocate it's size only once (maybe)
         integrate_implicit_euler(simulation, state, f, dx);
 
         // Update state
@@ -84,12 +85,16 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         Scalar lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
         Scalar alpha = 1.0f;
         const bool enableLineSearch = false;
+        const float alpha_min_threshold = 1e-7;
+        // DEBUG_LOG(energy);
+        // DEBUG_LOG(lineSearchEnergy);
         while (lineSearchEnergy > energy && enableLineSearch) {
-            DEBUG_LOG(alpha);
+            if (alpha < alpha_min_threshold or std::isnan(energy)) break;
             alpha /= 2.0f;
             state = stepState;
             update_simulation_state(simulation.simulables, alpha * dx, state.x);
-            lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
+            lineSearchEnergy = compute_energy(simulation.TimeStep,
+                                              simulation.energies, state, state0);
         }
 
     }

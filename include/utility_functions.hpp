@@ -10,7 +10,7 @@
     #define M_PI 3.14159265358979323846
 #endif
 
-#define DEBUG_LOG(variable) std::cout << #variable << " " << variable << std::endl;
+#define DEBUG_LOG(variable) std::cout << #variable << " " << variable << std::endl
 
 /**
  * Compute the skew-symetric matrix of the given vector.
