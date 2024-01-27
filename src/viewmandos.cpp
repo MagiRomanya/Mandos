@@ -22,6 +22,7 @@
 #include "spring.hpp"
 #include "viewmandos.hpp"
 #include "utility_functions.hpp"
+#include "gl_extensions.hpp"
 
 Color RB_COLOR = YELLOW;
 Color FEM_COLOR = PINK;
@@ -52,33 +53,6 @@ Camera3D create_camera() {
     camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
     return camera;
 }
-
-// DEPRECATED
-// Mesh SimulationMesh_to_RaylibMesh(const SimulationMesh& sim_mesh, MemoryPool& pool) {
-//     std::vector<unsigned short> indices = std::vector<unsigned short>(sim_mesh.indices.begin(), sim_mesh.indices.end());
-//     Mesh mesh = {0};
-//     mesh.vertexCount = sim_mesh.vertices.size() / 3;
-//     mesh.triangleCount = indices.size() / 3;
-//     mesh.vertices = (float *)std::memcpy(pool.allocate(sim_mesh.vertices.size() * sizeof(float)), sim_mesh.vertices.data(), sim_mesh.vertices.size() * sizeof(float));
-//     mesh.texcoords = NULL;
-//     mesh.normals = NULL;
-//     mesh.indices = (unsigned short *)std::memcpy(pool.allocate(indices.size() * sizeof(unsigned short)), indices.data(), indices.size() * sizeof(unsigned short));
-//     UploadMesh(&mesh, false);
-//     return mesh;
-// }
-
-// DEPRECATED
-// Mesh RenderMesh_to_RaylibMesh(const RenderMesh& render_mesh, MemoryPool& pool) {
-//     Mesh mesh = {0};
-//     mesh.vertexCount = render_mesh.vertices.size() / 3; // 3 coordinates per vertex
-//     mesh.triangleCount = mesh.vertexCount / 3; // 3 vertices per triangle
-//     mesh.vertices = (float *)std::memcpy(pool.allocate(render_mesh.vertices.size() * sizeof(float)), render_mesh.vertices.data(), render_mesh.vertices.size() * sizeof(float));
-//     mesh.texcoords = (float *)std::memcpy(pool.allocate(render_mesh.texcoords.size() * sizeof(float)), render_mesh.texcoords.data(), render_mesh.texcoords.size() * sizeof(float));
-//     mesh.normals = (float *)std::memcpy(pool.allocate(render_mesh.normals.size() * sizeof(float)), render_mesh.normals.data(), render_mesh.normals.size() * sizeof(float));
-//     mesh.indices = NULL;
-//     UploadMesh(&mesh, false);
-//     return mesh;
-// }
 
 void copy_tangents_as_vec_4(float* dest, const std::vector<float>& tangents) {
     for (unsigned int i = 0; i < tangents.size() / 3; i++) {
@@ -210,7 +184,8 @@ Material createMaterialFromShader(Shader shader) {
     SHADER(bling_phong_shader, "resources/shaders/lighting.vs", "resources/shaders/lighting.fs") \
     SHADER(bling_phong_texture_shader, "resources/shaders/lighting.vs", "resources/shaders/bling-phong-textures.fs") \
     SHADER(axis_shader, "resources/shaders/axis.vs", "resources/shaders/axis.fs") \
-    SHADER(instancing_shader, "resources/shaders/lighting_instancing.vs", "resources/shaders/lighting.fs")
+    SHADER(instancing_shader, "resources/shaders/lighting_instancing.vs", "resources/shaders/lighting.fs") \
+    SHADER(solid_shader, "resources/shaders/lighting.vs", "resources/shaders/diffuse_solid_color.fs")
 
 struct RenderState {
     void initialize();
@@ -237,6 +212,7 @@ struct RenderState {
     // -------------------------------------------------------------
     Mesh sphere_mesh;
     MeshGPU* axis3D = nullptr;
+    LinesGPU* lines = nullptr;
 
     // GUI
     // -------------------------------------------------------------
@@ -276,12 +252,15 @@ void RenderState::initialize() {
     sphere_mesh = GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS);
     RenderMesh axis3Drender = RenderMesh("resources/obj/axis.obj");
     axis3D = new MeshGPU(axis3Drender);
+    std::vector<float> vertices = {0.0f, 1.0f, 4.0f, 2.0f};
+    lines = new LinesGPU(vertices);
 }
 
 void RenderState::deinitialize() {
     // Unload geometry
     UnloadMesh(sphere_mesh);
     delete axis3D;
+    delete lines;
 
     // Unload shaders
 #define SHADER(var, vspath, fspath) UnloadShader(var);
@@ -651,24 +630,36 @@ void MandosViewer::draw_MassSpring(const MassSpringHandle& mass_spring, const Ph
 
 
 void MandosViewer::draw_FEM_tetrahedrons(const Simulation& simulation, const PhysicsState& state) {
-#define MAT(type, name)                                                 \
+    std::vector<float> vertices;
+
+#define MAT(type, name) \
     for (unsigned int i = 0; i < simulation.energies.fem_elements_##name.size(); i++) { \
         const FEM_Element3D<type>& e = simulation.energies.fem_elements_##name[i]; \
-        const Vec3& x1 = e.p1.get_position(state.x);                    \
-        const Vec3& x2 = e.p2.get_position(state.x);                    \
-        const Vec3& x3 = e.p3.get_position(state.x);                    \
-        const Vec3& x4 = e.p4.get_position(state.x);                    \
-        Color lineColor = BLUE;                                         \
-        if (is_tetrahedron_inverted(x1, x2, x3, x4)) lineColor = RED;   \
-        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x2), lineColor); \
-        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x3), lineColor); \
-        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x4), lineColor); \
-        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x2), lineColor); \
-        DrawLine3D(vector3_eigen_to_raylib(x4), vector3_eigen_to_raylib(x3), lineColor); \
-        DrawLine3D(vector3_eigen_to_raylib(x2), vector3_eigen_to_raylib(x3), lineColor); \
+        const Vec3& x1 = e.p1.get_position(state.x);  \
+        const Vec3& x2 = e.p2.get_position(state.x);  \
+        const Vec3& x3 = e.p3.get_position(state.x);  \
+        const Vec3& x4 = e.p4.get_position(state.x);  \
+        vertices.insert(vertices.end(), {x1.x(), x1.y(), x1.z()}); \
+        vertices.insert(vertices.end(), {x2.x(), x2.y(), x2.z()}); \
+        vertices.insert(vertices.end(), {x1.x(), x1.y(), x1.z()}); \
+        vertices.insert(vertices.end(), {x3.x(), x3.y(), x3.z()}); \
+        vertices.insert(vertices.end(), {x1.x(), x1.y(), x1.z()}); \
+        vertices.insert(vertices.end(), {x4.x(), x4.y(), x4.z()}); \
+        vertices.insert(vertices.end(), {x2.x(), x2.y(), x2.z()}); \
+        vertices.insert(vertices.end(), {x4.x(), x4.y(), x4.z()}); \
+        vertices.insert(vertices.end(), {x2.x(), x2.y(), x2.z()}); \
+        vertices.insert(vertices.end(), {x3.x(), x3.y(), x3.z()}); \
+        vertices.insert(vertices.end(), {x3.x(), x3.y(), x3.z()}); \
+        vertices.insert(vertices.end(), {x4.x(), x4.y(), x4.z()}); \
     }
     FEM_MATERIAL_MEMBERS
 #undef MAT
+
+    Material material = createMaterialFromShader(renderState->solid_shader);
+    material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
+    renderState->lines->drawLines(material, vertices);
+
+    free(material.maps);
 }
 
 void MandosViewer::draw_particle_indices(const Simulation& simulation, const PhysicsState& state) {
