@@ -569,12 +569,23 @@ void MandosViewer::draw_mesh(const Mat4& transform, const MeshGPU& mesh) {
 }
 
 void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState& state) {
+    std::vector<float> vertices;
     for (size_t i = 0; i < simulation.energies.particle_springs.size(); i++) {
         ParticleSpring s = simulation.energies.particle_springs[i];
         Vec3 x1 = s.p1.get_position(state.x);
         Vec3 x2 = s.p2.get_position(state.x);
-        DrawLine3D(vector3_eigen_to_raylib(x1), vector3_eigen_to_raylib(x2), BLACK);
+        vertices.push_back(x1.x());
+        vertices.push_back(x1.y());
+        vertices.push_back(x1.z());
+        vertices.push_back(x2.x());
+        vertices.push_back(x2.y());
+        vertices.push_back(x2.z());
     }
+
+    Material material = createMaterialFromShader(renderState->solid_shader);
+    material.maps[MATERIAL_MAP_DIFFUSE].color = RED;
+    renderState->lines->drawLines(material, vertices);
+    free(material.maps);
 }
 
 void MandosViewer::draw_particles(const Simulation& simulation, const PhysicsState& state) {
