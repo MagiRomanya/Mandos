@@ -180,6 +180,22 @@ Mesh MeshGPUtoRaymesh(const MeshGPU& mesh, MemoryPool& pool) {
     return raymesh;
 }
 
+Material createMaterialFromShader(Shader shader) {
+    Material material = { 0 };
+    material.maps = (MaterialMap *)calloc(12, sizeof(MaterialMap));
+
+    // Using rlgl default shader
+    material.shader = shader;
+
+    // Using rlgl default texture (1x1 pixel, UNCOMPRESSED_R8G8B8A8, 1 mipmap)
+    material.maps[MATERIAL_MAP_DIFFUSE].texture = Texture2D( rlGetTextureIdDefault(), 1, 1, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 );
+
+    material.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;    // Diffuse color
+    material.maps[MATERIAL_MAP_SPECULAR].color = WHITE;   // Specular color
+
+    return material;
+}
+
 /**
  * INFO Global data for our renderer that will be used throughout the runtime of the application.
  *
@@ -197,21 +213,33 @@ Mesh MeshGPUtoRaymesh(const MeshGPU& mesh, MemoryPool& pool) {
     SHADER(instancing_shader, "resources/shaders/lighting_instancing.vs", "resources/shaders/lighting.fs")
 
 struct RenderState {
+    void initialize();
+    void deinitialize();
+
+    // MISC
+    // -------------------------------------------------------------
     Camera3D camera;
-    Mesh sphere_mesh;
     Material base_material;
 
+    // SHADERS
+    // -------------------------------------------------------------
     Shader base_shader; // DO NOT INITIALIZE OR DESTROY
 #define SHADER(var, vspath, fspath) Shader var;
     SHADER_LIST
 #undef SHADER
 
+    // TEXTURES
+    // -------------------------------------------------------------
     Texture2D diffuseTexture;
     Texture2D normalMapTexture;
 
+    // GEOMETRY
+    // -------------------------------------------------------------
+    Mesh sphere_mesh;
     MeshGPU* axis3D = nullptr;
 
     // GUI
+    // -------------------------------------------------------------
     bool renderFrameOpen = false;
     bool cameraFrameOpen = false;
     bool ImGuiLogsOpen = false;
@@ -219,23 +247,54 @@ struct RenderState {
     std::vector<std::pair<int, std::string>> raylibLogs;
 };
 
-static RenderState* renderState = nullptr;
+void RenderState::initialize() {
+    camera = create_camera();
 
-Material createMaterialFromShader(Shader shader) {
-    Material material = { 0 };
-    material.maps = (MaterialMap *)calloc(12, sizeof(MaterialMap));
+    // Load shaders
+#define SHADER(var, vspath, fspath) var = LoadShader(vspath, fspath);
+    SHADER_LIST
+#undef SHADER
 
-    // Using rlgl default shader
-    material.shader = shader;
+    // Shaders expect viewPos as a uniform
+    bling_phong_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(bling_phong_shader, "viewPos");
+    bling_phong_texture_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(bling_phong_texture_shader, "viewPos");
+    pbr_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(pbr_shader, "viewPos");
+    instancing_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(instancing_shader, "viewPos");
+    instancing_shader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(instancing_shader, "instanceTransform");
 
-    // Using rlgl default texture (1x1 pixel, UNCOMPRESSED_R8G8B8A8, 1 mipmap)
-    material.maps[MATERIAL_MAP_DIFFUSE].texture = Texture2D( rlGetTextureIdDefault(), 1, 1, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 );
+    // Set sefault shader
+    base_shader = bling_phong_shader;
+    base_material = createMaterialFromShader(base_shader);
 
-    material.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;    // Diffuse color
-    material.maps[MATERIAL_MAP_SPECULAR].color = WHITE;   // Specular color
+    // Texture loading
+    diffuseTexture = LoadTexture("resources/textures/terracota.png");
+    normalMapTexture = LoadTexture("resources/textures/NormalMap.png");
+    SetMaterialTexture(&base_material, MATERIAL_MAP_DIFFUSE, diffuseTexture);
+    SetMaterialTexture(&base_material, MATERIAL_MAP_NORMAL, normalMapTexture);
 
-    return material;
+    // Meshes
+    sphere_mesh = GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS);
+    RenderMesh axis3Drender = RenderMesh("resources/obj/axis.obj");
+    axis3D = new MeshGPU(axis3Drender);
 }
+
+void RenderState::deinitialize() {
+    // Unload geometry
+    UnloadMesh(sphere_mesh);
+    delete axis3D;
+
+    // Unload shaders
+#define SHADER(var, vspath, fspath) UnloadShader(var);
+    SHADER_LIST
+#undef SHADER
+
+    // Unload textures
+    UnloadTexture(diffuseTexture);
+    UnloadTexture(normalMapTexture);
+}
+
+
+static RenderState* renderState = nullptr;
 
 void raylib_to_imgui_tracelog_callback(int logLevel, const char *text, va_list args) {
     std::string logString;
@@ -268,50 +327,14 @@ MandosViewer::MandosViewer() {
 
     // Set up the render state
     renderState = new RenderState;
-    renderState->camera = create_camera();
-    renderState->sphere_mesh = GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS);
+    renderState->initialize();
+
     SetTargetFPS(200);
-
-
-    // Other shaders
-#define SHADER(var, vspath, fspath) renderState->var = LoadShader(vspath, fspath);
-    SHADER_LIST
-#undef SHADER
-
-    // Shaders expect viewPos as a uniform
-    renderState->bling_phong_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->bling_phong_shader, "viewPos");
-    renderState->bling_phong_texture_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->bling_phong_texture_shader, "viewPos");
-    renderState->pbr_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->pbr_shader, "viewPos");
-    renderState->instancing_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(renderState->instancing_shader, "viewPos");
-    renderState->instancing_shader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(renderState->instancing_shader, "instanceTransform");
-
-    renderState->base_shader = renderState->bling_phong_shader;
-    // Load basic lighting shader
-    renderState->base_material = createMaterialFromShader(renderState->base_shader);
-
-    // Texture loading
-    renderState->diffuseTexture = LoadTexture("resources/textures/terracota.png");
-    renderState->normalMapTexture = LoadTexture("resources/textures/NormalMap.png");
-    SetMaterialTexture(&renderState->base_material, MATERIAL_MAP_DIFFUSE, renderState->diffuseTexture);
-    SetMaterialTexture(&renderState->base_material, MATERIAL_MAP_NORMAL, renderState->normalMapTexture);
-
-    // Axis 3D
-    RenderMesh axis3Drender = RenderMesh("resources/obj/axis.obj");
-    renderState->axis3D = new MeshGPU(axis3Drender);
 }
 
 MandosViewer::~MandosViewer() {
-    UnloadMesh(renderState->sphere_mesh);
-
-#define SHADER(var, vspath, fspath) UnloadShader(renderState->var);
-    SHADER_LIST
-#undef SHADER
-
-
-    UnloadTexture(renderState->diffuseTexture);
-    UnloadTexture(renderState->normalMapTexture);
-    delete renderState->axis3D;
-
+    renderState->deinitialize();
+    delete renderState;
     ImGuiDeinitialize();
     CloseWindow(); // Destroys the opengl context
 }
@@ -454,9 +477,7 @@ void MandosViewer::drawGUI() {
         GUI_ShowRaylibLogs();
         ImGui::End();
     }
-
     ImGuiEndDrawing();
-    DrawFPS(GetScreenWidth()*0.95, GetScreenHeight()*0.05);
 }
 
 void MandosViewer::end_drawing() {
