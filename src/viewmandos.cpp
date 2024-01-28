@@ -3,13 +3,15 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <memory>
 #include <string>
 #include <stdlib.h>
 #include <Eigen/Core>
 #include <vector>
+#include <imgui.h>
+#include <ImGuizmo.h>
 
 #include "fem_unit.hpp"
-#include "imgui.h"
 #include "linear_algebra.hpp"
 #include "mandos.hpp"
 #include "memory_pool.hpp"
@@ -207,6 +209,7 @@ struct RenderState {
     // -------------------------------------------------------------
     Texture2D diffuseTexture;
     Texture2D normalMapTexture;
+    RenderTexture2D screenFBO;
 
     // GEOMETRY
     // -------------------------------------------------------------
@@ -223,6 +226,7 @@ struct RenderState {
     std::vector<std::pair<int, std::string>> raylibLogs;
 };
 
+#define SHADER_LOC_SLICE_PLANE SHADER_LOC_COLOR_AMBIENT
 void RenderState::initialize() {
     camera = create_camera();
 
@@ -233,10 +237,14 @@ void RenderState::initialize() {
 
     // Shaders expect viewPos as a uniform
     bling_phong_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(bling_phong_shader, "viewPos");
+    bling_phong_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(bling_phong_shader, "slicePlane");
     bling_phong_texture_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(bling_phong_texture_shader, "viewPos");
+    bling_phong_texture_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(bling_phong_texture_shader, "slicePlane");
     pbr_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(pbr_shader, "viewPos");
+    pbr_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(pbr_shader, "slicePlane");
     instancing_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(instancing_shader, "viewPos");
     instancing_shader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(instancing_shader, "instanceTransform");
+    solid_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(pbr_shader, "slicePlane");
 
     // Set sefault shader
     base_shader = bling_phong_shader;
@@ -254,6 +262,9 @@ void RenderState::initialize() {
     axis3D = new MeshGPU(axis3Drender);
     std::vector<float> vertices = {0.0f, 1.0f, 4.0f, 2.0f};
     lines = new LinesGPU(vertices);
+
+    // Set up the FBO
+    screenFBO = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
 }
 
 void RenderState::deinitialize() {
@@ -270,8 +281,8 @@ void RenderState::deinitialize() {
     // Unload textures
     UnloadTexture(diffuseTexture);
     UnloadTexture(normalMapTexture);
+    UnloadRenderTexture(screenFBO);
 }
-
 
 static RenderState* renderState = nullptr;
 
@@ -312,6 +323,7 @@ MandosViewer::MandosViewer() {
 }
 
 MandosViewer::~MandosViewer() {
+    SetTraceLogCallback(NULL);
     renderState->deinitialize();
     delete renderState;
     ImGuiDeinitialize();
@@ -325,6 +337,11 @@ bool MandosViewer::window_should_close() {
 void MandosViewer::begin_drawing() {
     mem_pool.reset();
     BeginDrawing();
+    ClearBackground(WHITE);
+    BeginTextureMode(renderState->screenFBO);
+    // Update slice plane uniform
+    SetShaderValue(renderState->base_shader, renderState->base_shader.locs[SHADER_LOC_SLICE_PLANE], slicePlane.data(), SHADER_UNIFORM_VEC4);
+    SetShaderValue(renderState->solid_shader, renderState->solid_shader.locs[SHADER_LOC_SLICE_PLANE], slicePlane.data(), SHADER_UNIFORM_VEC4);
     ClearBackground(RAYWHITE);
 }
 
@@ -396,8 +413,104 @@ inline void GUI_ShowRaylibLogs() {
     ImGui::EndChild();
 }
 
+static inline void drawSlicingPlaneGuizmo(Vec4& slicePlaneVec, ImGuizmo::OPERATION operation) {
+    // PLANE GUIZMO
+    ImGuizmo::SetOrthographic(false);
+    ImGuizmo::SetDrawlist();
+    const float screenWidth = ImGui::GetContentRegionAvail().x;
+    const float screenHeight = ImGui::GetContentRegionAvail().y;
+    const float aspectRatio = screenWidth / screenHeight;
+    const ImVec2 windowPos = ImGui::GetWindowPos();
+
+    // set the screen dimensions
+    ImGuizmo::SetRect(windowPos.x, windowPos.y, screenWidth, screenHeight);
+
+    // We need to transpose the matrices because of the Matrix struct memory order of the components (column-major)
+    const Matrix matView = MatrixTranspose(GetCameraViewMatrix(&renderState->camera));
+    const Matrix matProj = MatrixTranspose(GetCameraProjectionMatrix(&renderState->camera, aspectRatio));
+    static Matrix planeTransform = MatrixIdentity();
+    ImGuizmo::Manipulate((float *)&matView, (float *)&matProj, operation, ImGuizmo::LOCAL, (float *)&planeTransform);
+    // Keep in mind Transform is transposed!
+    Mat3 planeRotation;
+    planeRotation <<
+        planeTransform.m0, planeTransform.m1, planeTransform.m2,
+        planeTransform.m4, planeTransform.m5, planeTransform.m6,
+        planeTransform.m8, planeTransform.m9, planeTransform.m10;
+    Vec3 planeTranslation = Vec3(planeTransform.m3, planeTransform.m7, planeTransform.m11);
+
+    const Vec3 initialPlaneNormal = Vec3(0.0f,1.0f,0.0f);
+    const Vec3 planeNormal = planeRotation * initialPlaneNormal;
+    const float D = - planeTranslation.dot(planeNormal);
+    slicePlaneVec = Vec4(planeNormal.x(), planeNormal.y(), planeNormal.z(), D);
+}
+
+void myUpdateCamera(Camera3D& camera) {
+    // if (ImGui::GetIO().WantCaptureMouse) return;
+    const float CAMERA_SENSITIVITY = 0.01f;
+    const float CAMERA_MOVE_SPEED = 0.01f;
+
+    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+        const Vector2 delta = GetMouseDelta();
+        if (IsKeyDown(KEY_LEFT_SHIFT)) {
+            CameraMoveRight(&camera, -CAMERA_MOVE_SPEED*delta.x, true);
+            CameraMoveUp(&camera, CAMERA_MOVE_SPEED*delta.y);
+        }
+        else {
+            CameraYaw(&camera, -delta.x*CAMERA_SENSITIVITY, true);
+            CameraPitch(&camera, -delta.y*CAMERA_SENSITIVITY, true, true, false);
+        }
+    }
+    // Zoom target distance
+    CameraMoveToTarget(&camera, -GetMouseWheelMove());
+
+    // Update the shaders with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
+    float cameraPos[3] = { renderState->camera.position.x, renderState->camera.position.y, renderState->camera.position.z };
+    SetShaderValue(renderState->base_shader, renderState->base_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
+    SetShaderValue(renderState->instancing_shader, renderState->instancing_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
+}
+
+void MandosViewer::drawSimulationVisualizationWindow() {
+    bool VisualizationOpen = true;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse
+        | ImGuiWindowFlags_NoScrollWithMouse
+        | ImGuiWindowFlags_NoScrollbar
+        ;
+    ImGui::Begin("Simulation view", &VisualizationOpen, flags);
+    if (ImGui::IsWindowHovered() && not ImGuizmo::IsOver()) {
+        myUpdateCamera(renderState->camera);
+    }
+    const float window_width = ImGui::GetContentRegionAvail().x;
+    const float window_height = ImGui::GetContentRegionAvail().y;
+
+    // Resizing the FBO
+    UpdateRenderTexture2D(renderState->screenFBO, window_width, window_height);
+    rlViewport(0, 0, window_width, window_height);
+
+    // Screen position of the window
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+
+    // Add the Simulation Render to the window
+    ImGui::GetWindowDrawList()->AddImage(
+        reinterpret_cast<ImTextureID>(renderState->screenFBO.texture.id),
+        ImVec2(pos.x, pos.y),
+        ImVec2(pos.x + window_width, pos.y + window_height),
+        ImVec2(0, 1),
+        ImVec2(1, 0)
+        );
+
+    if (enable_slice_plane) {
+        if (!slicePlaneGuizmoToggle)
+            drawSlicingPlaneGuizmo(slicePlane, ImGuizmo::OPERATION::ROTATE);
+        else
+            drawSlicingPlaneGuizmo(slicePlane, ImGuizmo::OPERATION::TRANSLATE);
+    }
+    ImGui::End();
+}
+
 void MandosViewer::drawGUI() {
     ImGuiBeginDrawing();
+    drawSimulationVisualizationWindow();
+
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Menu")) {
             if (ImGui::MenuItem("Render")) {
@@ -440,12 +553,29 @@ void MandosViewer::drawGUI() {
         if (ImGui::Button("Normals shader", buttonBox)) {
             renderState->base_shader = renderState->normals_shader;
         }
+        if (ImGui::Button("Solid Color", buttonBox)) {
+            renderState->base_shader = renderState->solid_shader;
+        }
         ImGui::SeparatorText("Simulation state visualization");
         ImGui::Checkbox("Render simulable meshes", &enable_draw_simulable_meshes);
         ImGui::Checkbox("Render particles", &enable_draw_particles);
         ImGui::Checkbox("Render springs", &enable_draw_springs);
         ImGui::Checkbox("Render FEM tetrahedrons", &enable_draw_fem_tetrahedrons);
         ImGui::Checkbox("Render particle indices", &enable_draw_particle_indices);
+
+        ImGui::SeparatorText("Slice plane");
+        ImGui::Checkbox("Enable Slice plane", &enable_slice_plane);
+        if (enable_slice_plane) {
+            EnableUserDefinedClipping();
+            if (ImGui::Button("Toggle Translation Rotation", buttonBox)) {
+                slicePlaneGuizmoToggle = not slicePlaneGuizmoToggle;
+            }
+            ImGui::InputFloat4("Slice plane", slicePlane.data());
+        }
+        else {
+            DisableUserDefinedClipping();
+        }
+
         ImGui::End();
     }
     if (renderState->ImGuiLogsOpen) {
@@ -460,6 +590,7 @@ void MandosViewer::drawGUI() {
 }
 
 void MandosViewer::end_drawing() {
+    EndTextureMode();
     drawGUI();
     EndDrawing();
 }
@@ -520,34 +651,6 @@ void MandosViewer::end_3D_mode() {
     if (enable_draw_particle_indices && SavedSim && SavedState) {
         draw_particle_indices(*SavedSim, *SavedState);
     }
-}
-
-void myUpdateCamera(Camera3D& camera) {
-    if (ImGui::GetIO().WantCaptureMouse) return;
-    const float CAMERA_SENSITIVITY = 0.01f;
-    const float CAMERA_MOVE_SPEED = 0.01f;
-    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
-        const Vector2 delta = GetMouseDelta();
-        if (IsKeyDown(KEY_LEFT_SHIFT)) {
-            CameraMoveRight(&camera, -CAMERA_MOVE_SPEED*delta.x, true);
-            CameraMoveUp(&camera, CAMERA_MOVE_SPEED*delta.y);
-        }
-        else {
-            CameraYaw(&camera, -delta.x*CAMERA_SENSITIVITY, true);
-            CameraPitch(&camera, -delta.y*CAMERA_SENSITIVITY, true, true, false);
-        }
-    }
-    // Zoom target distance
-    CameraMoveToTarget(&camera, -GetMouseWheelMove());
-}
-
-void MandosViewer::update_camera() {
-    myUpdateCamera(renderState->camera);
-
-    // Update the shaders with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
-    float cameraPos[3] = { renderState->camera.position.x, renderState->camera.position.y, renderState->camera.position.z };
-    SetShaderValue(renderState->base_shader, renderState->base_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
-    SetShaderValue(renderState->instancing_shader, renderState->instancing_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
 }
 
 bool MandosViewer::is_key_pressed(int Key) { return IsKeyPressed(Key); }

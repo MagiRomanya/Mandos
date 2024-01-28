@@ -1,6 +1,7 @@
 #ifndef VIEWMANDOS_H_
 #define VIEWMANDOS_H_
 
+#include "linear_algebra.hpp"
 #include "mandos.hpp"
 #include "mesh.hpp"
 #include "physics_state.hpp"
@@ -147,8 +148,6 @@ struct MandosViewer {
 
     void end_3D_mode();
 
-    void update_camera();
-
     bool is_key_pressed(int Key);
 
     void draw_particle(const ParticleHandle& particle, const PhysicsState& state);
@@ -173,11 +172,17 @@ struct MandosViewer {
 
 private:
     void drawGUI();
+    void drawSimulationVisualizationWindow();
+
     bool enable_draw_particle_indices = false;
     bool enable_draw_simulable_meshes = true;
     bool enable_draw_particles = false;
     bool enable_draw_springs = false;
     bool enable_draw_fem_tetrahedrons = false;
+
+    bool enable_slice_plane = false;
+    Vec4 slicePlane = Vec4(0.0f, 1.0f, 0.0f, 0.0f);
+    bool slicePlaneGuizmoToggle = false;
 
     const Simulation* SavedSim = nullptr;
     const PhysicsState* SavedState = nullptr;

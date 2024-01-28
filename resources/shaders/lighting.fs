@@ -75,6 +75,8 @@ void main()
 
     // Gamma correction
     finalColor = pow(finalColor, vec4(1.0/2.2));
-    // finalColor = vec4(0.5*fragTangent + 0.5, 1.0);
-    // finalColor = vec4(fragTexCoord,1.0, 1.0);
+
+    if (!gl_FrontFacing) {
+        finalColor = vec4(vec3(1.0) - finalColor.xyz, 1.0);
+    }
 }

@@ -9,6 +9,7 @@ in vec4 vertexColor;
 in vec3 vertexTangent;
 
 // Input uniform values
+uniform vec4 slicePlane;
 uniform mat4 mvp;
 uniform mat4 matModel;
 uniform mat4 matNormal;
@@ -20,6 +21,8 @@ out vec4 fragColor;
 out vec3 fragNormal;
 out vec3 fragTangent;
 out mat3 TBN;
+
+out float gl_ClipDistance[1];
 
 // NOTE: Add here your custom variables
 
@@ -38,4 +41,7 @@ void main()
 
     // Calculate final vertex position
     gl_Position = mvp*vec4(vertexPosition, 1.0);
+
+    // Plane culling
+    gl_ClipDistance[0] = -dot(slicePlane, vec4(fragPosition, 1.0));
 }

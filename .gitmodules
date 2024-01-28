@@ -17,3 +17,6 @@
 	path = external/pybind11
 	url = https://github.com/pybind/pybind11.git
 	branch = stable
+[submodule "external/ImGuizmo"]
+	path = external/ImGuizmo
+	url = https://github.com/CedricGuillemet/ImGuizmo.git

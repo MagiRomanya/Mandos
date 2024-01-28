@@ -192,7 +192,6 @@ int main(void) {
     // {
     //     // Update
     //     //----------------------------------------------------------------------------------
-    //     viewer.update_camera();
     //     /// Keyboard controls
     //     if (viewer.is_key_pressed(Key_Q)) break;
 

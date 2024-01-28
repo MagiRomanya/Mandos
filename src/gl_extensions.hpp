@@ -4,6 +4,12 @@
 #include "raylib.h"
 #include <vector>
 
+void EnableUserDefinedClipping();
+
+void DisableUserDefinedClipping();
+
+void UpdateRenderTexture2D(RenderTexture2D& fbo, int width, int height);
+
 struct LinesGPU {
     unsigned int VAO, VBO;
 

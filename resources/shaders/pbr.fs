@@ -90,8 +90,8 @@ void main()
 
     /// PBR
     //Material definition
-    vec3 albedo = colDiffuse.rgb;
-    const float metallic = 0.8;
+    vec3 albedo = texture(texture0, fragTexCoord).rgb;
+    const float metallic = 0.2;
     const float roughness = 0.3;
     const float ambientOclusion = 1.0;
 
