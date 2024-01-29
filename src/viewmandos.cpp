@@ -447,7 +447,6 @@ static inline void drawSlicingPlaneGuizmo(Vec4& slicePlaneVec, ImGuizmo::OPERATI
 }
 
 void myUpdateCamera(Camera3D& camera) {
-    // if (ImGui::GetIO().WantCaptureMouse) return;
     const float CAMERA_SENSITIVITY = 0.01f;
     const float CAMERA_MOVE_SPEED = 0.01f;
 
@@ -473,12 +472,18 @@ void myUpdateCamera(Camera3D& camera) {
 
 void MandosViewer::drawSimulationVisualizationWindow() {
     bool VisualizationOpen = true;
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse
+    const ImGuiWindowFlags constFlags = ImGuiWindowFlags_NoCollapse
         | ImGuiWindowFlags_NoScrollWithMouse
         | ImGuiWindowFlags_NoScrollbar
         ;
+    static ImGuiWindowFlags flags = constFlags;
+    ImGui::SetNextWindowSizeConstraints(ImVec2(300,300), ImVec2(3000,3000));
     ImGui::Begin("Simulation view", &VisualizationOpen, flags);
-    if (ImGui::IsWindowHovered() && not ImGuizmo::IsOver()) {
+    const bool isTitleBarHovered = ImGui::IsItemHovered();
+    flags = ImGui::IsWindowHovered() && (not isTitleBarHovered) ? ImGuiWindowFlags_NoMove : 0;
+    flags = flags | constFlags;
+
+    if (ImGui::IsWindowHovered() && not isTitleBarHovered && not ImGuizmo::IsOver()) {
         myUpdateCamera(renderState->camera);
     }
     const float window_width = ImGui::GetContentRegionAvail().x;
@@ -501,7 +506,7 @@ void MandosViewer::drawSimulationVisualizationWindow() {
         ImVec2(0, 1),
         ImVec2(1, 0)
         );
-
+    // ImGui::ImageButton(reinterpret_cast<ImTextureID>(renderState->screenFBO.texture.id), ImGui::GetContentRegionAvail(), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f), 0);
     if (enable_slice_plane) {
         if (!slicePlaneGuizmoToggle)
             drawSlicingPlaneGuizmo(slicePlane, ImGuizmo::OPERATION::ROTATE);
