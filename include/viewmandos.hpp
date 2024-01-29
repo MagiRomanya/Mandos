@@ -184,6 +184,9 @@ private:
     Vec4 slicePlane = Vec4(0.0f, 1.0f, 0.0f, 0.0f);
     bool slicePlaneGuizmoToggle = false;
 
+    float simulationViewerWidth = initialScreenWidth;
+    float simulationViewerHeight = initialScreenHeight;
+
     const Simulation* SavedSim = nullptr;
     const PhysicsState* SavedState = nullptr;
 };

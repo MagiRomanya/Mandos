@@ -227,6 +227,7 @@ struct RenderState {
 };
 
 #define SHADER_LOC_SLICE_PLANE SHADER_LOC_COLOR_AMBIENT
+
 void RenderState::initialize() {
     camera = create_camera();
 
@@ -235,7 +236,7 @@ void RenderState::initialize() {
     SHADER_LIST
 #undef SHADER
 
-    // Shaders expect viewPos as a uniform
+    // Shaders set uniforms
     bling_phong_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(bling_phong_shader, "viewPos");
     bling_phong_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(bling_phong_shader, "slicePlane");
     bling_phong_texture_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(bling_phong_texture_shader, "viewPos");
@@ -244,7 +245,8 @@ void RenderState::initialize() {
     pbr_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(pbr_shader, "slicePlane");
     instancing_shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(instancing_shader, "viewPos");
     instancing_shader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(instancing_shader, "instanceTransform");
-    solid_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(pbr_shader, "slicePlane");
+    solid_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(solid_shader, "slicePlane");
+    normals_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(normals_shader, "slicePlane");
 
     // Set sefault shader
     base_shader = bling_phong_shader;
@@ -481,6 +483,8 @@ void MandosViewer::drawSimulationVisualizationWindow() {
     }
     const float window_width = ImGui::GetContentRegionAvail().x;
     const float window_height = ImGui::GetContentRegionAvail().y;
+    simulationViewerWidth = window_width;
+    simulationViewerHeight = window_height;
 
     // Resizing the FBO
     UpdateRenderTexture2D(renderState->screenFBO, window_width, window_height);
@@ -789,7 +793,7 @@ void MandosViewer::draw_particle_indices(const Simulation& simulation, const Phy
         const float thresholdDistance = 5.0f;
         if (particleCamPos.z > 0.0f or particleCamPos.z < -thresholdDistance) continue;
 
-        Vector2 particleScreenSpacePosition = GetWorldToScreen(position, renderState->camera);
+        Vector2 particleScreenSpacePosition = GetWorldToScreenEx(position, renderState->camera, simulationViewerWidth, simulationViewerHeight);
         DrawText(std::to_string(index).c_str(), (int)particleScreenSpacePosition.x - MeasureText(std::to_string(index).c_str(), 20)/2, (int)particleScreenSpacePosition.y, 20, BLACK);
     }
 }

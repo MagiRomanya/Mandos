@@ -9,10 +9,10 @@ in vec4 vertexColor;
 in vec3 vertexTangent;
 
 // Input uniform values
-uniform vec4 slicePlane;
 uniform mat4 mvp;
 uniform mat4 matModel;
 uniform mat4 matNormal;
+uniform vec4 slicePlane;
 
 // Output vertex attributes (to fragment shader)
 out vec3 fragPosition;
