@@ -1,7 +1,9 @@
 #include "mesh.hpp"
 #include "edge.hpp"
 #include "linear_algebra.hpp"
+#include <cassert>
 #include <cstdio>
+#include <unordered_set>
 #include <vector>
 
 void mesh_boundary(const std::vector<Scalar>& vertices,
@@ -89,4 +91,61 @@ std::array<unsigned int, 2> count_springs(const std::vector<Scalar>& vertices, c
     unsigned int n_bend = internalEdges.size() / 2.0;
 
     return {n_flex, n_bend};
+}
+
+
+struct Triangle {
+    unsigned int a, b, c;
+};
+
+bool operator==(const Triangle& t1, const Triangle& t2) {
+    return ((t1.a == t2.a) && (t1.b == t2.b) && (t1.c == t2.c)) ||
+        ((t1.a == t2.b) && (t1.b == t2.c) && (t1.c == t2.a)) ||
+        ((t1.a == t2.c) && (t1.b == t2.a) && (t1.c == t2.b));
+}
+
+namespace std {
+    template<>
+    struct hash<Triangle>{
+        unsigned int operator()(const Triangle& key) const {
+            size_t hashValue = 17; // Choose a prime number as a seed
+            hashValue = hashValue * 31 + key.a;
+            hashValue = hashValue * 31 + key.b;
+            hashValue = hashValue * 31 + key.c;
+            return hashValue;
+        }
+    };
+}
+
+void compute_triangle_indices_from_tetrahedron_indices(const std::vector<unsigned int>& tet_ind, std::vector<unsigned int>& out_ind) {
+    assert(tet_ind.size() % 4 != 0);
+
+    // The tetrahderon mesh will have repeated triangles
+    std::unordered_set<Triangle> known_triangles;
+
+    // Iterate tetrahedrons
+    for (unsigned int i = 0; i < tet_ind.size()/4; i++) {
+        const unsigned int a = tet_ind[4*i+0];
+        const unsigned int b = tet_ind[4*i+1];
+        const unsigned int c = tet_ind[4*i+2];
+        const unsigned int d = tet_ind[4*i+3];
+
+        // Each tetrahedron has 4 triangular faces
+        const Triangle t1 = Triangle(a,b,c);
+        const Triangle t2 = Triangle(a,d,b);
+        const Triangle t3 = Triangle(a,c,d);
+        const Triangle t4 = Triangle(b,d,c);
+
+        // Add the triangle to the output when it is not repeated
+        const Triangle triangles[] = {t1,t2,t3,t4};
+        for (unsigned int j=0; j < 4; j++) {
+            const Triangle& t = triangles[j];
+            if (!known_triangles.contains(t)) {
+                known_triangles.insert(t);
+                out_ind.push_back(t.a);
+                out_ind.push_back(t.b);
+                out_ind.push_back(t.c);
+            }
+        }
+    }
 }
