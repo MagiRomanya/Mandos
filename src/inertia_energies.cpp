@@ -1,6 +1,7 @@
 #include "inertia_energies.hpp"
 #include "particle.hpp"
 #include "simulation.hpp"
+#include "utility_functions.hpp"
 
 Scalar LinearInertia::compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const {
     const Vec3 x = p.get_position(state.x);
@@ -55,6 +56,30 @@ Scalar RotationalInertia::compute_energy(Scalar TimeStep, const PhysicsState& st
 
 }
 
+static const Scalar threshold2 = 1e-3;
+
+inline void compute_axis_angle_jacobian_parts(const Vec3& phi, Mat3& A, Mat3& B) {
+    const Mat3 phi_phiT = phi * phi.transpose();
+    A = compute_rotation_matrix_rodrigues(phi) - Mat3::Identity() + phi_phiT;
+    B = skew(phi) + phi_phiT;
+}
+
+inline Mat3 compute_global_to_local_axis_angle_jacobian(const Vec3& phi) {
+    if (phi.squaredNorm() < threshold2) return Mat3::Identity();
+
+    Mat3 A, B;
+    compute_axis_angle_jacobian_parts(phi, A, B);
+    return A.inverse() * B;
+}
+
+inline Mat3 compute_local_to_global_axis_angle_jacobian(const Vec3& phi) {
+    if (phi.squaredNorm() < threshold2) return Mat3::Identity();
+
+    Mat3 A, B;
+    compute_axis_angle_jacobian_parts(phi, A, B);
+    return B.inverse() * A;
+}
+
 void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
     // Get the relevant sate
     // ---------------------------------------------------------------
@@ -74,8 +99,13 @@ void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const Ph
     // Compute the energy derivatives
     // ---------------------------------------------------------------
     const Scalar KE = (deltaR * rb.J_inertia_tensor0 * deltaR.transpose()).trace() / (2.0f*h2);
-    const Vec3 gradient = 2.0f * Vec3(-A(1,2), A(0,2), -A(0,1)) / h2;                 // v s.t. A = skew(v)
-    const Mat3 hessian = 1.0f / h2 * (S.trace() * Mat3::Identity() - S);
+    Vec3 gradient = 2.0f * Vec3(-A(1,2), A(0,2), -A(0,1)) / h2;                 // v s.t. A = skew(v)
+    Mat3 hessian = 1.0f / h2 * (S.trace() * Mat3::Identity() - S);
+
+    // const Vec3 phi = rb.get_axis_angle(state.x);
+    // const Mat3 dtheta_dphi = compute_local_to_global_axis_angle_jacobian(phi);
+    // gradient = dtheta_dphi.transpose() * gradient;
+    // hessian = dtheta_dphi.transpose() * hessian * dtheta_dphi;
 
     // Add the energy derivatives to the global structure
     // ---------------------------------------------------------------

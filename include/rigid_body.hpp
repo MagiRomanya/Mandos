@@ -70,6 +70,7 @@ struct RigidBody {
     const Mat3 J_inertia_tensor0;
 
     Vec3 get_COM_position(const Vec& x) const;
+    Vec3 get_axis_angle(const Vec& x) const;
     Mat3 compute_rotation_matrix(const Vec& x) const;
     Mat3 compute_inertia_tensor(const Mat3& rotation_matrix) const;
     void update_state(const Vec& dx, Vec& x) const;

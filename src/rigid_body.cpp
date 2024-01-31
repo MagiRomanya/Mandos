@@ -35,17 +35,18 @@ Eigen::Matrix<Scalar,3,4> compute_axis_angle_quaternion_jacobian(const Eigen::Qu
 
 Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta) {
     Scalar angle = theta.norm();
-    angle = std::fmod(angle, 2 * M_PI);
+    Scalar bound_angle = std::fmod(angle, 2 * M_PI);
 
     // Prevent angle = 0, axis not well defined case
     // Using small angle approximation instead
-    const Scalar THRESHOLD = 1e-1;
+    const Scalar THRESHOLD = 1e-2;
     if (angle < THRESHOLD) return Mat3::Identity() + skew(theta);
-
+    else if (bound_angle < THRESHOLD) return Mat3::Identity() + skew(theta / angle * bound_angle);
     const Vec3 axis = theta / angle;
+
     // Rodrigues formula https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula#Matrix_notation
     const Mat3 K = skew(axis);
-    return Mat3::Identity() + sin(angle) * K + (1. -cos(angle)) * K * K;
+    return Mat3::Identity() + std::sin(angle) * K + (1.0f - std::cos(angle)) * K * K;
 }
 
 Mat3 RigidBody::compute_inertia_tensor(const Mat3& rotation_matrix) const {
@@ -53,11 +54,15 @@ Mat3 RigidBody::compute_inertia_tensor(const Mat3& rotation_matrix) const {
 }
 
 Vec3 RigidBody::get_COM_position(const Vec& x) const {
-    return x.segment(index, 3);
+    return x.segment<3>(index);
+}
+
+Vec3 RigidBody::get_axis_angle(const Vec& x) const {
+    return x.segment<3>(index + 3);
 }
 
 Mat3 RigidBody::compute_rotation_matrix(const Vec& x) const {
-    Vec3 theta = x.segment(index+3, 3);
+    Vec3 theta = get_axis_angle(x);
     return compute_rotation_matrix_rodrigues(theta);
 }
 
@@ -153,20 +158,50 @@ Vec3 compute_COM_position_UNIFORM_VOLUME(const std::vector<unsigned int>& indice
     return COM_position;
 }
 
-Vec3 update_axis_angle(const Vec3& theta, const Vec3& omega) {
-    const Scalar angle = theta.norm();
-    if (angle < 1e-4) return theta + omega;
-    const Vec3 axis = theta / angle;
-    typedef Eigen::Quaternion<Scalar> Quat;
-    const Quat q = Quat(Eigen::AngleAxis<Scalar>(angle, axis));
-    const Quat q_omega = Quat(0, 0.5 * omega);
-    const Quat q_dot = q_omega * q;
-    const Quat q_new = Quat(q.w() + q_dot.w(), q.vec() + q_dot.vec());
-    const Eigen::AngleAxis<Scalar> angle_axis(q_new);
+Vec3 update_axis_angle(const Vec3& theta, const Vec3& dtheta) {
+    const Scalar dangle = dtheta.norm();
+    if (dangle < 1e-8) return theta;
+    const Vec3 daxis = dtheta / dangle;
 
-    const Vec3 new_axis = angle_axis.axis();
-    const Scalar new_angle = angle_axis.angle();
+    const Scalar angle = theta.norm();
+    if (angle < 1e-4) return theta + dtheta;
+    const Vec3 axis = theta / angle;
+
+    // Scalar new_angle = angle + axis.dot(dtheta);
+    // const Mat3 A = std::sin(angle/2) / std::sin(new_angle/2) * (Mat3::Identity() + 0.5f * skew(dtheta));
+    // const Vec3 b = 0.5f * std::cos(angle/2) / std::sin(new_angle/2) * dtheta;
+    // const Vec3 new_axis = A * axis + b;
+    // new_angle = std::fmod(new_angle, 2 * M_PI);
+    // return new_angle * new_axis;
+
+    // https://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
+    Scalar new_angle = 2.0f * std::acos(std::cos(dangle/2.0f) * std::cos(angle/2.0f)
+                                      - std::sin(dangle/2.0f) * std::sin(angle/2.0f) * axis.dot(daxis));
+    new_angle = std::fmod(new_angle, 2.0f * M_PI);
+    if (new_angle > M_PI) {
+        new_angle -= 2*M_PI;
+    }
+    const Vec3 new_axis = 1.0f / std::sin(new_angle/2.0f) * (
+        std::sin(dangle/2.0f) * std::cos(angle/2.0f) * daxis
+        + std::cos(dangle/2.0f) * std::sin(angle/2.0f) * axis
+        + std::sin(dangle/2.0f) * std::sin(angle/2.0f) * cross(daxis, axis));
+
+    DEBUG_LOG(new_angle);
+    DEBUG_LOG(new_axis.transpose());
     return new_angle * new_axis;
+
+    // typedef Eigen::Quaternion<Scalar> Quat;
+    // const Quat q = Quat(Eigen::AngleAxis<Scalar>(angle, axis));
+    // const Quat q_omega = Quat(0, 0.5 * dtheta);
+    // const Quat q_dot = q_omega * q;
+    // const Quat q_new = Quat(q.w() + q_dot.w(), q.vec() + q_dot.vec());
+    // const Eigen::AngleAxis<Scalar> angle_axis(q_new);
+
+    // const Vec3 new_axis = angle_axis.axis();
+    // const Scalar new_angle = angle_axis.angle();
+    // DEBUG_LOG(new_angle);
+    // DEBUG_LOG(new_axis.transpose());
+    // return new_angle * new_axis;
 }
 
 
@@ -175,10 +210,11 @@ void RigidBody::update_state(const Vec& dx, Vec& x) const {
     x.segment<3>(index) += dx.segment<3>(index);
 
     // Update axis-angle rotation
-    const Vec3 theta = x.segment(index+3,3);
-    const Vec3 dtheta = dx.segment(index+3,3); // omega * TimeStep
+
+    const Vec3 theta = get_axis_angle(x);
+    const Vec3 dtheta = get_axis_angle(dx); // omega * TimeStep
     const Vec3 axis_angle = update_axis_angle(theta, dtheta);
-    x.segment(index+3, 3) = axis_angle;
+    x.segment<3>(index+3) = axis_angle;
 }
 
 Vec3 compute_principal_moments_of_inertia(const Mat3& inertia_tensor) {

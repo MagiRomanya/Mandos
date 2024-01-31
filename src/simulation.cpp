@@ -68,7 +68,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         // -----------------------------------------------------------------------------------------
         f = EnergyAndDerivatives(nDoF);
         compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
-        if (nDoF * f.gradient.norm() < gradientMinThreshold) break;
+        // if (nDoF * f.gradient.norm() < gradientMinThreshold) break;
         Scalar energy = f.energy;
 
         // Integration step
@@ -81,6 +81,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         const PhysicsState stepState = state;
         state.x_old = state0.x;
         update_simulation_state(simulation.simulables, dx, state.x);
+        // state.x += dx;
 
         Scalar lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
         Scalar alpha = 1.0f;
@@ -93,8 +94,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
             alpha /= 2.0f;
             state = stepState;
             update_simulation_state(simulation.simulables, alpha * dx, state.x);
-            lineSearchEnergy = compute_energy(simulation.TimeStep,
-                                              simulation.energies, state, state0);
+            lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
         }
 
     }
