@@ -7,21 +7,24 @@
 #include <memory>
 #include <string>
 #include <stdlib.h>
-#include <Eigen/Core>
 #include <vector>
+
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+
 #include <imgui.h>
 #include <ImGuizmo.h>
+#include <raylib.h>
+#include <raylib_imgui.hpp>
+#include <raymath.h>
+#include <rlgl.h>
+#include <rcamera.h>
 
 #include "fem_unit.hpp"
 #include "linear_algebra.hpp"
 #include "mandos.hpp"
 #include "memory_pool.hpp"
 #include "mesh.hpp"
-#include "raylib.h"
-#include "raylib_imgui.hpp"
-#include "raymath.h"
-#include "rlgl.h"
-#include "rcamera.h"
 #include "spring.hpp"
 #include "viewmandos.hpp"
 #include "utility_functions.hpp"

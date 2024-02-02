@@ -1,3 +1,5 @@
+#include <Eigen/Dense> // for inverse()
+
 #include "inertia_energies.hpp"
 #include "particle.hpp"
 #include "simulation.hpp"
@@ -8,7 +10,7 @@ Scalar LinearInertia::compute_energy(Scalar TimeStep, const PhysicsState& state,
     const Vec3 x0 = p.get_position(state0);
     const Vec3 v0 = p.get_velocity(state0);
     const Vec3 x_guess = x0 + TimeStep * v0;
-    const Scalar h2 = TimeStep*TimeStep;
+    const Scalar h2 = TimeStep * TimeStep;
 
     const Scalar energy = 1.0 / (2.0 * h2) * (x - x_guess).transpose() * Mass * (x - x_guess);
     return energy;
@@ -21,7 +23,7 @@ void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const Physic
     const Vec3 x0 = p.get_position(state0);
     const Vec3 v0 = p.get_velocity(state0);
     const Vec3 x_guess = x0 + TimeStep * v0;
-    const Scalar h2 = TimeStep*TimeStep;
+    const Scalar h2 = TimeStep * TimeStep;
 
     // Compute the energy derivatives
     // ---------------------------------------------------------------

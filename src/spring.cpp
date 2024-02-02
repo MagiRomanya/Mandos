@@ -52,7 +52,8 @@ Vec3 SpringParameters::get_energy_gradient(const Vec3& x1, const Vec3& x2, const
     Vec3 f = -k * (L - L0) * u;
     // damping force
     f += - damping * u * u.transpose() * (v1 - v2);
-    return f;
+    // The gradient is minus the force
+    return -f;
 }
 
 Mat3 SpringParameters::get_energy_hessian(Scalar TimeStep, const Vec3& x1, const Vec3& x2, Scalar L) const {
@@ -67,5 +68,7 @@ Mat3 SpringParameters::get_energy_hessian(Scalar TimeStep, const Vec3& x1, const
 
     // Damping jacobian
     df_dx += - 1.0f / TimeStep * damping * uut;
-    return df_dx; // 3x3 matrix
+
+    // The hessian is minus the force jacobian
+    return -df_dx; // 3x3 matrix
 }

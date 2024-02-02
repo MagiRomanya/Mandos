@@ -1,3 +1,5 @@
+#include <Eigen/Geometry>
+
 #include "mandos.hpp"
 #include "fem_unit.hpp"
 #include "utility_functions.hpp"
