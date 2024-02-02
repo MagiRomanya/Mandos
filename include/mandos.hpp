@@ -118,7 +118,7 @@ class ParticleHandle {
 
         ParticleHandle freeze() const;
 
-        inline Vec3 get_position(const PhysicsState& state) { return particle.get_position(state.x); }
+        inline Vec3 get_position(const PhysicsState& state) { return particle.get_position(state); }
 
         const Particle particle;
         const unsigned int particle_index;

@@ -24,7 +24,7 @@ SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_m
   simulation.initial_state.x.segment<3>(3*2+index) = Vec3(0,1,0);
   simulation.initial_state.x.segment<3>(3*3+index) = Vec3(0,0,1);
 
-  simulation.initial_state.x_old.segment<nDoF>(index) = simulation.initial_state.x.segment<nDoF>(index);
+  simulation.initial_state.v.segment<nDoF>(index) = Eigen::Vector<Scalar, nDoF>::Zero();
 
   const Scalar mu = young_modulus / (2*(1 + poisson_ratio));
   const Scalar lambda = young_modulus * poisson_ratio / ((1+poisson_ratio) * (1-2*poisson_ratio));
@@ -65,7 +65,7 @@ SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Sca
   // Initial conditions
   for (unsigned int i = 0; i < nDoF; i++) {
     simulation.initial_state.x[index+i] = tet_vertices[i];
-    simulation.initial_state.x_old[index+i] = tet_vertices[i];
+    simulation.initial_state.v[index+i] = 0.0f;
   }
 
   const Scalar mu = young_modulus / (2*(1 + poisson_ratio));
@@ -77,10 +77,10 @@ SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Sca
     const Particle p2 = simulation.simulables.particles[particle_index + tet_indices[4*i+1]];
     const Particle p3 = simulation.simulables.particles[particle_index + tet_indices[4*i+2]];
     const Particle p4 = simulation.simulables.particles[particle_index + tet_indices[4*i+3]];
-    const Eigen::Matrix<Scalar,4,3> ds_dx =  compute_shape_function_derivative(p1.get_position(simulation.initial_state.x),
-                                                                               p2.get_position(simulation.initial_state.x),
-                                                                               p3.get_position(simulation.initial_state.x),
-                                                                               p4.get_position(simulation.initial_state.x));
+    const Eigen::Matrix<Scalar,4,3> ds_dx =  compute_shape_function_derivative(p1.get_position(simulation.initial_state),
+                                                                               p2.get_position(simulation.initial_state),
+                                                                               p3.get_position(simulation.initial_state),
+                                                                               p4.get_position(simulation.initial_state));
     MaterialType FEM_paramters(mu, lambda);
     FEM_Element3D<MaterialType> fem_element(p1, p2, p3, p4, ds_dx, FEM_paramters);
     add_FEM_element(simulation.energies, fem_element);

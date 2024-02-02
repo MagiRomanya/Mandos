@@ -79,8 +79,8 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         // Update state
         // -----------------------------------------------------------------------------------------
         const PhysicsState stepState = state;
-        state.x_old = state0.x;
         update_simulation_state(simulation.simulables, dx, state.x);
+        state.v = (state.x - state0.x) / simulation.TimeStep;
         // state.x += dx;
 
         Scalar lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);

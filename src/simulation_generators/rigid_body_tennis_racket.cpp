@@ -9,15 +9,15 @@ SimulableBounds generate_RigidBody_tennis_racket_effect(Simulation& simulation) 
   SimulationMesh RB_mesh = SimulationMesh("resources/obj/cone.obj");
   const Scalar RB_MASS = 1.0;
   const Mat3 inertia_tensor = compute_initial_inertia_tensor_PARTICLES(RB_MASS, RB_mesh.vertices);
-  const unsigned int index = simulation.initial_state.x.size();
+  const unsigned int dof_index = simulation.initial_state.x.size();
   simulation.initial_state.add_size(6);
-  const RigidBody rb(index, RB_MASS, inertia_tensor);
+  const RigidBody rb(dof_index, RB_MASS, inertia_tensor);
   add_rigid_body_to_simulation(simulation, rb);
 
   // Initial conditions
-  simulation.initial_state.x.segment<nDoF>(index).setZero();
-  simulation.initial_state.x_old.segment<nDoF>(index).setZero();
-  set_angular_velocity(simulation.initial_state, simulation.TimeStep, rb.index+3, Vec3(0,0.01,0.1));
+  simulation.initial_state.x.segment<nDoF>(dof_index).setZero();
+  simulation.initial_state.v.segment<nDoF>(dof_index).setZero();
+  simulation.initial_state.v.segment<3>(dof_index+3) = Vec3(0,0.01,0.1);
 
-  return SimulableBounds{index, nDoF, 0, 0, rb_index, nDoF / 6};
+  return SimulableBounds{dof_index, nDoF, 0, 0, rb_index, nDoF / 6};
 }

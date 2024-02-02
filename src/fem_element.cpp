@@ -189,10 +189,10 @@ template <typename MaterialType>
 Scalar FEM_Element3D<MaterialType>::compute_energy(Scalar TimeStep, const PhysicsState& state) const {
   // Get the relevant sate
   // ---------------------------------------------------------------
-  const Vec3& x1 = p1.get_position(state.x);
-  const Vec3& x2 = p2.get_position(state.x);
-  const Vec3& x3 = p3.get_position(state.x);
-  const Vec3& x4 = p4.get_position(state.x);
+  const Vec3& x1 = p1.get_position(state);
+  const Vec3& x2 = p2.get_position(state);
+  const Vec3& x3 = p3.get_position(state);
+  const Vec3& x4 = p4.get_position(state);
 
   const Mat3 F = compute_deformation_tensor(dvecF_dx, x1, x2, x3, x4);
 
@@ -207,10 +207,10 @@ template <typename MaterialType>
 void FEM_Element3D<MaterialType>::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const {
   // Get the relevant sate
   // ---------------------------------------------------------------
-  const Vec3& x1 = p1.get_position(state.x);
-  const Vec3& x2 = p2.get_position(state.x);
-  const Vec3& x3 = p3.get_position(state.x);
-  const Vec3& x4 = p4.get_position(state.x);
+  const Vec3& x1 = p1.get_position(state);
+  const Vec3& x2 = p2.get_position(state);
+  const Vec3& x3 = p3.get_position(state);
+  const Vec3& x4 = p4.get_position(state);
 
   // Compute deformation tensor
   // ---------------------------------------------------------------

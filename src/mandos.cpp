@@ -12,7 +12,7 @@ RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const std:
     simulation.initial_state.add_size(6);
     add_rigid_body_to_simulation(simulation, rb);
     simulation.initial_state.x.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
-    simulation.initial_state.x_old.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
+    simulation.initial_state.v.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
 }
 
 RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const Mat3& inertia_tensor)
@@ -22,31 +22,27 @@ RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const Mat3
     simulation.initial_state.add_size(6);
     add_rigid_body_to_simulation(simulation, rb);
     simulation.initial_state.x.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
-    simulation.initial_state.x_old.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
+    simulation.initial_state.v.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
 }
 
 RigidBodyHandle RigidBodyHandle::set_COM_initial_position(Vec3 pos) const {
     const Vec3 x = rb.get_COM_position(simulation.initial_state.x);
-    const Vec3 x_old = rb.get_COM_position(simulation.initial_state.x_old);
-    const Vec3 delta = x - x_old;
     simulation.initial_state.x.segment<3>(rb.index) = pos;
-    simulation.initial_state.x_old.segment<3>(rb.index) = pos - delta;
     return *this;
 }
 
 RigidBodyHandle RigidBodyHandle::set_initial_orientation(Vec3 axis_angle) const {
     simulation.initial_state.x.segment<3>(rb.index + 3) = axis_angle;
-    simulation.initial_state.x_old.segment<3>(rb.index + 3) = axis_angle;
     return *this;
 }
 
 RigidBodyHandle RigidBodyHandle::set_COM_initial_velocity(Vec3 vel) const {
-    set_linear_velocity(simulation.initial_state, simulation.TimeStep, rb.index, vel);
+    simulation.initial_state.v.segment<3>(rb.index) = vel;
     return *this;
 }
 
 RigidBodyHandle RigidBodyHandle::set_initial_angular_velocity(Vec3 omega) const {
-    set_angular_velocity(simulation.initial_state, simulation.TimeStep, rb.index+3, omega);
+    simulation.initial_state.v.segment<3>(rb.index+3) = omega;
     return *this;
 }
 
@@ -91,7 +87,7 @@ Vec3 MassSpringHandle::compute_center_of_mass(const PhysicsState& state) const {
     Scalar total_mass = 0;
     for (unsigned int i = bounds.particle_index; i < bounds.particle_index + bounds.n_particles; i++) {
         const Particle& p = simulation.simulables.particles[i];
-        center_of_mass += p.get_position(state.x) * p.mass;
+        center_of_mass += p.get_position(state) * p.mass;
         total_mass += p.mass;
     }
     return center_of_mass / total_mass;
@@ -103,8 +99,7 @@ MassSpringHandle MassSpringHandle::set_initial_COM_position(const Vec3& position
     PhysicsState& state = simulation.initial_state;
     for (unsigned int i = bounds.particle_index; i < bounds.n_particles; i++) {
         const Particle& p = simulation.simulables.particles[i];
-        state.x.segment<3>(p.index) = p.get_position(state.x) + displacement;
-        state.x_old.segment<3>(p.index) = p.get_position(state.x_old) + displacement;
+        state.x.segment<3>(p.index) = p.get_position(state) + displacement;
     }
     return *this;
 }
@@ -141,22 +136,18 @@ ParticleHandle::ParticleHandle(Simulation& simulation, Scalar mass)
     simulation.initial_state.add_size(3);
     // Initialize initial conditions
     simulation.initial_state.x.segment<3>(particle.index) = Vec3::Zero();
-    simulation.initial_state.x_old.segment<3>(particle.index) = Vec3::Zero();
+    simulation.initial_state.v.segment<3>(particle.index) = Vec3::Zero();
     add_particle_to_simulation(simulation, particle);
 }
 
 ParticleHandle ParticleHandle::set_initial_position(Vec3 position) const {
-    const Vec3 x = particle.get_position(simulation.initial_state.x);
-    const Vec3 x_old = particle.get_position(simulation.initial_state.x_old);
-    const Vec3 delta = x - x_old;
+    const Vec3 x = particle.get_position(simulation.initial_state);
     simulation.initial_state.x.segment<3>(particle.index) = position;
-    simulation.initial_state.x_old.segment<3>(particle.index) = position - delta;
     return *this;
 }
 
 ParticleHandle ParticleHandle::set_initial_velocity(Vec3 velocity) const {
-    const Vec3 x = particle.get_position(simulation.initial_state.x);
-    simulation.initial_state.x_old.segment<3>(particle.index) = x - velocity / simulation.TimeStep;
+    simulation.initial_state.v.segment<3>(particle.index) = velocity;
     return *this;
 }
 
@@ -174,8 +165,8 @@ ParticleHandle ParticleHandle::freeze() const {
 }
 
 void join_particles_with_spring(Simulation& simulation, const ParticleHandle& p1, const ParticleHandle& p2, Scalar k, Scalar damping) {
-    const Vec3 x1 = p1.particle.get_position(simulation.initial_state.x);
-    const Vec3 x2 = p2.particle.get_position(simulation.initial_state.x);
+    const Vec3 x1 = p1.particle.get_position(simulation.initial_state);
+    const Vec3 x2 = p2.particle.get_position(simulation.initial_state);
     const Scalar distance = (x1 -x2).norm();
     simulation.energies.particle_springs.emplace_back(p1.particle, p2.particle,
                                                       SpringParameters{.k = k, .L0 = distance, .damping = damping});
@@ -195,7 +186,7 @@ Vec3 FEMHandle::compute_center_of_mass(const PhysicsState& state) const {
     Scalar total_mass = 0;
     for (unsigned int i = bounds.particle_index; i < bounds.particle_index + bounds.n_particles; i++) {
         const Particle& p = simulation.simulables.particles[i];
-        center_of_mass += p.get_position(state.x) * p.mass;
+        center_of_mass += p.get_position(state) * p.mass;
         total_mass += p.mass;
     }
     return center_of_mass / total_mass;
@@ -220,6 +211,6 @@ FEMHandle FEMHandle::add_gravity(Scalar gravity) const {
 }
 
 void join_rigid_body_with_particle(Simulation& sim, RigidBodyHandle rb, ParticleHandle p) {
-    ParticleRigidBodyCopuling copuling = ParticleRigidBodyCopuling(rb.rb, p.particle, p.particle.get_position(sim.initial_state.x));
+    ParticleRigidBodyCopuling copuling = ParticleRigidBodyCopuling(rb.rb, p.particle, p.particle.get_position(sim.initial_state));
     sim.copulings.add_copuling(copuling);
 }

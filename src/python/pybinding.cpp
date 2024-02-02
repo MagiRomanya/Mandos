@@ -23,7 +23,7 @@ PYBIND11_MODULE(pymandos, m) {
     py::class_<PhysicsState>(m, "PhysicsState")
         .def(py::init())
         .def_readwrite("x", &PhysicsState::x)
-        .def_readwrite("x_old", &PhysicsState::x_old)
+        .def_readwrite("v", &PhysicsState::v)
         .def("copy",  [](const PhysicsState &self) {
             return PhysicsState(self);
         })

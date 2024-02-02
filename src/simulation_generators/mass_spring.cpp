@@ -36,7 +36,7 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
     // Initial conditions ( v = 0)
     for (size_t i=0; i < n_dof; i++) {
         simulation.initial_state.x[index + i] = vertices[i];
-        simulation.initial_state.x_old[index + i] = vertices[i];
+        simulation.initial_state.v[index + i] = 0.0f;
     }
 
     // Set up the springs

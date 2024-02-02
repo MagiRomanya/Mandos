@@ -728,7 +728,7 @@ bool MandosViewer::is_key_pressed(int Key) { return IsKeyPressed(Key); }
 
 void MandosViewer::draw_particle(const ParticleHandle& particle, const PhysicsState& state) {
     if (!enable_draw_simulable_meshes) return;
-    const Vec3 position = particle.particle.get_position(state.x);
+    const Vec3 position = particle.particle.get_position(state);
     Matrix transform = MatrixTranslate(position.x(), position.y(), position.z());
     DrawMesh(renderState->sphere_mesh, renderState->base_material, transform);
 }
@@ -746,8 +746,8 @@ void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState
     std::vector<float> vertices;
     for (size_t i = 0; i < simulation.energies.particle_springs.size(); i++) {
         ParticleSpring s = simulation.energies.particle_springs[i];
-        Vec3 x1 = s.p1.get_position(state.x);
-        Vec3 x2 = s.p2.get_position(state.x);
+        Vec3 x1 = s.p1.get_position(state);
+        Vec3 x2 = s.p2.get_position(state);
         vertices.push_back(x1.x());
         vertices.push_back(x1.y());
         vertices.push_back(x1.z());
@@ -768,7 +768,7 @@ void MandosViewer::draw_particles(const Simulation& simulation, const PhysicsSta
 
     for (size_t i = 0; i < simulation.simulables.particles.size(); i++) {
         Particle particle = simulation.simulables.particles[i];
-        Vec3 position = particle.get_position(state.x);
+        Vec3 position = particle.get_position(state);
         Matrix transform = MatrixTranslate(position.x(), position.y(), position.z());
         transforms.push_back(transform);
     }
@@ -820,10 +820,10 @@ void MandosViewer::draw_FEM_tetrahedrons_lines(const Simulation& simulation, con
 #define MAT(type, name) \
     for (unsigned int i = 0; i < simulation.energies.fem_elements_##name.size(); i++) { \
         const FEM_Element3D<type>& e = simulation.energies.fem_elements_##name[i]; \
-        const Vec3& x1 = e.p1.get_position(state.x);  \
-        const Vec3& x2 = e.p2.get_position(state.x);  \
-        const Vec3& x3 = e.p3.get_position(state.x);  \
-        const Vec3& x4 = e.p4.get_position(state.x);  \
+        const Vec3& x1 = e.p1.get_position(state);  \
+        const Vec3& x2 = e.p2.get_position(state);  \
+        const Vec3& x3 = e.p3.get_position(state);  \
+        const Vec3& x4 = e.p4.get_position(state);  \
         vertices.insert(vertices.end(), {x1.x(), x1.y(), x1.z()}); \
         vertices.insert(vertices.end(), {x2.x(), x2.y(), x2.z()}); \
         vertices.insert(vertices.end(), {x1.x(), x1.y(), x1.z()}); \
@@ -909,7 +909,7 @@ void MandosViewer::draw_FEM_tetrahedrons(const Simulation& simulation, const Phy
 void MandosViewer::draw_particle_indices(const Simulation& simulation, const PhysicsState& state) {
     for (size_t i = 0; i < simulation.simulables.particles.size(); i++) {
         const Particle particle = simulation.simulables.particles[i];
-        const Vector3 position = vector3_eigen_to_raylib(particle.get_position(state.x));
+        const Vector3 position = vector3_eigen_to_raylib(particle.get_position(state));
 
         const unsigned int index = particle.index / 3;
         const Matrix matView = GetCameraMatrix(renderState->camera);
