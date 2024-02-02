@@ -136,6 +136,7 @@ struct MandosViewer {
     MemoryPool mem_pool = MemoryPool(1e6*sizeof(float));
 
     MandosViewer();
+    MandosViewer(const Simulation* simulation);
     ~MandosViewer();
 
     bool window_should_close();
@@ -166,11 +167,14 @@ struct MandosViewer {
 
     void draw_springs(const Simulation& simulation, const PhysicsState& state);
 
+    void draw_FEM_tetrahedrons_lines(const Simulation& simulation, const PhysicsState& state);
+
     void draw_FEM_tetrahedrons(const Simulation& simulation, const PhysicsState& state);
 
     void draw_particle_indices(const Simulation& simulation, const PhysicsState& state);
 
 private:
+    void initialize_graphical_context();
     void drawGUI();
     void drawSimulationVisualizationWindow();
 
@@ -178,7 +182,8 @@ private:
     bool enable_draw_simulable_meshes = true;
     bool enable_draw_particles = false;
     bool enable_draw_springs = false;
-    bool enable_draw_fem_tetrahedrons = false;
+    enum FEM_TETRAHEDRON_VISUALIZATION {TET_NONE, TET_MESH, TET_LINES};
+    int enable_draw_fem_tetrahedrons = TET_NONE;
 
     bool enable_slice_plane = false;
     Vec4 slicePlane = Vec4(0.0f, 1.0f, 0.0f, 0.0f);

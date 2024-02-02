@@ -24,7 +24,7 @@ Eigen::Matrix<Scalar,4,3> compute_shape_function_derivative(const Vec3& x1, cons
 Mat3 compute_deformation_tensor(const Eigen::Matrix<Scalar,9,12>& dvecF_dx, const Vec3& x1, const Vec3& x2, const Vec3& x3, const Vec3& x4); // F
 
 /**
- * X Macro for the defined FEM materials
+ * X Macro for FEM materials
  */
 #define FEM_MATERIAL_MEMBERS \
     MAT(FEM_LinearMaterial, linearMat) \
@@ -37,6 +37,7 @@ Mat3 compute_deformation_tensor(const Eigen::Matrix<Scalar,9,12>& dvecF_dx, cons
 // The energy derivatives are computed with respect to the vectorized deformation tensor vecF.
 // To compute the derivatives with respect to the vertices, one must use the jacobian dvecF_dx.
 // ----------------------------------------------------------------------------------------
+
 /**
  * FEM Linear Material
  *
@@ -52,12 +53,9 @@ struct FEM_LinearMaterial {
     // Lame coefficients
     const Scalar mu, lambda;
 
-    Mat3 compute_strain_tensor(const Mat3& F) const;
-    Mat3 compute_stress_tensor(const Mat3& F) const;
-
     Scalar get_phi(const Mat3& F) const;
-    Eigen::Vector<Scalar, 9> get_phi_gradient(const Mat3& sigma) const;
-    Eigen::Matrix<Scalar, 9, 9> get_phi_hessian(const Mat3& F) const;
+    Vec9 get_phi_gradient(const Mat3& F) const;
+    Mat9 get_phi_hessian(const Mat3& F) const;
 };
 
 /**
@@ -74,12 +72,9 @@ struct FEM_NeoHookeanMaterial {
     // Lame coefficients
     const Scalar mu, lambda;
 
-    Mat3 compute_strain_tensor(const Mat3& F) const;
-    Mat3 compute_stress_tensor(const Mat3& F) const;
-
     Scalar get_phi(const Mat3& F) const;
-    Eigen::Vector<Scalar, 9> get_phi_gradient(const Mat3& sigma) const;
-    Eigen::Matrix<Scalar, 9, 9> get_phi_hessian(const Mat3& F) const;
+    Vec9 get_phi_gradient(const Mat3& F) const;
+    Mat9 get_phi_hessian(const Mat3& F) const;
 };
 // ----------------------------------------------------------------------------------------
 
@@ -90,7 +85,7 @@ struct FEM_Element3D {
     const Particle p1, p2, p3, p4;
     const MaterialType material;
 
-    // Shape function derivative (in the form of a block matrix)
+    // Shape function derivative
     const Eigen::Matrix<Scalar,9,12> dvecF_dx;
 
     Scalar compute_energy(Scalar TimeStep, const PhysicsState& state) const;

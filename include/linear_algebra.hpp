@@ -13,6 +13,8 @@ typedef Eigen::Matrix3<Scalar> Mat3;
 typedef Eigen::Vector4<Scalar> Vec4;
 typedef Eigen::Matrix4<Scalar> Mat4;
 typedef Eigen::Matrix4<Scalar> Mat4;
+typedef Eigen::Matrix<Scalar,9,9> Mat9;
+typedef Eigen::Vector<Scalar,9> Vec9;
 
 // DYNAMIC VECTORS AND MATRICES
 typedef Eigen::VectorX<Scalar> Vec;

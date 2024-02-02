@@ -239,6 +239,30 @@ RenderMesh::RenderMesh(std::string filename) {
     computeRenderMeshTangentVectors(*this);
 }
 
+RenderMesh::RenderMesh(const SimulationMesh& simMesh) {
+    for (unsigned int i = 0; i < simMesh.indices.size(); i++) {
+        unsigned int index = simMesh.indices[i];
+        // Vertices
+        vertices.push_back(simMesh.vertices[3*index+0]);
+        vertices.push_back(simMesh.vertices[3*index+1]);
+        vertices.push_back(simMesh.vertices[3*index+2]);
+
+        // All other fields uninitialized
+        normals.push_back(0);
+        normals.push_back(0);
+        normals.push_back(0);
+
+        tangents.push_back(0);
+        tangents.push_back(0);
+        tangents.push_back(0);
+
+        texcoords.push_back(0);
+        texcoords.push_back(0);
+    }
+    // Compute normals and tangents
+    updateFromSimulationMesh(simMesh);
+}
+
 void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& out_vertices, std::vector<unsigned int>& out_indices) {
     tinyobj::ObjReaderConfig reader_config;
     tinyobj::ObjReader reader;

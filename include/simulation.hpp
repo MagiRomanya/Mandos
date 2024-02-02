@@ -35,10 +35,12 @@ struct Simulables {
     X(std::vector<Gravity>, gravities)
 
 #define X(type, name) type name;
+
 struct Energies {
     INERTIAL_ENERGY_MEMBERS
     POTENTIAL_ENERGY_MEMBERS
 };
+
 #undef X
 #undef MAT
 

@@ -24,8 +24,6 @@ out mat3 TBN;
 
 out float gl_ClipDistance[1];
 
-// NOTE: Add here your custom variables
-
 void main()
 {
     // Send vertex attributes to fragment shader

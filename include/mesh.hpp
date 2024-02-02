@@ -15,6 +15,7 @@ struct SimulationMesh;
 struct RenderMesh {
     RenderMesh() {};
     RenderMesh(std::string filename);
+    RenderMesh(const SimulationMesh& simMesh);
 
     void updateFromSimulationMesh(const SimulationMesh& sim_mesh);
 

@@ -158,6 +158,7 @@ Vec3 compute_COM_position_UNIFORM_VOLUME(const std::vector<unsigned int>& indice
     return COM_position;
 }
 
+#define AXIS_ANGLE_UPDATE
 Vec3 update_axis_angle(const Vec3& theta, const Vec3& dtheta) {
     const Scalar dangle = dtheta.norm();
     if (dangle < 1e-8) return theta;
@@ -167,41 +168,51 @@ Vec3 update_axis_angle(const Vec3& theta, const Vec3& dtheta) {
     if (angle < 1e-4) return theta + dtheta;
     const Vec3 axis = theta / angle;
 
-    // Scalar new_angle = angle + axis.dot(dtheta);
-    // const Mat3 A = std::sin(angle/2) / std::sin(new_angle/2) * (Mat3::Identity() + 0.5f * skew(dtheta));
-    // const Vec3 b = 0.5f * std::cos(angle/2) / std::sin(new_angle/2) * dtheta;
-    // const Vec3 new_axis = A * axis + b;
-    // new_angle = std::fmod(new_angle, 2 * M_PI);
-    // return new_angle * new_axis;
-
-    // https://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
-    Scalar new_angle = 2.0f * std::acos(std::cos(dangle/2.0f) * std::cos(angle/2.0f)
-                                      - std::sin(dangle/2.0f) * std::sin(angle/2.0f) * axis.dot(daxis));
+#ifdef AXIS_ANGLE_LINEAR_APPROX
+    Scalar new_angle = angle + axis.dot(dtheta);
+    if (new_angle < 1e-7) return Vec3::Zero();
+    const Mat3 A = std::sin(angle/2) / std::sin(new_angle/2) * (Mat3::Identity() + 0.5f * skew(dtheta));
+    const Vec3 b = 0.5f * std::cos(angle/2) / std::sin(new_angle/2) * dtheta;
+    const Vec3 new_axis = A * axis + b;
     new_angle = std::fmod(new_angle, 2.0f * M_PI);
     if (new_angle > M_PI) {
         new_angle -= 2*M_PI;
     }
+    return new_angle * new_axis;
+#endif // AXIS_ANGLE_LINEAR_APPROX
+
+#ifdef AXIS_ANGLE_UPDATE
+    // https://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
+    Scalar new_angle = 2.0f * std::acos(std::cos(dangle/2.0f) * std::cos(angle/2.0f)
+                                      - std::sin(dangle/2.0f) * std::sin(angle/2.0f) * axis.dot(daxis));
+    if (new_angle < 1e-7) return Vec3::Zero();
+
     const Vec3 new_axis = 1.0f / std::sin(new_angle/2.0f) * (
         std::sin(dangle/2.0f) * std::cos(angle/2.0f) * daxis
         + std::cos(dangle/2.0f) * std::sin(angle/2.0f) * axis
         + std::sin(dangle/2.0f) * std::sin(angle/2.0f) * cross(daxis, axis));
 
+    new_angle = std::fmod(new_angle, 2.0f * M_PI);
+    if (new_angle > M_PI) {
+        new_angle -= 2*M_PI;
+    }
+    return new_angle * new_axis;
+#endif // AXIS_ANGLE_UPDATE
+
+#ifdef AXIS_ANLGE_QUATERNION_UPDATE
+    typedef Eigen::Quaternion<Scalar> Quat;
+    const Quat q = Quat(Eigen::AngleAxis<Scalar>(angle, axis));
+    const Quat q_omega = Quat(0, 0.5 * dtheta);
+    const Quat q_dot = q_omega * q;
+    const Quat q_new = Quat(q.w() + q_dot.w(), q.vec() + q_dot.vec());
+    const Eigen::AngleAxis<Scalar> angle_axis(q_new);
+
+    const Vec3 new_axis = angle_axis.axis();
+    const Scalar new_angle = angle_axis.angle();
     DEBUG_LOG(new_angle);
     DEBUG_LOG(new_axis.transpose());
     return new_angle * new_axis;
-
-    // typedef Eigen::Quaternion<Scalar> Quat;
-    // const Quat q = Quat(Eigen::AngleAxis<Scalar>(angle, axis));
-    // const Quat q_omega = Quat(0, 0.5 * dtheta);
-    // const Quat q_dot = q_omega * q;
-    // const Quat q_new = Quat(q.w() + q_dot.w(), q.vec() + q_dot.vec());
-    // const Eigen::AngleAxis<Scalar> angle_axis(q_new);
-
-    // const Vec3 new_axis = angle_axis.axis();
-    // const Scalar new_angle = angle_axis.angle();
-    // DEBUG_LOG(new_angle);
-    // DEBUG_LOG(new_axis.transpose());
-    // return new_angle * new_axis;
+#endif //  AXIS_ANLGE_QUATERNION_UPDATE
 }
 
 

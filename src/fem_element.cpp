@@ -22,7 +22,7 @@ Mat3 compute_deformation_tensor(const Eigen::Matrix<Scalar,9,12>& dvecF_dx, cons
   X_vec.segment<3>(3*3) = x4;
   // F_vec is a column-wise vectorized representation of the F tensor
   // Meaning F_vec = F11, F21, F31, F12, F22, F32, F13, F32, F33
-  const Eigen::Vector<Scalar, 9> F_vec = dvecF_dx * X_vec;
+  const Vec9 F_vec = dvecF_dx * X_vec;
   Mat3 F;
   F << F_vec(0), F_vec(3), F_vec(6),
        F_vec(1), F_vec(4), F_vec(7),
@@ -34,28 +34,25 @@ Mat3 compute_deformation_tensor(const Eigen::Matrix<Scalar,9,12>& dvecF_dx, cons
 FEM_LinearMaterial::FEM_LinearMaterial(Scalar mu, Scalar lambda)
   : mu(mu), lambda(lambda) {}
 
-Mat3 FEM_LinearMaterial::compute_strain_tensor(const Mat3& F) const {
+Mat3 compute_linear_strain_tensor(const Mat3& F) {
   // epsilon
   return 0.5 * (F + F.transpose()) - Mat3::Identity();
 }
 
-Mat3 FEM_LinearMaterial::compute_stress_tensor(const Mat3& F) const {
-  // Homogenious material Hook's Law https://en.wikipedia.org/wiki/Lam%C3%A9_parameters
-  const Mat3 epsilon = compute_strain_tensor(F);
-  return 2.0f * mu * epsilon + lambda * epsilon.trace() * Mat3::Identity();
-}
-
 Scalar FEM_LinearMaterial::get_phi(const Mat3& F) const {
-  const Mat3 epsilon = compute_strain_tensor(F);
+  const Mat3 epsilon = compute_linear_strain_tensor(F);
   return mu * (epsilon.transpose()*epsilon).trace() + 0.5 * lambda * epsilon.trace() * epsilon.trace();
 }
 
-Eigen::Vector<Scalar, 9> FEM_LinearMaterial::get_phi_gradient(const Mat3& sigma) const {
+Vec9 FEM_LinearMaterial::get_phi_gradient(const Mat3& F) const {
+  const Mat3 epsilon = compute_linear_strain_tensor(F);
+  // Homogenious material Hook's Law https://en.wikipedia.org/wiki/Lam%C3%A9_parameters
+  const Mat3 sigma =  2.0f * mu * epsilon + lambda * epsilon.trace() * Mat3::Identity();
   return vectorize_matrix<3>(sigma);
 }
 
-Eigen::Matrix<Scalar, 9, 9> FEM_LinearMaterial::get_phi_hessian(const Mat3& F) const {
-  Eigen::Matrix<Scalar,9,9> dvecSigma_dvecF;
+Mat9 FEM_LinearMaterial::get_phi_hessian(const Mat3& F) const {
+  Mat9 dvecSigma_dvecF;
   dvecSigma_dvecF << 2*mu+lambda,  0,  0,  0,      lambda,  0,  0,  0,      lambda,
                      0          , mu,  0, mu,           0,  0,  0,  0,           0,
                      0          ,  0, mu,  0,           0,  0, mu,  0,           0,
@@ -77,12 +74,6 @@ FEM_NeoHookeanMaterial::FEM_NeoHookeanMaterial(Scalar mu_lame, Scalar lambda_lam
   // const Scalar nu = (lambda - 5.0f / 8.0f *mu) / (2*lambda + mu/4.0f);
 }
 
-Mat3 FEM_NeoHookeanMaterial::compute_strain_tensor(const Mat3& F) const {
-  // FIXME: this is not the correct strain tensor
-  std::cerr << "ERROR::FEM_NeoHookeanMaterial::compute_strain_tensor: This function is wrong!." << std::endl;
-  return 0.5 * (F + F.transpose()) - Mat3::Identity();
-}
-
 Scalar FEM_NeoHookeanMaterial::get_phi(const Mat3& F) const {
   const Mat3 C = F.transpose() * F;
   const Scalar IC = C.trace();
@@ -94,9 +85,9 @@ Scalar FEM_NeoHookeanMaterial::get_phi(const Mat3& F) const {
 }
 
 template <typename Material>
-Eigen::Vector<Scalar, 9> compute_phi_gradinet_finite(const Material& mat, Scalar dx, const Mat3& F) {
+Vec9 compute_phi_gradinet_finite(const Material& mat, Scalar dx, const Mat3& F) {
   const Scalar phi0 = mat.get_phi(F);
-  Eigen::Vector<Scalar, 9> grad;
+  Vec9 grad;
   for (unsigned int i = 0; i < 9; i++) {
     Mat3 dF = F;
     const unsigned int row = i % 3;
@@ -109,15 +100,15 @@ Eigen::Vector<Scalar, 9> compute_phi_gradinet_finite(const Material& mat, Scalar
 }
 
 template <typename Material>
-Eigen::Matrix<Scalar, 9, 9> compute_phi_hess_finite(const Material& mat, Scalar dx, const Mat3& F) {
-  const Eigen::Vector<Scalar, 9> grad0 = compute_phi_gradinet_finite(mat, dx, F);
-  Eigen::Matrix<Scalar,9,9> hess;
+Mat9 compute_phi_hess_finite(const Material& mat, Scalar dx, const Mat3& F) {
+  const Vec9 grad0 = compute_phi_gradinet_finite(mat, dx, F);
+  Mat9 hess;
   for (unsigned int i = 0; i < 9; i++) {
     Mat3 dF = F;
     const unsigned int row = i % 3;
     const unsigned int col = i / 3;
     dF(row, col) += dx;
-    const Eigen::Vector<Scalar, 9> dgrad = compute_phi_gradinet_finite(mat, dx, dF);
+    const Vec9 dgrad = compute_phi_gradinet_finite(mat, dx, dF);
     hess.col(i) = (dgrad - grad0) / dx;
   }
   return hess;
@@ -129,7 +120,7 @@ Mat3 determinant_derivative(const Mat3& mat) {
   return result;
 }
 
-Mat3 FEM_NeoHookeanMaterial::compute_stress_tensor(const Mat3& F) const {
+Vec9 FEM_NeoHookeanMaterial::get_phi_gradient(const Mat3& F) const {
   const Mat3 C = F.transpose() * F;
   const Scalar IC = C.trace();
   const Scalar J = F.determinant();
@@ -137,45 +128,41 @@ Mat3 FEM_NeoHookeanMaterial::compute_stress_tensor(const Mat3& F) const {
   // First Piola-kirchoff Stress (eq 18 https://dl.acm.org/doi/pdf/10.1145/3180491)
   const Mat3 dJ_dF = determinant_derivative(F);
   const Mat3 PK1 = mu * (1.f - 1.f / (IC + 1.f)) * F + lambda * (J - alpha) * dJ_dF;
-  return PK1;
+  return vectorize_matrix<3>(PK1);
 }
 
-Eigen::Vector<Scalar, 9> FEM_NeoHookeanMaterial::get_phi_gradient(const Mat3& sigma) const {
-  return vectorize_matrix<3>(sigma);
-}
-
-inline Eigen::Matrix<Scalar, 9,9> compute_vectorized_volume_hessian(const Mat3& F) {
+inline Mat9 compute_vectorized_volume_hessian(const Mat3& F) {
   // (eq 28 https://dl.acm.org/doi/pdf/10.1145/3180491)
-  Eigen::Matrix<Scalar, 9, 9> vec_H;
+  Mat9 vec_H;
   vec_H << Mat3::Zero()    , -skew(F.col(2)) , skew(F.col(1)),
            skew(F.col(2))  , Mat3::Zero()    , -skew(F.col(0)),
            -skew(F.col(1)) , skew(F.col(0))  , Mat3::Zero();
   return vec_H;
 }
 
-Eigen::Matrix<Scalar, 9, 9> FEM_NeoHookeanMaterial::get_phi_hessian(const Mat3& F) const {
+Mat9 FEM_NeoHookeanMaterial::get_phi_hessian(const Mat3& F) const {
   const Mat3 C = F.transpose() * F;
   const Scalar IC = C.trace();
   const Scalar J = F.determinant();
   const Scalar alpha = 1.0f + mu / lambda - mu / (4.0f * lambda);
   // Energy hessian (eq 22 https://dl.acm.org/doi/pdf/10.1145/3180491)
   // Vectorized energy hessian (eq 41 https://dl.acm.org/doi/pdf/10.1145/3180491)
-  const Eigen::Vector<Scalar, 9> vec_F = vectorize_matrix<3>(F);
+  const Vec9 vec_F = vectorize_matrix<3>(F);
   const Mat3 dJ_dF = determinant_derivative(F);
-  const Eigen::Vector<Scalar, 9> vec_G = vectorize_matrix<3>(dJ_dF);
-  const Eigen::Matrix<Scalar, 9,9> vec_H = compute_vectorized_volume_hessian(F);
+  const Vec9 vec_G = vectorize_matrix<3>(dJ_dF);
+  const Mat9 vec_H = compute_vectorized_volume_hessian(F);
 
-  Eigen::Matrix<Scalar,9,9> dvecSigma_dvecF = Eigen::Matrix<Scalar,9,9>::Zero();
-  dvecSigma_dvecF += mu * (1.0f - 1.0f / (IC + 1.0f)) * Eigen::Matrix<Scalar,9,9>::Identity();
+  Mat9 dvecSigma_dvecF = Mat9::Zero();
+  dvecSigma_dvecF += mu * (1.0f - 1.0f / (IC + 1.0f)) * Mat9::Identity();
   dvecSigma_dvecF += mu * 2.0f / ((IC + 1.0f) * (IC + 1.0f)) * vec_F * vec_F.transpose();
   dvecSigma_dvecF += lambda * vec_G * vec_G.transpose();
   dvecSigma_dvecF += lambda * (J - alpha) * vec_H;
 
-  const bool enableSemiPositiveProjection = true;
+  const bool enableSemiPositiveProjection = false;
   if (enableSemiPositiveProjection) {
-    const Eigen::SelfAdjointEigenSolver<Eigen::Matrix<Scalar, 9, 9>> eigs(dvecSigma_dvecF);
-    Eigen::Vector<Scalar, 9> eigenvalues = eigs.eigenvalues();
-    Eigen::Matrix<Scalar, 9, 9> eigenvectors = eigs.eigenvectors();
+    const Eigen::SelfAdjointEigenSolver<Mat9> eigs(dvecSigma_dvecF);
+    Vec9 eigenvalues = eigs.eigenvalues();
+    Mat9 eigenvectors = eigs.eigenvectors();
 
     for (int i = 0; i < 9; i++) {
       if (eigenvalues(i) < 0.0) {
@@ -225,16 +212,15 @@ void FEM_Element3D<MaterialType>::compute_energy_and_derivatives(Scalar TimeStep
   const Vec3& x3 = p3.get_position(state.x);
   const Vec3& x4 = p4.get_position(state.x);
 
-  // Compute deformation, strain and stress tensors
+  // Compute deformation tensor
   // ---------------------------------------------------------------
   const Mat3 F = compute_deformation_tensor(dvecF_dx, x1, x2, x3, x4);
-  const Mat3 sigma = material.compute_stress_tensor(F);
 
   // Compute the energy derivatives
   // ---------------------------------------------------------------
   const Scalar volume = abs(compute_volume(x1, x2, x3, x4));
   const Scalar energy = volume * material.get_phi(F);
-  const Eigen::Vector<Scalar,12> grad = volume * material.get_phi_gradient(sigma).transpose() *  dvecF_dx;
+  const Eigen::Vector<Scalar,12> grad = volume * material.get_phi_gradient(F).transpose() *  dvecF_dx;
   const Eigen::Matrix<Scalar,12,12> hess = volume * dvecF_dx.transpose()* material.get_phi_hessian(F) * dvecF_dx;
 
   // Add the energy derivatives to the global structure

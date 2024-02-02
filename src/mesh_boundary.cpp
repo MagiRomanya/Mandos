@@ -1,6 +1,7 @@
 #include "mesh.hpp"
 #include "edge.hpp"
 #include "linear_algebra.hpp"
+#include "utility_functions.hpp"
 #include <cassert>
 #include <cstdio>
 #include <unordered_set>
@@ -118,15 +119,15 @@ namespace std {
 }
 
 void compute_triangle_indices_from_tetrahedron_indices(const std::vector<unsigned int>& tet_ind, std::vector<unsigned int>& out_ind) {
-    assert(tet_ind.size() % 4 != 0);
+    assert(tet_ind.size() % 4 == 0);
 
     // The tetrahderon mesh will have repeated triangles
     std::unordered_set<Triangle> known_triangles;
 
     // Iterate tetrahedrons
     for (unsigned int i = 0; i < tet_ind.size()/4; i++) {
-        const unsigned int a = tet_ind[4*i+0];
-        const unsigned int b = tet_ind[4*i+1];
+        const unsigned int a = tet_ind[4*i+1];
+        const unsigned int b = tet_ind[4*i+0];
         const unsigned int c = tet_ind[4*i+2];
         const unsigned int d = tet_ind[4*i+3];
 
@@ -140,7 +141,7 @@ void compute_triangle_indices_from_tetrahedron_indices(const std::vector<unsigne
         const Triangle triangles[] = {t1,t2,t3,t4};
         for (unsigned int j=0; j < 4; j++) {
             const Triangle& t = triangles[j];
-            if (!known_triangles.contains(t)) {
+            if (true or known_triangles.contains(t)) {
                 known_triangles.insert(t);
                 out_ind.push_back(t.a);
                 out_ind.push_back(t.b);

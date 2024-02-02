@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -31,6 +32,7 @@ Color FEM_COLOR = PINK;
 Color PARTICLE_COLOR = BLUE;
 Color MASS_SPRING_COLOR  = GREEN;
 Color FROZEN_PARTICLE_COLOR = WHITE;
+Color TETRAHEDRON_VISUALIZATION_COLOR = PURPLE;
 
 inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
     Matrix r = {
@@ -56,6 +58,9 @@ Camera3D create_camera() {
     return camera;
 }
 
+/**
+ * Raylib expects tangents as vec4 and not vec3 idk why
+ */
 void copy_tangents_as_vec_4(float* dest, const std::vector<float>& tangents) {
     for (unsigned int i = 0; i < tangents.size() / 3; i++) {
         dest[4*i+0] = tangents[3 * i + 0]; // x
@@ -67,9 +72,13 @@ void copy_tangents_as_vec_4(float* dest, const std::vector<float>& tangents) {
 
 MeshGPU::MeshGPU(const RenderMesh& mesh) {
     // Allocate resources
+    if (mesh.vertices.size() == 0) {
+        std::cerr << "Error::MeshGPU::MeshGPU: no vertices in Render Mesh" << std::endl;
+        exit(-1);
+    }
     vertices = (float*) calloc(sizeof(float), mesh.vertices.size());
-    texcoords = (float*) calloc(sizeof(float), mesh.texcoords.size());
     normals = (float*) calloc(sizeof(float), mesh.normals.size());
+    texcoords = (float*) calloc(sizeof(float), mesh.texcoords.size());
     tangents = (float*) calloc(sizeof(float), 4 * mesh.tangents.size() / 3);
 
     // Copy the data
@@ -172,12 +181,28 @@ Material createMaterialFromShader(Shader shader) {
     return material;
 }
 
-/**
- * INFO Global data for our renderer that will be used throughout the runtime of the application.
- *
- * NOTE We can not hold this variables inside of MandosViewer class, as they depend on raylib and MandosViewer should
- * be renderer agnostic by design.
- */
+struct TetrahedronMeshVisualization {
+    SimulationMesh simMesh;
+    RenderMesh renderMesh;
+    unsigned int dof_offset = 0;
+    MeshGPU* tetrahedronMeshGPU = nullptr;
+
+    TetrahedronMeshVisualization(const std::vector<unsigned int>& tet_indices);
+    ~TetrahedronMeshVisualization();
+};
+
+TetrahedronMeshVisualization::TetrahedronMeshVisualization(const std::vector<unsigned int>& tet_indices) {
+    if (tet_indices.size() == 0) return;
+    compute_triangle_indices_from_tetrahedron_indices(tet_indices, simMesh.indices);
+    const unsigned int max_index = *std::max_element(simMesh.indices.begin(), simMesh.indices.end());
+    simMesh.vertices.resize(3*(max_index+1), 0.0f);
+    renderMesh = RenderMesh(simMesh);
+    tetrahedronMeshGPU = new MeshGPU(renderMesh);
+}
+
+TetrahedronMeshVisualization::~TetrahedronMeshVisualization() {
+    delete tetrahedronMeshGPU;
+}
 
 #define SPHERE_SUBDIVISIONS 30
 #define SHADER_LIST \
@@ -189,6 +214,12 @@ Material createMaterialFromShader(Shader shader) {
     SHADER(instancing_shader, "resources/shaders/lighting_instancing.vs", "resources/shaders/lighting.fs") \
     SHADER(solid_shader, "resources/shaders/lighting.vs", "resources/shaders/diffuse_solid_color.fs")
 
+/**
+ * INFO Global data for our renderer that will be used throughout the runtime of the application.
+ *
+ * NOTE We can not hold this variables inside of MandosViewer class, as they depend on raylib and MandosViewer should
+ * be renderer agnostic by design.
+ */
 struct RenderState {
     void initialize();
     void deinitialize();
@@ -215,7 +246,8 @@ struct RenderState {
     // -------------------------------------------------------------
     Mesh sphere_mesh;
     MeshGPU* axis3D = nullptr;
-    LinesGPU* lines = nullptr;
+    LinesGPU* tetLines = nullptr;
+    TetrahedronMeshVisualization* tetVis = nullptr;
 
     // GUI
     // -------------------------------------------------------------
@@ -263,7 +295,7 @@ void RenderState::initialize() {
     RenderMesh axis3Drender = RenderMesh("resources/obj/axis.obj");
     axis3D = new MeshGPU(axis3Drender);
     std::vector<float> vertices = {0.0f, 1.0f, 4.0f, 2.0f};
-    lines = new LinesGPU(vertices);
+    tetLines = new LinesGPU(vertices);
 
     // Set up the FBO
     screenFBO = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
@@ -273,7 +305,8 @@ void RenderState::deinitialize() {
     // Unload geometry
     UnloadMesh(sphere_mesh);
     delete axis3D;
-    delete lines;
+    delete tetLines;
+    delete tetVis;
 
     // Unload shaders
 #define SHADER(var, vspath, fspath) UnloadShader(var);
@@ -310,7 +343,8 @@ void raylib_to_imgui_tracelog_callback(int logLevel, const char *text, va_list a
     std::cout << logString << std::flush;
 }
 
-MandosViewer::MandosViewer() {
+
+void MandosViewer::initialize_graphical_context() {
     InitWindow(initialScreenWidth, initialScreenHeight, "Mandos");
     ImGuiInitialize();
     SetTraceLogCallback(raylib_to_imgui_tracelog_callback);
@@ -322,6 +356,14 @@ MandosViewer::MandosViewer() {
     renderState->initialize();
 
     SetTargetFPS(200);
+}
+
+MandosViewer::MandosViewer() {
+    initialize_graphical_context();
+}
+
+MandosViewer::MandosViewer(const Simulation* simulation) : SavedSim(simulation){
+    initialize_graphical_context();
 }
 
 MandosViewer::~MandosViewer() {
@@ -569,7 +611,28 @@ void MandosViewer::drawGUI() {
         ImGui::Checkbox("Render simulable meshes", &enable_draw_simulable_meshes);
         ImGui::Checkbox("Render particles", &enable_draw_particles);
         ImGui::Checkbox("Render springs", &enable_draw_springs);
-        ImGui::Checkbox("Render FEM tetrahedrons", &enable_draw_fem_tetrahedrons);
+        static bool bool_draw_fem_tetrahedrons = false;
+        if (ImGui::Checkbox("Render tetrahedrons", &bool_draw_fem_tetrahedrons)) {
+            if (bool_draw_fem_tetrahedrons) enable_draw_fem_tetrahedrons = TET_LINES;
+            else enable_draw_fem_tetrahedrons = TET_NONE;
+        }
+        if (bool_draw_fem_tetrahedrons) {
+            if (enable_draw_fem_tetrahedrons == TET_LINES) {
+                ImGui::SameLine();
+                if (ImGui::Button("Switch to mesh")) enable_draw_fem_tetrahedrons = TET_MESH;
+            }
+            else if (enable_draw_fem_tetrahedrons == TET_MESH) {
+                ImGui::SameLine();
+                if (ImGui::Button("Switch to lines")) enable_draw_fem_tetrahedrons = TET_LINES;
+
+                float floatColor[4];
+                getFloatsFromColor(floatColor, TETRAHEDRON_VISUALIZATION_COLOR);
+                if (ImGui::ColorEdit4("", floatColor)) {
+                    TETRAHEDRON_VISUALIZATION_COLOR = getColorFromFloats(floatColor);
+                }
+            }
+        }
+
         ImGui::Checkbox("Render particle indices", &enable_draw_particle_indices);
 
         ImGui::SeparatorText("Slice plane");
@@ -579,7 +642,6 @@ void MandosViewer::drawGUI() {
             if (ImGui::Button("Toggle Translation Rotation", buttonBox)) {
                 slicePlaneGuizmoToggle = not slicePlaneGuizmoToggle;
             }
-            ImGui::InputFloat4("Slice plane", slicePlane.data());
         }
         else {
             DisableUserDefinedClipping();
@@ -696,7 +758,7 @@ void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState
 
     Material material = createMaterialFromShader(renderState->solid_shader);
     material.maps[MATERIAL_MAP_DIFFUSE].color = RED;
-    renderState->lines->drawLines(material, vertices);
+    renderState->tetLines->drawLines(material, vertices);
     free(material.maps);
 }
 
@@ -752,7 +814,7 @@ void MandosViewer::draw_MassSpring(const MassSpringHandle& mass_spring, const Ph
 }
 
 
-void MandosViewer::draw_FEM_tetrahedrons(const Simulation& simulation, const PhysicsState& state) {
+void MandosViewer::draw_FEM_tetrahedrons_lines(const Simulation& simulation, const PhysicsState& state) {
     std::vector<float> vertices;
 
 #define MAT(type, name) \
@@ -780,9 +842,68 @@ void MandosViewer::draw_FEM_tetrahedrons(const Simulation& simulation, const Phy
 
     Material material = createMaterialFromShader(renderState->solid_shader);
     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
-    renderState->lines->drawLines(material, vertices);
+    renderState->tetLines->drawLines(material, vertices);
 
     free(material.maps);
+}
+
+void MandosViewer::draw_FEM_tetrahedrons(const Simulation& simulation, const PhysicsState& state) {
+#define MAT(type, name) \
+    for (unsigned int i = 0; i < simulation.energies.fem_elements_##name.size(); i++) { \
+        const FEM_Element3D<type>& e = simulation.energies.fem_elements_##name[i]; \
+        const unsigned int a = e.p1.index; \
+        const unsigned int b = e.p2.index; \
+        const unsigned int c = e.p3.index; \
+        const unsigned int d = e.p4.index; \
+        tet_indices.insert(tet_indices.end(), {a, b, c, d}); \
+        if (a < min_index) min_index = a; \
+        if (b < min_index) min_index = b; \
+        if (c < min_index) min_index = c; \
+        if (d < min_index) min_index = d; \
+    }
+    // Compute the tetrahedron mesh indices if they are not already computed
+    // ----------------------------------------------------
+    if (!renderState->tetVis) {
+        std::vector<unsigned int> tet_indices;
+        unsigned int min_index = 1000000000;
+        FEM_MATERIAL_MEMBERS
+
+        for (unsigned int i = 0; i < tet_indices.size(); i++) {
+            tet_indices[i] -= min_index;
+            tet_indices[i] /= 3;
+        }
+        renderState->tetVis = new TetrahedronMeshVisualization(tet_indices);
+        renderState->tetVis->dof_offset = min_index;
+    }
+
+    if (!renderState->tetVis) return;
+
+#undef MAT
+
+    // Update the Tetrahedron mesh vertices!
+    // ----------------------------------------------------
+    TetrahedronMeshVisualization* tetVis = renderState->tetVis;
+    std::vector<float> vertices;
+    for (unsigned int i = 0; i < tetVis->simMesh.vertices.size() / 3; i++) { \
+        unsigned int dof_index = tetVis->dof_offset + 3*i;
+        const Vec3& x = state.x.segment<3>(dof_index);
+        vertices.insert(vertices.end(), {x.x(), x.y(), x.z()});
+    }
+
+    for (unsigned int i = 0; i < vertices.size(); i++) {
+        tetVis->simMesh.vertices[i] = vertices[i];
+    }
+    tetVis->renderMesh.updateFromSimulationMesh(renderState->tetVis->simMesh);
+    tetVis->tetrahedronMeshGPU->updateData(renderState->tetVis->renderMesh);
+    Mesh tetMesh = MeshGPUtoRaymesh(*tetVis->tetrahedronMeshGPU, mem_pool);
+    Material mat = LoadMaterialDefault();
+    mat.maps[MATERIAL_MAP_ALBEDO].color = TETRAHEDRON_VISUALIZATION_COLOR;
+    mat.shader = renderState->bling_phong_shader;
+    DrawMesh(tetMesh, mat, MatrixIdentity());
+#undef MAT
+
+    // Update GPU data and update the tetrahedron mesh
+    // ----------------------------------------------------
 }
 
 void MandosViewer::draw_particle_indices(const Simulation& simulation, const PhysicsState& state) {
@@ -810,6 +931,8 @@ void MandosViewer::draw_simulation_state(const Simulation& simulation, const Phy
         draw_springs(simulation, state);
     if (enable_draw_particles)
         draw_particles(simulation, state);
-    if (enable_draw_fem_tetrahedrons)
+    if (enable_draw_fem_tetrahedrons ==TET_LINES)
+        draw_FEM_tetrahedrons_lines(simulation, state);
+    else if (enable_draw_fem_tetrahedrons ==TET_MESH)
         draw_FEM_tetrahedrons(simulation, state);
 }
