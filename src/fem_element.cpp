@@ -159,7 +159,7 @@ Mat9 FEM_NeoHookeanMaterial::get_phi_hessian(const Mat3& F) const {
   dvecSigma_dvecF += lambda * vec_G * vec_G.transpose();
   dvecSigma_dvecF += lambda * (J - alpha) * vec_H;
 
-  const bool enableSemiPositiveProjection = false;
+  const bool enableSemiPositiveProjection = true;
   if (enableSemiPositiveProjection) {
     const Eigen::SelfAdjointEigenSolver<Mat9> eigs(dvecSigma_dvecF);
     Vec9 eigenvalues = eigs.eigenvalues();
@@ -170,8 +170,7 @@ Mat9 FEM_NeoHookeanMaterial::get_phi_hessian(const Mat3& F) const {
         eigenvalues(i) = 0.0;
       }
     }
-
-    dvecSigma_dvecF = eigenvectors * eigenvalues.asDiagonal() * eigenvectors.transpose();
+    dvecSigma_dvecF = eigenvectors * eigenvalues.asDiagonal() * eigenvectors.inverse();
   }
   return dvecSigma_dvecF;
 }

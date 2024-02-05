@@ -4,6 +4,7 @@
 #include "simulation.hpp"
 #include "viewmandos.hpp"
 #include "physics_state.hpp"
+#include "../differentiable.hpp"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
@@ -18,6 +19,9 @@ PYBIND11_MODULE(pymandos, m) {
         .def(py::init())
         .def_readwrite("initial_state", &Simulation::initial_state)
         .def_readwrite("TimeStep", &Simulation::TimeStep)
+        .def("copy",  [](const Simulation &self) {
+            return Simulation(self);
+        })
         ;
 
     py::class_<PhysicsState>(m, "PhysicsState")
@@ -114,6 +118,18 @@ PYBIND11_MODULE(pymandos, m) {
         .def("add_gravity", &FEMHandle::add_gravity)
         ;
 
+    // DIFFERENTIABLE SIMULATION
+    // -----------------------------------------------------------------------------
+    py::class_<LossFunctionAndDerivatives>(m, "LossFunctionAndDerivatives")
+        .def(py::init<>())
+        .def_readwrite("loss", &LossFunctionAndDerivatives::loss)
+        .def_readwrite("loss_position_partial_derivative", &LossFunctionAndDerivatives::loss_position_partial_derivative)
+        .def_readwrite("loss_velocity_partial_derivative", &LossFunctionAndDerivatives::loss_velocity_partial_derivative)
+        .def_readwrite("loss_parameter_partial_derivative", &LossFunctionAndDerivatives::loss_parameter_partial_derivative)
+        ;
+
+    m.def("compute_loss_function_gradient_backpropagation", &compute_loss_function_gradient_backpropagation);
+
     // RENDERING
     // -----------------------------------------------------------------------------
     py::class_<MeshGPU>(m, "MeshGPU")
@@ -123,6 +139,7 @@ PYBIND11_MODULE(pymandos, m) {
 
     py::class_<MandosViewer>(m, "MandosViewer")
         .def(py::init<>())
+        .def("disable_render_logs", &MandosViewer::disable_render_logs)
         .def("window_should_close", &MandosViewer::window_should_close)
         .def("begin_drawing", &MandosViewer::begin_drawing)
         .def("end_drawing", &MandosViewer::end_drawing)

@@ -139,6 +139,8 @@ struct MandosViewer {
     MandosViewer(const Simulation* simulation);
     ~MandosViewer();
 
+    void disable_render_logs();
+
     bool window_should_close();
 
     void begin_drawing();

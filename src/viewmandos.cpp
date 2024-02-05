@@ -733,7 +733,9 @@ void MandosViewer::draw_particle(const ParticleHandle& particle, const PhysicsSt
     if (!enable_draw_simulable_meshes) return;
     const Vec3 position = particle.particle.get_position(state);
     Matrix transform = MatrixTranslate(position.x(), position.y(), position.z());
+    renderState->base_material.maps[MATERIAL_MAP_ALBEDO].color = PARTICLE_COLOR;
     DrawMesh(renderState->sphere_mesh, renderState->base_material, transform);
+    renderState->base_material.maps[MATERIAL_MAP_ALBEDO].color = WHITE;
 }
 
 void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh) {
@@ -938,4 +940,9 @@ void MandosViewer::draw_simulation_state(const Simulation& simulation, const Phy
         draw_FEM_tetrahedrons_lines(simulation, state);
     else if (enable_draw_fem_tetrahedrons ==TET_MESH)
         draw_FEM_tetrahedrons(simulation, state);
+}
+
+
+void MandosViewer::disable_render_logs() {
+    SetTraceLogLevel(LOG_NONE);
 }
