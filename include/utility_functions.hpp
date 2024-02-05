@@ -42,6 +42,9 @@ Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta);
  * Compute the cross product between 2 vectors.
  */
 inline Vec3 cross(const Vec3& v, const Vec3& u) {
-    return Vec3(v.y() * u.z() - v.z() * u.y(), v.z() * u.x() - v.x() * u.z(), v.x() * u.y() - v.y() * u.x());
+    return Vec3(v.y() * u.z() - v.z() * u.y(),
+                v.z() * u.x() - v.x() * u.z(),
+                v.x() * u.y() - v.y() * u.x());
 }
+
 #endif // UTILITY_FUNCTIONS_H_

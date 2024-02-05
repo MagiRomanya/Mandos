@@ -168,12 +168,15 @@ Vec3 update_axis_angle(const Vec3& theta, const Vec3& dtheta) {
     if (angle < 1e-4) return theta + dtheta;
     const Vec3 axis = theta / angle;
 
-#ifdef AXIS_ANGLE_LINEAR_APPROX
+#ifdef AXIS_ANGLE_LINEAR_UPDATE
     Scalar new_angle = angle + axis.dot(dtheta);
-    if (new_angle < 1e-7) return Vec3::Zero();
-    const Mat3 A = std::sin(angle/2) / std::sin(new_angle/2) * (Mat3::Identity() + 0.5f * skew(dtheta));
-    const Vec3 b = 0.5f * std::cos(angle/2) / std::sin(new_angle/2) * dtheta;
-    const Vec3 new_axis = A * axis + b;
+    if (fabs(new_angle) < 1e-7) { return Vec3::Zero(); }
+
+    const Scalar one_over_sin_new_angle_2 = 1.0 / std::sin(new_angle/2);
+    const Mat3 A = 0.5f * one_over_sin_new_angle_2 * (std::cos(angle/2) * Mat3::Identity() - std::sin(angle/2) * skew(axis));
+    const Vec3 b = one_over_sin_new_angle_2 * std::sin(angle/2) * axis;
+    const Vec3 new_axis = (A * dtheta + b).normalized();
+
     new_angle = std::fmod(new_angle, 2.0f * M_PI);
     if (new_angle > M_PI) {
         new_angle -= 2*M_PI;
@@ -185,7 +188,8 @@ Vec3 update_axis_angle(const Vec3& theta, const Vec3& dtheta) {
     // https://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
     Scalar new_angle = 2.0f * std::acos(std::cos(dangle/2.0f) * std::cos(angle/2.0f)
                                       - std::sin(dangle/2.0f) * std::sin(angle/2.0f) * axis.dot(daxis));
-    if (new_angle < 1e-7) return Vec3::Zero();
+
+    if (fabs(new_angle) < 1e-7) { return Vec3::Zero(); }
 
     const Vec3 new_axis = 1.0f / std::sin(new_angle/2.0f) * (
         std::sin(dangle/2.0f) * std::cos(angle/2.0f) * daxis

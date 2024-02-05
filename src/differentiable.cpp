@@ -1,6 +1,7 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <cassert>
 #include "differentiable.hpp"
+#include "linear_algebra.hpp"
 #include "utility_functions.hpp"
 
 /**
@@ -20,7 +21,7 @@ void compute_partial_gradient_energy_partial_position(Scalar TimeStep, const Ene
         }
     }
     for (unsigned int i = 0; i < energies.rotational_inertias.size(); i++) {
-        assert(false && "TODO: NOT IMPLEMENTED");
+        assert(false && "TODO: RIGID BODY NOT IMPLEMENTED");
     }
     // TODO: IGNORING DRAG!
     out.setFromTriplets(dgradE_dx0_triplets.begin(), dgradE_dx0_triplets.end());
@@ -43,7 +44,7 @@ void compute_partial_gradient_energy_partial_velocity(Scalar TimeStep, const Ene
         }
     }
     for (unsigned int i = 0; i < energies.rotational_inertias.size(); i++) {
-        assert(false && "TODO: NOT IMPLEMENTED");
+        assert(false && "TODO: RIGID BODY NOT IMPLEMENTED");
     }
 
     // TODO: IGNORING DRAG!
@@ -75,7 +76,8 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
         // -------------------------------------------------------------------------
         EnergyAndDerivatives f(nDoF);
         compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state, f);
-        SparseMat hessian(nDoF,nDoF), dgradE_dx0(nDoF,nDoF), dgradE_dv0(nDoF,nDoF), dgradE_dp(nDoF,nDoF);
+        SparseMat hessian(nDoF,nDoF), dgradE_dx0(nDoF,nDoF), dgradE_dv0(nDoF,nDoF);
+        Mat dgradE_dp = Mat::Zero(nDoF, nParameters);
         hessian.setFromTriplets(f.hessian_triplets.begin(), f.hessian_triplets.end());
         compute_partial_gradient_energy_partial_position(simulation.TimeStep, simulation.energies, state, dgradE_dx0);
         compute_partial_gradient_energy_partial_velocity(simulation.TimeStep, simulation.energies, state, dgradE_dv0);
