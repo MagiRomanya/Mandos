@@ -4,6 +4,7 @@
 #include <cassert>
 #include <vector>
 
+#include "particle.hpp"
 #include "simulable_generator.hpp"
 #include "simulation.hpp"
 
@@ -107,7 +108,10 @@ class MassSpringHandle {
 };
 
 class ParticleHandle {
-    public:
+        public:
+        ParticleHandle(Simulation& sim, const Particle& particle, unsigned int index)
+                : particle(particle), particle_index(index), simulation(sim)
+                {}
         ParticleHandle(Simulation& simulation, Scalar mass);
 
         ParticleHandle set_initial_position(Vec3 position) const;
@@ -127,6 +131,8 @@ class ParticleHandle {
 
 };
 
+ParticleHandle get_particle_handle(Simulation& sim, unsigned int particle_index);
+
 void join_particles_with_spring(Simulation& simulation, const ParticleHandle& p1, const ParticleHandle& p2, Scalar k, Scalar damping);
 
 void join_rigid_body_with_particle(Simulation& sim, RigidBodyHandle rbA, ParticleHandle p);
@@ -145,7 +151,6 @@ class FEMHandle {
         FEMHandle add_gravity(Scalar gravity) const;
 
         inline unsigned int get_n_particles() const { return bounds.n_particles; }
-
 
         const Scalar TotalMass;
         const SimulableBounds bounds;

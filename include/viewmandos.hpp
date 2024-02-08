@@ -167,6 +167,8 @@ struct MandosViewer {
 
     void draw_simulation_state(const Simulation& simulation, const PhysicsState& state);
 
+    void draw_springs_lines(const Simulation& simulation, const PhysicsState& state);
+
     void draw_springs(const Simulation& simulation, const PhysicsState& state);
 
     void draw_FEM_tetrahedrons_lines(const Simulation& simulation, const PhysicsState& state);

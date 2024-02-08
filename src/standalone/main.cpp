@@ -1,7 +1,9 @@
+#include <cmath>
 #include <cstring>
 #include <ctime>
 #include <iostream>
 #include <vector>
+#include <Eigen/Dense> // for inverse
 
 #include "linear_algebra.hpp"
 #include "mandos.hpp"
@@ -129,100 +131,106 @@ Eigen::Matrix<Scalar,3,9> dvecR_dtheta_analytic(const Vec3& theta) {
     return vectorized_levi_civita() * block_matrix(R);
 }
 
+/*
+ * Result = Ra * Rb
+*/
+inline Vec3 compose_axis_angle(const Vec3& a, const Vec3& b) {
+    const Scalar a_angle = a.norm();
+    if (a_angle < 1e-8) return b;
+    const Vec3 a_axis = a / a_angle;
+
+    const Scalar b_angle = b.norm();
+    if (b_angle < 1e-4) return b + a;
+    const Vec3 b_axis = b / b_angle;
+
+    // https://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
+    const Scalar sin_a_angle2 = std::sin(a_angle / 2);
+    const Scalar cos_a_angle2 = std::cos(a_angle / 2);
+    const Scalar sin_b_angle2 = std::sin(b_angle / 2);
+    const Scalar cos_b_angle2 = std::cos(b_angle / 2);
+
+    Scalar new_angle = 2.0f * std::acos(cos_a_angle2 * cos_b_angle2
+                                      - sin_a_angle2 * sin_b_angle2 * b_axis.dot(a_axis));
+
+    if (fabs(new_angle) < 1e-7) { return Vec3::Zero(); }
+
+    const Vec3 new_axis = 1.0f / std::sin(new_angle/2.0f) * (
+        sin_a_angle2 * cos_b_angle2 * a_axis
+        + cos_a_angle2 * sin_b_angle2 * b_axis
+        + sin_a_angle2 * sin_b_angle2 * cross(a_axis, b_axis));
+
+    new_angle = std::fmod(new_angle, 2.0f * M_PI);
+    if (new_angle > M_PI) {
+        new_angle -= 2*M_PI;
+    }
+    return new_angle * new_axis;
+}
+
+static const Scalar threshold2 = 1e-3;
+
+inline void compute_axis_angle_jacobian_parts(const Vec3& phi, Mat3& A, Mat3& B) {
+    const Mat3 phi_phiT = phi * phi.transpose();
+    A = compute_rotation_matrix_rodrigues(phi) - Mat3::Identity() + phi_phiT;
+    B = skew(phi) + phi_phiT;
+}
+
+inline Mat3 compute_global_to_local_axis_angle_jacobian(const Vec3& phi) {
+    if (phi.squaredNorm() < threshold2) return Mat3::Identity();
+
+    Mat3 A, B;
+    compute_axis_angle_jacobian_parts(phi, A, B);
+    return A.inverse() * B;
+}
+
+inline Mat3 compute_local_to_global_axis_angle_jacobian(const Vec3& phi) {
+    if (phi.squaredNorm() < threshold2) return Mat3::Identity();
+
+    Mat3 A, B;
+    compute_axis_angle_jacobian_parts(phi, A, B);
+    return B.inverse() * A;
+}
+
+inline Mat3 axis_angle_local_to_global_jacobian_finite(const Vec3& phi0) {
+    Mat3 dtheta_dphi;
+    const Scalar dx = 0.0001f;
+    for (int i = 0; i < 3; i++) {
+        Vec3 delta = Vec3::Zero();
+        delta[i] = dx;
+        const Vec3 dphi = compose_axis_angle(delta, phi0);
+        dtheta_dphi.col(i) = (dphi - phi0) / dx;
+    }
+    return dtheta_dphi;
+}
+
 int main(void) {
-    Simulation simulation;
-    const Scalar MASS = 10.0;
-    const Scalar GRAVITY = -1.0;
+    const Vec3 phi = M_PI_2 * Vec3(0,1,1).normalized();
 
-    RenderMesh render_mesh = RenderMesh("resources/obj/bunny.obj");
-    SimulationMesh sim_mesh = SimulationMesh("resources/obj/bunny.obj");
+    Mat3 finite_jac = axis_angle_local_to_global_jacobian_finite(phi);
+    Mat3 a_jac = compute_local_to_global_axis_angle_jacobian(phi);
+    Mat3 b_jac = compute_global_to_local_axis_angle_jacobian(phi);
+    std ::cout << "finite_jac" << std::endl
+               << finite_jac << std ::endl;
+    // std ::cout << "a_jac" << std::endl
+    //            << a_jac << std ::endl;
+    std ::cout << "b_jac" << std::endl
+               << b_jac << std ::endl;
 
-    const Mat3 inertia_tensor = compute_initial_inertia_tensor_PARTICLES(MASS, sim_mesh.vertices);
-    const Vec3 center_of_mass = compute_COM_position_PARTICLES(sim_mesh.vertices);
-    recenter_mesh(sim_mesh, center_of_mass);
+    const Scalar angle = phi.norm();
+    const Vec3 axis = phi / angle;
+    const Scalar half_angle = 0.5 * angle;
+    const Mat3 axisaxisT = axis * axis.transpose();
+    Mat3 c_jac = half_angle / tan(half_angle) * (Mat3::Identity() - axisaxisT)
+        + axisaxisT
+        - skew(0.5 * phi);
 
-    const Vec3 theta = Vec3(3.0,0,0);
-    const Vec3 theta0 = Vec3(2,0,0);
-    const Vec3 omega0 = Vec3(0,0,0);
+    std ::cout << "c_jac" << std::endl
+               << c_jac << std ::endl;
 
-    Eigen::Matrix<Scalar,3,9> dvecR_dtheta_F = dvecR_dtheta_finite(theta);
-    Eigen::Matrix<Scalar,3,9> dvecR_dtheta_F2 = dvecR_dtheta_finite2(theta);
-    Eigen::Matrix<Scalar,3,9> dvecR_dtheta_A = dvecR_dtheta_analytic(theta);
-    std::cout << "dvecR_dtheta finite = "<< std::endl << dvecR_dtheta_F << std::endl;
-    std::cout << "dvecR_dtheta finite 2 = "<< std::endl << dvecR_dtheta_F2 << std::endl;
-    std::cout << "dvecR_dtheta analytic = "<< std::endl << dvecR_dtheta_A << std::endl;
-
-    // const Vec3 grad1 = rotation_inertia_energy_gradient(theta, theta0, omega0, 0.1f);
-    // const Vec3 grad2 = rotation_inertia_energy_gradient2(theta, theta0, omega0, 0.1f);
-    // std ::cout << "grad1" << std::endl << grad1.transpose() << std ::endl;
-    // std ::cout << "grad2" << std::endl << grad2.transpose() << std ::endl;
-
-    // const Mat3 dEdtheta0 = rotation_inertia_dgradE_dtheta0(theta, theta0, omega0, 0.1f);
-    // const Mat3 dEdtheta0Finite = rotation_inertia_finite_dgradE_dtheta0(theta, theta0, omega0, 0.1f);
-    // const Mat3 Hess = rotation_inertia_energy_hessian(theta, theta0, omega0, 0.1f);
-    // std ::cout << "dEdtheta0" << std::endl << dEdtheta0 << std ::endl;
-    // std ::cout << "dEdtheta0Finite" << std::endl << dEdtheta0Finite << std ::endl;
-    // std ::cout << "Hess" << std::endl << Hess << std ::endl;
-    // std ::cout << "dEdtheta0 - Hess" << std::endl << dEdtheta0 - Hess << std ::endl;
-
-    // Compute the tetrahedron mesh
-    // std::vector<unsigned int> tet_indices;
-    // std::vector<float> tet_vertices;
-    // tetgen_compute_tetrahedrons(sim_mesh.indices, sim_mesh.vertices, tet_indices, tet_vertices);
-
-    // const Scalar young_modulus = 5e2;
-    // const Scalar poisson_ratio = 0.2;
-    // const FEMHandle fem1 = FEMHandle(simulation, tet_vertices, tet_indices, MASS, poisson_ratio, young_modulus)
-    //     .add_gravity(GRAVITY)
-    //     // .freeze_particles({0,1,4,5})
-    //     .freeze_particles({0})
-    //     ;
-    // //--------------------------------------------------------------------------------------
-
-    // bool simulation_paused = true;
-    // PhysicsState state = simulation.initial_state;
-
-    // // Render Initialization
-    // //--------------------------------------------------------------------------------------
-    // MandosViewer viewer = MandosViewer();
-    // render_mesh.updateFromSimulationMesh(sim_mesh);
-    // MeshGPU meshGPU = MeshGPU(render_mesh);
-
-    // while (!viewer.window_should_close())    // Detect window close button or ESC key
-    // {
-    //     // Update
-    //     //----------------------------------------------------------------------------------
-    //     /// Keyboard controls
-    //     if (viewer.is_key_pressed(Key_Q)) break;
-
-    //     if (viewer.is_key_pressed(Key_H)) simulation_paused = !simulation_paused;
-    //     if (viewer.is_key_pressed(Key_R)) state = simulation.initial_state;
-    //     static double simulation_time = 0;
-    //     if (!simulation_paused or viewer.is_key_pressed(Key_G)) {
-    //         Clock clock = Clock(simulation_time);
-    //         EnergyAndDerivatives f(0);
-    //         simulation_step(simulation, state, f);
-    //         std::cout << "Energy " << f.energy << std::endl;
-    //         // std::cout << "Simulation time " << simulation_time << " (ms)" << std::endl;
-    //     }
-    //     //----------------------------------------------------------------------------------
-
-    //     // Draw
-    //     //----------------------------------------------------------------------------------
-    //     viewer.begin_drawing();
-    //     {
-    //         viewer.begin_3D_mode();
-    //         {
-    //             // viewer.draw_particles(simulation, state);
-    //             // viewer.draw_FEM_tetrahedrons(simulation, state);
-    //             viewer.draw_FEM(fem1, state, meshGPU, render_mesh, sim_mesh);
-    //             // viewer.draw_mesh(Mat4::Identity(), meshGPU);
-    //         }
-    //         viewer.end_3D_mode();
-    //     }
-    //     viewer.end_drawing();
-    //     //----------------------------------------------------------------------------------
-    // }
-
+    Vec3 test = M_PI_2 * Vec3(1,0,1).normalized();
+    Mat3 Ra = compute_rotation_matrix_rodrigues(test);
+    Vec3 test2 = test + test.normalized() * 2 * M_PI;
+    Mat3 Rb = compute_rotation_matrix_rodrigues(test2);
+    DEBUG_LOG(Ra);
+    DEBUG_LOG(Rb);
     return 0;
 }

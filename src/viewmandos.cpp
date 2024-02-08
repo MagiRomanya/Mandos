@@ -47,6 +47,16 @@ inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
     return r;
 }
 
+inline Matrix matrix_eigen_to_raylib(const Mat3& m) {
+    Matrix r = {
+    m(0,0), m(0,1), m(0, 2), 0,
+    m(1,0), m(1,1), m(1, 2), 0,
+    m(2,0), m(2,1), m(2, 2), 0,
+         0,      0,       0, 1,
+    };
+    return r;
+}
+
 inline Vector3 vector3_eigen_to_raylib(const Vec3& v) {
     return Vector3{v.x(), v.y(), v.z()};
 }
@@ -248,6 +258,7 @@ struct RenderState {
     // GEOMETRY
     // -------------------------------------------------------------
     Mesh sphere_mesh;
+    Model spring_model;
     MeshGPU* axis3D = nullptr;
     LinesGPU* tetLines = nullptr;
     TetrahedronMeshVisualization* tetVis = nullptr;
@@ -294,6 +305,7 @@ void RenderState::initialize() {
     SetMaterialTexture(&base_material, MATERIAL_MAP_NORMAL, normalMapTexture);
 
     // Meshes
+    spring_model = LoadModel("resources/obj/spring.obj");
     sphere_mesh = GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS);
     RenderMesh axis3Drender = RenderMesh("resources/obj/axis.obj");
     axis3D = new MeshGPU(axis3Drender);
@@ -307,6 +319,7 @@ void RenderState::initialize() {
 void RenderState::deinitialize() {
     // Unload geometry
     UnloadMesh(sphere_mesh);
+    UnloadModel(spring_model);
     delete axis3D;
     delete tetLines;
     delete tetVis;
@@ -747,7 +760,7 @@ void MandosViewer::draw_mesh(const Mat4& transform, const MeshGPU& mesh) {
     draw_mesh_color(transform, mesh, mem_pool, WHITE);
 }
 
-void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState& state) {
+void MandosViewer::draw_springs_lines(const Simulation& simulation, const PhysicsState& state) {
     std::vector<float> vertices;
     for (size_t i = 0; i < simulation.energies.particle_springs.size(); i++) {
         ParticleSpring s = simulation.energies.particle_springs[i];
@@ -765,6 +778,42 @@ void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState
     material.maps[MATERIAL_MAP_DIFFUSE].color = RED;
     renderState->tetLines->drawLines(material, vertices);
     free(material.maps);
+}
+
+void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState& state) {
+    std::vector<Matrix> transforms;
+    transforms.reserve(simulation.energies.particle_springs.size());
+
+    for (size_t i = 0; i < simulation.energies.particle_springs.size(); i++) {
+        ParticleSpring s = simulation.energies.particle_springs[i];
+        const Vec3 x1 = s.p1.get_position(state);
+        const Vec3 x2 = s.p2.get_position(state);
+        const Vec3 center = (x1 + x2) * 0.5f;
+        const Scalar length = (x1 - x2).norm();
+        const Vec3 align_axis = (x1 - x2) / length;
+        Mat3 Rotation = Mat3::Identity();
+        const Vec3 up = Vec3(0.0, 0.0, 1.0);
+        if (cross(up, align_axis).squaredNorm() > 1e-3) {
+            Vec3 tangent = cross(align_axis, up).normalized();
+            Vec3 bitangent = cross(align_axis, tangent).normalized();
+            Rotation.col(0) = tangent;
+            Rotation.col(1) = bitangent;
+            Rotation.col(2) = align_axis;
+        }
+        Matrix transform = MatrixTranslate(center.x(), center.y(), center.z());
+        const Matrix rotation4 = matrix_eigen_to_raylib(Rotation);
+        const Matrix rotateX = MatrixRotateX(M_PI_2);
+        transform = MatrixMultiply(rotation4, transform);
+        transform = MatrixMultiply(rotateX, transform);
+        const Matrix scale = MatrixScale(1, length, 1);
+        transform = MatrixMultiply(scale, transform);
+        transforms.push_back(transform);
+    }
+
+    Material matInstances = LoadMaterialDefault();
+    matInstances.shader = renderState->instancing_shader;
+    matInstances.maps[MATERIAL_MAP_DIFFUSE].color = PARTICLE_COLOR;
+    DrawMeshInstanced(renderState->spring_model.meshes[0], matInstances, transforms.data(), transforms.size());
 }
 
 void MandosViewer::draw_particles(const Simulation& simulation, const PhysicsState& state) {
@@ -932,8 +981,10 @@ void MandosViewer::draw_particle_indices(const Simulation& simulation, const Phy
 void MandosViewer::draw_simulation_state(const Simulation& simulation, const PhysicsState& state) {
     SavedSim = &simulation;
     SavedState = &state;
-    if (enable_draw_springs)
+    if (enable_draw_springs) {
+        // draw_springs(simulation, state);
         draw_springs(simulation, state);
+    }
     if (enable_draw_particles)
         draw_particles(simulation, state);
     if (enable_draw_fem_tetrahedrons ==TET_LINES)

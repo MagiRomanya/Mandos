@@ -76,6 +76,8 @@ PYBIND11_MODULE(pymandos, m) {
 
     m.def("join_particles_with_spring", &join_particles_with_spring);
 
+    m.def("get_particle", &get_particle_handle);
+
     m.def("compute_tetrahedrons", py::overload_cast<const std::vector<unsigned int>&, const std::vector<float>&, TetrahedronMesh&>(&tetgen_compute_tetrahedrons));
 
     py::class_<RigidBodyHandle>(m, "RigidBody")

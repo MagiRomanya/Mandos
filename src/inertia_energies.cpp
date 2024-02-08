@@ -60,7 +60,7 @@ Scalar RotationalInertia::compute_energy(Scalar TimeStep, const PhysicsState& st
 
 }
 
-static const Scalar threshold2 = 1e-3;
+static const Scalar threshold2 = 1e-7;
 
 inline void compute_axis_angle_jacobian_parts(const Vec3& phi, Mat3& A, Mat3& B) {
     const Mat3 phi_phiT = phi * phi.transpose();
@@ -69,7 +69,7 @@ inline void compute_axis_angle_jacobian_parts(const Vec3& phi, Mat3& A, Mat3& B)
 }
 
 inline Mat3 compute_global_to_local_axis_angle_jacobian(const Vec3& phi) {
-    if (phi.squaredNorm() < threshold2) return Mat3::Identity();
+    if (phi.norm() < threshold2) return Mat3::Identity();
 
     Mat3 A, B;
     compute_axis_angle_jacobian_parts(phi, A, B);
@@ -77,11 +77,22 @@ inline Mat3 compute_global_to_local_axis_angle_jacobian(const Vec3& phi) {
 }
 
 inline Mat3 compute_local_to_global_axis_angle_jacobian(const Vec3& phi) {
-    if (phi.squaredNorm() < threshold2) return Mat3::Identity();
+    if (phi.norm() < threshold2) return Mat3::Identity();
 
     Mat3 A, B;
     compute_axis_angle_jacobian_parts(phi, A, B);
     return B.inverse() * A;
+}
+
+inline Mat3 compute_global_axis_angle_jacobian(const Vec3& phi) {
+    const Scalar angle = phi.norm();
+    if (angle < threshold2) return Mat3::Identity();
+    const Vec3 axis = phi / angle;
+    const Scalar half_angle = 0.5 * angle;
+    const Mat3 axisaxisT = axis * axis.transpose();
+    return half_angle / tan(half_angle) * (Mat3::Identity() - axisaxisT)
+        + axisaxisT
+        - skew(0.5 * phi);
 }
 
 void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
@@ -108,10 +119,11 @@ void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const Ph
     Vec3 gradient = 2.0f * Vec3(-A(1,2), A(0,2), -A(0,1)) / h2;                 // v s.t. A = skew(v)
     Mat3 hessian = 1.0f / h2 * (S.trace() * Mat3::Identity() - S);
 
-    // const Vec3 phi = rb.get_axis_angle(state.x);
-    // const Mat3 dtheta_dphi = compute_local_to_global_axis_angle_jacobian(phi);
-    // gradient = dtheta_dphi.transpose() * gradient;
-    // hessian = dtheta_dphi.transpose() * hessian * dtheta_dphi;
+    const Vec3 phi = rb.get_axis_angle(state.x);
+    const Mat3 dtheta_dphi = compute_global_axis_angle_jacobian(phi);
+    // const Mat3 dtheta_dphi = compute_global_to_local_axis_angle_jacobian(phi);
+    gradient = dtheta_dphi.transpose() * gradient;
+    hessian = dtheta_dphi.transpose() * hessian * dtheta_dphi;
 
     // Add the energy derivatives to the global structure
     // ---------------------------------------------------------------

@@ -212,6 +212,11 @@ FEMHandle FEMHandle::add_gravity(Scalar gravity) const {
     return *this;
 }
 
+ParticleHandle get_particle_handle(Simulation& sim, unsigned int particle_index) {
+    Particle p = sim.simulables.particles[particle_index];
+    return ParticleHandle(sim, p, particle_index);
+}
+
 void join_rigid_body_with_particle(Simulation& sim, RigidBodyHandle rb, ParticleHandle p) {
     ParticleRigidBodyCopuling copuling = ParticleRigidBodyCopuling(rb.rb, p.particle, p.particle.get_position(sim.initial_state));
     sim.copulings.add_copuling(copuling);

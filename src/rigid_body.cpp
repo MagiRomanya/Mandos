@@ -42,6 +42,7 @@ Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta) {
     const Scalar THRESHOLD = 1e-2;
     if (angle < THRESHOLD) return Mat3::Identity() + skew(theta);
     else if (bound_angle < THRESHOLD) return Mat3::Identity() + skew(theta / angle * bound_angle);
+
     const Vec3 axis = theta / angle;
 
     // Rodrigues formula https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula#Matrix_notation
@@ -158,8 +159,56 @@ Vec3 compute_COM_position_UNIFORM_VOLUME(const std::vector<unsigned int>& indice
     return COM_position;
 }
 
+/*
+ * Result = Ra * Rb
+*/
+inline Vec3 compose_axis_angle(const Vec3& a, const Vec3& b) {
+    const Scalar a_angle = a.norm();
+    if (a_angle < 1e-8) return b;
+    const Vec3 a_axis = a / a_angle;
+
+    const Scalar b_angle = b.norm();
+    if (b_angle < 1e-4) return b + a;
+    const Vec3 b_axis = b / b_angle;
+
+    // https://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
+    const Scalar sin_a_angle2 = std::sin(a_angle / 2);
+    const Scalar cos_a_angle2 = std::cos(a_angle / 2);
+    const Scalar sin_b_angle2 = std::sin(b_angle / 2);
+    const Scalar cos_b_angle2 = std::cos(b_angle / 2);
+
+    Scalar new_angle = 2.0f * std::acos(cos_a_angle2 * cos_b_angle2
+                                      - sin_a_angle2 * sin_b_angle2 * b_axis.dot(a_axis));
+
+    if (fabs(new_angle) < 1e-7) { return Vec3::Zero(); }
+
+    const Vec3 new_axis = 1.0f / std::sin(new_angle/2.0f) * (
+        sin_a_angle2 * cos_b_angle2 * a_axis
+        + cos_a_angle2 * sin_b_angle2 * b_axis
+        + sin_a_angle2 * sin_b_angle2 * cross(a_axis, b_axis));
+
+    new_angle = std::fmod(new_angle, 2.0f * M_PI);
+    if (new_angle > M_PI) {
+        new_angle -= 2*M_PI;
+    }
+    return new_angle * new_axis;
+}
+
+inline Mat3 axis_angle_local_to_global_jacobian(const Vec3& theta, const Vec3& dtheta) {
+    Mat3 dtheta_dphi;
+    const Scalar dx = 0.01f;
+    const Vec3 phi = compose_axis_angle(dtheta, theta);
+    for (int i = 0; i < 3; i++) {
+        Vec3 delta = Vec3::Zero();
+        delta[i] = dx;
+        const Vec3 dphi = compose_axis_angle(dtheta + delta, theta);
+        dtheta_dphi.col(i) = (dphi - phi) / dx;
+    }
+    return dtheta_dphi;
+}
+
 #define AXIS_ANGLE_UPDATE
-Vec3 update_axis_angle(const Vec3& theta, const Vec3& dtheta) {
+Vec3 update_axis_angle(const Vec3& dtheta, const Vec3& theta) {
     const Scalar dangle = dtheta.norm();
     if (dangle < 1e-8) return theta;
     const Vec3 daxis = dtheta / dangle;
@@ -185,22 +234,7 @@ Vec3 update_axis_angle(const Vec3& theta, const Vec3& dtheta) {
 #endif // AXIS_ANGLE_LINEAR_APPROX
 
 #ifdef AXIS_ANGLE_UPDATE
-    // https://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
-    Scalar new_angle = 2.0f * std::acos(std::cos(dangle/2.0f) * std::cos(angle/2.0f)
-                                      - std::sin(dangle/2.0f) * std::sin(angle/2.0f) * axis.dot(daxis));
-
-    if (fabs(new_angle) < 1e-7) { return Vec3::Zero(); }
-
-    const Vec3 new_axis = 1.0f / std::sin(new_angle/2.0f) * (
-        std::sin(dangle/2.0f) * std::cos(angle/2.0f) * daxis
-        + std::cos(dangle/2.0f) * std::sin(angle/2.0f) * axis
-        + std::sin(dangle/2.0f) * std::sin(angle/2.0f) * cross(daxis, axis));
-
-    new_angle = std::fmod(new_angle, 2.0f * M_PI);
-    if (new_angle > M_PI) {
-        new_angle -= 2*M_PI;
-    }
-    return new_angle * new_axis;
+    return compose_axis_angle(dtheta, theta);
 #endif // AXIS_ANGLE_UPDATE
 
 #ifdef AXIS_ANLGE_QUATERNION_UPDATE
@@ -227,9 +261,19 @@ void RigidBody::update_state(const Vec& dx, Vec& x) const {
     // Update axis-angle rotation
 
     const Vec3 theta = get_axis_angle(x);
-    const Vec3 dtheta = get_axis_angle(dx); // omega * TimeStep
-    const Vec3 axis_angle = update_axis_angle(theta, dtheta);
-    x.segment<3>(index+3) = axis_angle;
+    const Vec3 dtheta = get_axis_angle(dx);
+
+    Vec3 new_theta = theta + dtheta;
+    Scalar new_angle = new_theta.norm();
+    Vec3 axis = new_theta / new_angle;
+    new_angle = std::fmod(new_angle, 2.0f * M_PI);
+    if (new_angle > M_PI) {
+        new_angle -= 2*M_PI;
+    }
+    x.segment<3>(index+3) = new_angle * axis;
+
+    // const Vec3 axis_angle = compose_axis_angle(dtheta, theta);
+    // x.segment<3>(index+3) = axis_angle;
 }
 
 Vec3 compute_principal_moments_of_inertia(const Mat3& inertia_tensor) {
@@ -238,4 +282,3 @@ Vec3 compute_principal_moments_of_inertia(const Mat3& inertia_tensor) {
     assert(eigenvalues.imag().isZero());
     return eigenvalues.real();
 }
-

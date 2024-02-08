@@ -1,14 +1,16 @@
-#include <Eigen/IterativeLinearSolvers>
-#include <Eigen/SparseCore>
 #include <iostream>
+#include <thread>
 #include <vector>
+#include <Eigen/SparseCore>
+#include <Eigen/IterativeLinearSolvers>
+#include "linear_algebra.hpp"
 
 #include "integrators.hpp"
-#include "linear_algebra.hpp"
 #include "particle_rigid_body_copuling.hpp"
 #include "physics_state.hpp"
 #include "simulation.hpp"
 #include "utility_functions.hpp"
+#include "clock.hpp"
 
 void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, Vec& dx) {
     const unsigned int nDoF = state.get_nDoF();
@@ -29,8 +31,11 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
 
     // Solving the system of equations
     // ----------------------------------------------------------------------------------
-    // Gradient conjugate solving method class
-    Eigen::ConjugateGradient<SparseMat> cg;
+    Eigen::setNbThreads(std::thread::hardware_concurrency());
+    Eigen::setNbThreads(0);
+    Eigen::ConjugateGradient<SparseMat, Eigen::Lower | Eigen::Upper> cg;
+    const Scalar tol = 1e-2;
+    cg.setTolerance(tol);
     cg.compute(equation_matrix);
     dx = copuling_jacobian * cg.solve(equation_vector);
 }
