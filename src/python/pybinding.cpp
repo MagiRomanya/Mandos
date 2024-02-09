@@ -78,7 +78,7 @@ PYBIND11_MODULE(pymandos, m) {
 
     m.def("get_particle", &get_particle_handle);
 
-    m.def("compute_tetrahedrons", py::overload_cast<const std::vector<unsigned int>&, const std::vector<float>&, TetrahedronMesh&>(&tetgen_compute_tetrahedrons));
+    m.def("compute_tetrahedrons", py::overload_cast<const std::vector<unsigned int>&, const std::vector<Scalar>&, TetrahedronMesh&>(&tetgen_compute_tetrahedrons));
 
     py::class_<RigidBodyHandle>(m, "RigidBody")
         .def(py::init<Simulation&, Scalar, std::vector<Scalar>>())

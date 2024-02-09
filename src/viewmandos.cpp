@@ -39,26 +39,26 @@ Color TETRAHEDRON_VISUALIZATION_COLOR = PURPLE;
 
 inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
     Matrix r = {
-    m(0,0), m(0,1), m(0, 2), m(0, 3),
-    m(1,0), m(1,1), m(1, 2), m(1, 3),
-    m(2,0), m(2,1), m(2, 2), m(2, 3),
-    m(3,0), m(3,1), m(3, 2), m(3, 3),
+    (float) m(0,0), (float) m(0,1), (float) m(0, 2), (float) m(0, 3),
+    (float) m(1,0), (float) m(1,1), (float) m(1, 2), (float) m(1, 3),
+    (float) m(2,0), (float) m(2,1), (float) m(2, 2), (float) m(2, 3),
+    (float) m(3,0), (float) m(3,1), (float) m(3, 2), (float) m(3, 3),
     };
     return r;
 }
 
 inline Matrix matrix_eigen_to_raylib(const Mat3& m) {
     Matrix r = {
-    m(0,0), m(0,1), m(0, 2), 0,
-    m(1,0), m(1,1), m(1, 2), 0,
-    m(2,0), m(2,1), m(2, 2), 0,
-         0,      0,       0, 1,
+    (float) m(0,0), (float) m(0,1), (float) m(0, 2), 0,
+    (float) m(1,0), (float) m(1,1), (float) m(1, 2), 0,
+    (float) m(2,0), (float) m(2,1), (float) m(2, 2), 0,
+                 0,              0,               0, 1,
     };
     return r;
 }
 
 inline Vector3 vector3_eigen_to_raylib(const Vec3& v) {
-    return Vector3{v.x(), v.y(), v.z()};
+    return Vector3{(float) v.x(), (float) v.y(), (float) v.z()};
 }
 
 Camera3D create_camera() {
@@ -74,12 +74,12 @@ Camera3D create_camera() {
 /**
  * Raylib expects tangents as vec4 and not vec3 idk why
  */
-void copy_tangents_as_vec_4(float* dest, const std::vector<float>& tangents) {
+void copy_tangents_as_vec_4(float* dest, const std::vector<Scalar>& tangents) {
     for (unsigned int i = 0; i < tangents.size() / 3; i++) {
-        dest[4*i+0] = tangents[3 * i + 0]; // x
-        dest[4*i+1] = tangents[3 * i + 1]; // y
-        dest[4*i+2] = tangents[3 * i + 2]; // z
-        dest[4*i+3] = 0.0f;                // w
+        dest[4*i+0] = static_cast<float>(tangents[3 * i + 0]); // x
+        dest[4*i+1] = static_cast<float>(tangents[3 * i + 1]); // y
+        dest[4*i+2] = static_cast<float>(tangents[3 * i + 2]); // z
+        dest[4*i+3] = 0.0f;                                    // w
     }
 }
 
@@ -96,14 +96,22 @@ MeshGPU::MeshGPU(const RenderMesh& mesh) {
 
     // Copy the data
     nVertices = mesh.vertices.size() / 3;
-    vertices = (float *) std::memcpy(vertices, mesh.vertices.data(), mesh.vertices.size()*sizeof(float));
-    texcoords = (float *) std::memcpy(texcoords, mesh.texcoords.data(), mesh.texcoords.size()*sizeof(float));
-    normals = (float *) std::memcpy(normals, mesh.normals.data(), mesh.normals.size()*sizeof(float));
+    for (int i = 0; i < nVertices; i++) {
+        vertices[3*i+0] = static_cast<float>(mesh.vertices[3*i+0]);
+        vertices[3*i+1] = static_cast<float>(mesh.vertices[3*i+1]);
+        vertices[3*i+2] = static_cast<float>(mesh.vertices[3*i+2]);
+
+        normals[3*i+0] = static_cast<float>(mesh.normals[3*i+0]);
+        normals[3*i+1] = static_cast<float>(mesh.normals[3*i+1]);
+        normals[3*i+2] = static_cast<float>(mesh.normals[3*i+2]);
+
+        texcoords[2*i+0] = static_cast<float>(mesh.texcoords[2*i+0]);
+        texcoords[2*i+1] = static_cast<float>(mesh.texcoords[2*i+1]);
+    }
+    // vertices = (float *) std::memcpy(vertices, mesh.vertices.data(), mesh.vertices.size()*sizeof(float));
+    // texcoords = (float *) std::memcpy(texcoords, mesh.texcoords.data(), mesh.texcoords.size()*sizeof(float));
+    // normals = (float *) std::memcpy(normals, mesh.normals.data(), mesh.normals.size()*sizeof(float));
     copy_tangents_as_vec_4(tangents, mesh.tangents);
-    if (!vertices) std::cerr << "MeshGPU::MeshGPU: vertices null" << std::endl;
-    if (!texcoords) std::cerr << "MeshGPU::MeshGPU: texcoord null" << std::endl;
-    if (!normals) std::cerr << "MeshGPU::MeshGPU: normals null" << std::endl;
-    if (!tangents) std::cerr << "MeshGPU::MeshGPU: tangents null" << std::endl;
 
     // Upload the mesh to GPU
     Mesh raymesh = {0};
@@ -126,8 +134,18 @@ MeshGPU::MeshGPU(const RenderMesh& mesh) {
 
 void MeshGPU::updateData(const RenderMesh& mesh) {
     // Copy the data from the render mesh
-    vertices = (float*) std::memcpy(vertices, mesh.vertices.data(), mesh.vertices.size()*sizeof(float));
-    normals = (float*) std::memcpy(normals, mesh.normals.data(), mesh.normals.size()*sizeof(float));
+
+    for (int i = 0; i < nVertices; i++) {
+        vertices[3*i+0] = static_cast<float>(mesh.vertices[3*i+0]);
+        vertices[3*i+1] = static_cast<float>(mesh.vertices[3*i+1]);
+        vertices[3*i+2] = static_cast<float>(mesh.vertices[3*i+2]);
+
+        normals[3*i+0] = static_cast<float>(mesh.normals[3*i+0]);
+        normals[3*i+1] = static_cast<float>(mesh.normals[3*i+1]);
+        normals[3*i+2] = static_cast<float>(mesh.normals[3*i+2]);
+    }
+    // vertices = (float*) std::memcpy(vertices, mesh.vertices.data(), mesh.vertices.size()*sizeof(float));
+    // normals = (float*) std::memcpy(normals, mesh.normals.data(), mesh.normals.size()*sizeof(float));
     copy_tangents_as_vec_4(tangents, mesh.tangents);
 
     // Update the VBOs in the GPU
@@ -712,7 +730,7 @@ void DrawAxis3D(MemoryPool& mem_pool) {
     axisCam.position = Vector3(0.0f, 0.0f, 10.0f);
     axisCam.projection = CAMERA_ORTHOGRAPHIC;
     Mat3 transform = Mat3::Identity()*2.f;
-    Scalar pitch, yaw;
+    float pitch, yaw;
     getPitchYaw(renderState->camera, pitch, yaw);
     const Eigen::AngleAxis<Scalar> pitchRotation(pitch, Vec3(1.0f,0.0f,0.0f));
     const Eigen::AngleAxis<Scalar> yawRotation(-yaw - M_PI_2, Vec3(renderState->camera.up.x,renderState->camera.up.y,renderState->camera.up.z));
@@ -720,9 +738,9 @@ void DrawAxis3D(MemoryPool& mem_pool) {
     Mesh raymesh = MeshGPUtoRaymesh(*renderState->axis3D, mem_pool);
 
     Matrix rayTransform = {
-    transform(0,0), transform(0,1), transform(0, 2), axisPosition.x,
-    transform(1,0), transform(1,1), transform(1, 2), axisPosition.y,
-    transform(2,0), transform(2,1), transform(2, 2), axisPosition.z,
+    (float)transform(0,0), (float)transform(0,1), (float)transform(0, 2), axisPosition.x,
+    (float)transform(1,0), (float)transform(1,1), (float)transform(1, 2), axisPosition.y,
+    (float)transform(2,0), (float)transform(2,1), (float)transform(2, 2), axisPosition.z,
     0.0f ,0.0f ,0.0f , 1.0f,
     };
     BeginMode3D(axisCam);
@@ -874,22 +892,22 @@ void MandosViewer::draw_FEM_tetrahedrons_lines(const Simulation& simulation, con
 #define MAT(type, name) \
     for (unsigned int i = 0; i < simulation.energies.fem_elements_##name.size(); i++) { \
         const FEM_Element3D<type>& e = simulation.energies.fem_elements_##name[i]; \
-        const Vec3& x1 = e.p1.get_position(state);  \
-        const Vec3& x2 = e.p2.get_position(state);  \
-        const Vec3& x3 = e.p3.get_position(state);  \
-        const Vec3& x4 = e.p4.get_position(state);  \
-        vertices.insert(vertices.end(), {x1.x(), x1.y(), x1.z()}); \
-        vertices.insert(vertices.end(), {x2.x(), x2.y(), x2.z()}); \
-        vertices.insert(vertices.end(), {x1.x(), x1.y(), x1.z()}); \
-        vertices.insert(vertices.end(), {x3.x(), x3.y(), x3.z()}); \
-        vertices.insert(vertices.end(), {x1.x(), x1.y(), x1.z()}); \
-        vertices.insert(vertices.end(), {x4.x(), x4.y(), x4.z()}); \
-        vertices.insert(vertices.end(), {x2.x(), x2.y(), x2.z()}); \
-        vertices.insert(vertices.end(), {x4.x(), x4.y(), x4.z()}); \
-        vertices.insert(vertices.end(), {x2.x(), x2.y(), x2.z()}); \
-        vertices.insert(vertices.end(), {x3.x(), x3.y(), x3.z()}); \
-        vertices.insert(vertices.end(), {x3.x(), x3.y(), x3.z()}); \
-        vertices.insert(vertices.end(), {x4.x(), x4.y(), x4.z()}); \
+        const Vector3 x1 = vector3_eigen_to_raylib(e.p1.get_position(state));  \
+        const Vector3 x2 = vector3_eigen_to_raylib(e.p2.get_position(state));  \
+        const Vector3 x3 = vector3_eigen_to_raylib(e.p3.get_position(state));  \
+        const Vector3 x4 = vector3_eigen_to_raylib(e.p4.get_position(state));  \
+        vertices.insert(vertices.end(), {x1.x, x1.y, x1.z}); \
+        vertices.insert(vertices.end(), {x2.x, x2.y, x2.z}); \
+        vertices.insert(vertices.end(), {x1.x, x1.y, x1.z}); \
+        vertices.insert(vertices.end(), {x3.x, x3.y, x3.z}); \
+        vertices.insert(vertices.end(), {x1.x, x1.y, x1.z}); \
+        vertices.insert(vertices.end(), {x4.x, x4.y, x4.z}); \
+        vertices.insert(vertices.end(), {x2.x, x2.y, x2.z}); \
+        vertices.insert(vertices.end(), {x4.x, x4.y, x4.z}); \
+        vertices.insert(vertices.end(), {x2.x, x2.y, x2.z}); \
+        vertices.insert(vertices.end(), {x3.x, x3.y, x3.z}); \
+        vertices.insert(vertices.end(), {x3.x, x3.y, x3.z}); \
+        vertices.insert(vertices.end(), {x4.x, x4.y, x4.z}); \
     }
     FEM_MATERIAL_MEMBERS
 #undef MAT
@@ -941,7 +959,7 @@ void MandosViewer::draw_FEM_tetrahedrons(const Simulation& simulation, const Phy
     for (unsigned int i = 0; i < tetVis->simMesh.vertices.size() / 3; i++) { \
         unsigned int dof_index = tetVis->dof_offset + 3*i;
         const Vec3& x = state.x.segment<3>(dof_index);
-        vertices.insert(vertices.end(), {x.x(), x.y(), x.z()});
+        vertices.insert(vertices.end(), {(float)x.x(), (float)x.y(), (float)x.z()});
     }
 
     for (unsigned int i = 0; i < vertices.size(); i++) {

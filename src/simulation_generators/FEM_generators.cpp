@@ -41,13 +41,13 @@ SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_m
 }
 
 
-#define MAT(type, name) template SimulableBounds generate_FEM3D_from_tetrahedron_mesh<type>(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,const std::vector<unsigned int>& tet_indices, const std::vector<float>& tet_vertices);
+#define MAT(type, name) template SimulableBounds generate_FEM3D_from_tetrahedron_mesh<type>(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,const std::vector<unsigned int>& tet_indices, const std::vector<Scalar>& tet_vertices);
 FEM_MATERIAL_MEMBERS
 #undef MAT
 
 template <typename MaterialType>
 SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,
-                                                     const std::vector<unsigned int>& tet_indices, const std::vector<float>& tet_vertices) {
+                                                     const std::vector<unsigned int>& tet_indices, const std::vector<Scalar>& tet_vertices) {
   const unsigned int index = simulation.initial_state.x.size();
   const unsigned int particle_index = simulation.simulables.particles.size();
   const unsigned int nDoF = tet_vertices.size();

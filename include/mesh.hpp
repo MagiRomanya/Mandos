@@ -9,8 +9,8 @@ struct SimulationMesh;
 /**
  * Mesh description with repeated vertices, along with normals and texture coordinates.
  *
- * The vertices are stored as a vector of floats. The vector has size nVertices * 3. The number of triangles is nVertices / 3.
- * The normals, tangents and texture coordinates are also stored as vector of floats with sizes nVertices*3 (normals and tangens) and nVertices*2 (texture coordinates).
+ * The vertices are stored as a vector of scalars. The vector has size nVertices * 3. The number of triangles is nVertices / 3.
+ * The normals, tangents and texture coordinates are also stored as vector of scalars with sizes nVertices*3 (normals and tangens) and nVertices*2 (texture coordinates).
  */
 struct RenderMesh {
     RenderMesh() {};
@@ -19,16 +19,16 @@ struct RenderMesh {
 
     void updateFromSimulationMesh(const SimulationMesh& sim_mesh);
 
-    std::vector<float> vertices;
-    std::vector<float> normals;
-    std::vector<float> tangents;
-    std::vector<float> texcoords;
+    std::vector<Scalar> vertices;
+    std::vector<Scalar> normals;
+    std::vector<Scalar> tangents;
+    std::vector<Scalar> texcoords;
 };
 
 /**
  * Mesh description with no repeated vertices.
  *
- * The vertices are stored as a vector of floats. The vector has size nVertices * 3.
+ * The vertices are stored as a vector of scalars. The vector has size nVertices * 3.
  * The indices are stored as a vector of unsigned integers. The vector has size nTriangles * 3.
  */
 struct SimulationMesh {
@@ -46,7 +46,7 @@ struct SimulationMesh {
  * The tetrahedrons are described by the vector of indices which has a size of nTetrahedrons * 4.
  */
 struct TetrahedronMesh {
-    std::vector<float> vertices;
+    std::vector<Scalar> vertices;
     std::vector<unsigned int> indices;
 };
 
@@ -57,7 +57,7 @@ struct TetrahedronMesh {
  * @param out_vertices output vector of vertices (no repetition)
  * @param out_indices output vector of indices
  */
-void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& out_vertices, std::vector<unsigned int>& out_indices);
+void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<Scalar>& out_vertices, std::vector<unsigned int>& out_indices);
 
 /**
  * Compute a tetrahedron volumetric mesh from a triangle surface mesh.
@@ -66,8 +66,8 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& ou
  * @param out_tetrahedron_indices Tetrahedron output vector of indices (mutiple of 4)
  * @param out_tetrahedron_vertices Tetrahedron output vector of vertices
  */
-void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices,
-                                 std::vector<unsigned int>& out_tetrahedron_indices, std::vector<float>& out_tetrahedron_vertices);
+void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<Scalar>& triangle_vertices,
+                                 std::vector<unsigned int>& out_tetrahedron_indices, std::vector<Scalar>& out_tetrahedron_vertices);
 
 /**
  * Compute a tetrahedron volumetric mesh from a triangle surface mesh.
@@ -75,7 +75,7 @@ void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indic
  * @param triangle_indices, triangle_vertices description of the mesh with no repeated vertices.
  * @param tmesh Outputs of the computed tetrahedron mesh.
  */
-void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices, TetrahedronMesh& tmesh);
+void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<Scalar>& triangle_vertices, TetrahedronMesh& tmesh);
 
 /**
  * Compute the volume of the mesh (units of the vertices).

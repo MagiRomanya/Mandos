@@ -23,7 +23,7 @@ SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_m
 
 template <typename MaterialType>
 SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,
-                                                     const std::vector<unsigned int>& tet_indices, const std::vector<float>& tet_vertices);
+                                                     const std::vector<unsigned int>& tet_indices, const std::vector<Scalar>& tet_vertices);
 
 SimulableBounds generate_RigidBody_tennis_racket_effect(Simulation& simulation);
 

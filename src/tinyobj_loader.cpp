@@ -37,7 +37,7 @@ struct h_vec3 {
     }
 
     bool operator==(const h_vec3& other) const {
-        const float epsilon = 1e-6;
+        const Scalar epsilon = 1e-6;
         return abs(x - other.x) < epsilon && abs(y - other.y) < epsilon && abs(z - other.z) < epsilon;
     }
 };
@@ -118,9 +118,9 @@ SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
 }
 
 void LoadRenderMeshTinyOBJ(std::string inputfile,
-                                   std::vector<float> &out_vertices,
-                                   std::vector<float> &out_normals,
-                                   std::vector<float> &out_tex_coord) {
+                                   std::vector<Scalar> &out_vertices,
+                                   std::vector<Scalar> &out_normals,
+                                   std::vector<Scalar> &out_tex_coord) {
     tinyobj::ObjReaderConfig reader_config;
     tinyobj::ObjReader reader;
     if (!reader.ParseFromFile(inputfile, reader_config)) {
@@ -189,7 +189,7 @@ void LoadRenderMeshTinyOBJ(std::string inputfile,
 
 inline Vec3 compute_tangent_vector(const Vec3& edge1, const Vec3& edge2, const Vec2& deltaUV1, const Vec2& deltaUV2) {
     Vec3 tangent;
-    const float denominator = 1.0f / (deltaUV1.x() * deltaUV2.y() - deltaUV1.y() * deltaUV2.x());
+    const Scalar denominator = 1.0f / (deltaUV1.x() * deltaUV2.y() - deltaUV1.y() * deltaUV2.x());
     // First vertex tangent
     tangent.x() = denominator * (deltaUV2.y() * edge1.x() - deltaUV1.y() * edge2.x());
     tangent.y() = denominator * (deltaUV2.y() * edge1.y() - deltaUV1.y() * edge2.y());
@@ -263,7 +263,7 @@ RenderMesh::RenderMesh(const SimulationMesh& simMesh) {
     updateFromSimulationMesh(simMesh);
 }
 
-void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& out_vertices, std::vector<unsigned int>& out_indices) {
+void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<Scalar>& out_vertices, std::vector<unsigned int>& out_indices) {
     tinyobj::ObjReaderConfig reader_config;
     tinyobj::ObjReader reader;
     if (!reader.ParseFromFile(inputfile, reader_config)) {
@@ -279,7 +279,10 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<float>& ou
     auto& attrib = reader.GetAttrib();
     auto& shapes = reader.GetShapes();
 
-    out_vertices = attrib.vertices;
+    out_vertices.resize(attrib.vertices.size());
+    for (size_t i = 0; i < attrib.vertices.size(); i++) {
+        out_vertices[i] = static_cast<double>(attrib.vertices[i]);
+    }
 
     for (size_t s = 0; s < shapes.size(); s++) {
         const tinyobj::shape_t& shape = shapes[s];

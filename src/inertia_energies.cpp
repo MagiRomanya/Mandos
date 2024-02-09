@@ -120,8 +120,12 @@ void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const Ph
     Mat3 hessian = 1.0f / h2 * (S.trace() * Mat3::Identity() - S);
 
     const Vec3 phi = rb.get_axis_angle(state.x);
-    const Mat3 dtheta_dphi = compute_global_axis_angle_jacobian(phi);
-    // const Mat3 dtheta_dphi = compute_global_to_local_axis_angle_jacobian(phi);
+    Mat3 dtheta_dphi = compute_global_axis_angle_jacobian(phi);
+    DEBUG_LOG(dtheta_dphi.determinant());
+    dtheta_dphi = compute_global_axis_angle_jacobian(phi).inverse();
+
+    // const Mat3 dtheta_dphi = compute_local_to_global_axis_angle_jacobian(phi);
+    // const Mat3 dtheta_dphi = Mat3::Identity();
     gradient = dtheta_dphi.transpose() * gradient;
     hessian = dtheta_dphi.transpose() * hessian * dtheta_dphi;
 

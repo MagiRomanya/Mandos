@@ -4,12 +4,12 @@
 #include <tetgen.h>
 
 
-void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices, TetrahedronMesh& tmesh) {
+void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<Scalar>& triangle_vertices, TetrahedronMesh& tmesh) {
     tetgen_compute_tetrahedrons(triangle_indices, triangle_vertices, tmesh.indices, tmesh.vertices);
 }
 
-void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<float>& triangle_vertices,
-                                 std::vector<unsigned int>& out_tetrahedron_indices, std::vector<float>& out_tetrahedron_vertices) {
+void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indices, const std::vector<Scalar>& triangle_vertices,
+                                 std::vector<unsigned int>& out_tetrahedron_indices, std::vector<Scalar>& out_tetrahedron_vertices) {
 
     // Create the tetgen input object
     tetgenio in, out;

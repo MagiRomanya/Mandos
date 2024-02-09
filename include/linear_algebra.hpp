@@ -4,7 +4,7 @@
 #include "../external/eigen/Eigen/Core"
 #include "../external/eigen/Eigen/SparseCore"
 
-typedef float Scalar;
+typedef double Scalar;
 
 // STATIC VECTORS AND MATRICES
 typedef Eigen::Vector2<Scalar> Vec2;
