@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "linear_algebra.hpp"
+#include "utility_functions.hpp"
 
 /**
  * Compute the inertia tensor as if the object is made out of mass particles in their vertices.
@@ -45,9 +46,9 @@ Vec3 compute_principal_moments_of_inertia(const Mat3& inertia_tensor);
  */
 inline Mat3 compute_J_inertia_tensor(const Vec3& I) {
     Mat3 J = Mat3::Zero();
-    J(1,1) = - I.x() + I.y() + I.z();
-    J(2,2) = + I.x() - I.y() + I.z();
-    J(3,3) = + I.x() + I.y() - I.z();
+    J(0,0) = - I.x() + I.y() + I.z();
+    J(1,1) = + I.x() - I.y() + I.z();
+    J(2,2) = + I.x() + I.y() - I.z();
     return 0.5 * J;
 }
 
@@ -62,8 +63,10 @@ inline Mat3 compute_J_inertia_tensor(const Mat3& inertia_tensor) {
 }
 
 struct RigidBody {
-    RigidBody(unsigned int index, Scalar mass, Mat3 J_inertia_tensor0)
-        : index(index), mass(mass), J_inertia_tensor0(J_inertia_tensor0) {}
+    RigidBody(unsigned int index, Scalar mass, Mat3 inertia_tensor0)
+        : index(index), mass(mass), J_inertia_tensor0(compute_J_inertia_tensor(inertia_tensor0)) {
+        DEBUG_LOG(J_inertia_tensor0);
+    }
 
     const unsigned int index;
     const Scalar mass;

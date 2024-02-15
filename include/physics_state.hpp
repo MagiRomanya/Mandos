@@ -5,6 +5,8 @@
 #include "linear_algebra.hpp"
 
 struct PhysicsState {
+    PhysicsState() {}
+    PhysicsState(const Vec& x, const Vec& v) : x(x), v(v) {}
     Vec x;
     Vec v;
 

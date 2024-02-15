@@ -61,8 +61,8 @@ Mat3 SpringParameters::get_energy_hessian(Scalar TimeStep, const Vec3& x1, const
     const Vec3 u = (x1 - x2) / L;
     // Initialize the derivative matrix
     Mat3 df_dx = (L - L0) * Mat3::Identity();
-    // The u · u.transpose() matrix
     const Mat3 uut = u * u.transpose();
+
     // Calculate the final derivative matrix
     df_dx = - k / L * (df_dx + L0 * uut);
 

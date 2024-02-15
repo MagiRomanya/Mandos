@@ -7,6 +7,7 @@
 
 #include "rigid_body.hpp"
 #include "linear_algebra.hpp"
+#include "sinc.hpp"
 #include "utility_functions.hpp"
 
 Mat3 skew(const Vec3& v) {
@@ -34,20 +35,12 @@ Eigen::Matrix<Scalar,3,4> compute_axis_angle_quaternion_jacobian(const Eigen::Qu
 };
 
 Mat3 compute_rotation_matrix_rodrigues(const Vec3& theta) {
-    Scalar angle = theta.norm();
-    Scalar bound_angle = std::fmod(angle, 2 * M_PI);
-
-    // Prevent angle = 0, axis not well defined case
-    // Using small angle approximation instead
-    const Scalar THRESHOLD = 1e-2;
-    if (angle < THRESHOLD) return Mat3::Identity() + skew(theta);
-    else if (bound_angle < THRESHOLD) return Mat3::Identity() + skew(theta / angle * bound_angle);
-
-    const Vec3 axis = theta / angle;
-
-    // Rodrigues formula https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula#Matrix_notation
-    const Mat3 K = skew(axis);
-    return Mat3::Identity() + std::sin(angle) * K + (1.0f - std::cos(angle)) * K * K;
+    // https://ipc-sim.github.io/rigid-ipc/assets/rigid_ipc_paper_350ppi.pdf
+    // NOTE: There is an error in the paper. The sinc² is multiplied by 2 instead of 1/2.
+    const Scalar angle = fmod(theta.norm(), 2 * M_PI);
+    const Scalar sinc_angle_2 = sinc(angle / 2.0);
+    const Mat3 skew_theta = skew(theta);
+    return Mat3::Identity() + sinc(angle) * skew_theta + 0.5 * sinc_angle_2 * sinc_angle_2 * skew_theta * skew_theta;
 }
 
 Mat3 RigidBody::compute_inertia_tensor(const Mat3& rotation_matrix) const {
@@ -110,8 +103,8 @@ Mat3 compute_initial_inertia_tensor_PARTICLES(Scalar rb_total_mass, const std::v
     const Scalar PARTICLE_MASS = rb_total_mass * 3.0 / vertices.size();
     for (unsigned int i = 0; i < vertices.size(); i+=3) {
         const Vec3 r = Vec3(vertices[i], vertices[i+1], vertices[i+2]);
-        const Mat3 r_star = skew(r);
-        inertia_tensor += - PARTICLE_MASS * r_star * r_star;
+        const Mat3 skew_r = skew(r);
+        inertia_tensor += - PARTICLE_MASS * skew_r * skew_r;
     }
     return inertia_tensor;
 }
@@ -177,17 +170,17 @@ inline Vec3 compose_axis_angle(const Vec3& a, const Vec3& b) {
     const Scalar sin_b_angle2 = std::sin(b_angle / 2);
     const Scalar cos_b_angle2 = std::cos(b_angle / 2);
 
-    Scalar new_angle = 2.0f * std::acos(cos_a_angle2 * cos_b_angle2
+    Scalar new_angle = 2.0 * std::acos(cos_a_angle2 * cos_b_angle2
                                       - sin_a_angle2 * sin_b_angle2 * b_axis.dot(a_axis));
 
     if (fabs(new_angle) < 1e-7) { return Vec3::Zero(); }
 
-    const Vec3 new_axis = 1.0f / std::sin(new_angle/2.0f) * (
+    const Vec3 new_axis = 1.0 / std::sin(new_angle/2.0) * (
         sin_a_angle2 * cos_b_angle2 * a_axis
         + cos_a_angle2 * sin_b_angle2 * b_axis
         + sin_a_angle2 * sin_b_angle2 * cross(a_axis, b_axis));
 
-    new_angle = std::fmod(new_angle, 2.0f * M_PI);
+    new_angle = std::fmod(new_angle, 2.0 * M_PI);
     if (new_angle > M_PI) {
         new_angle -= 2*M_PI;
     }
@@ -196,7 +189,7 @@ inline Vec3 compose_axis_angle(const Vec3& a, const Vec3& b) {
 
 inline Mat3 axis_angle_local_to_global_jacobian(const Vec3& theta, const Vec3& dtheta) {
     Mat3 dtheta_dphi;
-    const Scalar dx = 0.01f;
+    const Scalar dx = 0.01;
     const Vec3 phi = compose_axis_angle(dtheta, theta);
     for (int i = 0; i < 3; i++) {
         Vec3 delta = Vec3::Zero();
@@ -222,11 +215,11 @@ Vec3 update_axis_angle(const Vec3& dtheta, const Vec3& theta) {
     if (fabs(new_angle) < 1e-7) { return Vec3::Zero(); }
 
     const Scalar one_over_sin_new_angle_2 = 1.0 / std::sin(new_angle/2);
-    const Mat3 A = 0.5f * one_over_sin_new_angle_2 * (std::cos(angle/2) * Mat3::Identity() - std::sin(angle/2) * skew(axis));
+    const Mat3 A = 0.5 * one_over_sin_new_angle_2 * (std::cos(angle/2) * Mat3::Identity() - std::sin(angle/2) * skew(axis));
     const Vec3 b = one_over_sin_new_angle_2 * std::sin(angle/2) * axis;
     const Vec3 new_axis = (A * dtheta + b).normalized();
 
-    new_angle = std::fmod(new_angle, 2.0f * M_PI);
+    new_angle = std::fmod(new_angle, 2.0 * M_PI);
     if (new_angle > M_PI) {
         new_angle -= 2*M_PI;
     }
@@ -263,22 +256,23 @@ void RigidBody::update_state(const Vec& dx, Vec& x) const {
     const Vec3 theta = get_axis_angle(x);
     const Vec3 dtheta = get_axis_angle(dx);
 
-    Vec3 new_theta = theta + dtheta;
-    Scalar new_angle = new_theta.norm();
-    Vec3 axis = new_theta / new_angle;
-    new_angle = std::fmod(new_angle, 2.0f * M_PI);
-    if (new_angle > M_PI) {
-        new_angle -= 2*M_PI;
-    }
-    x.segment<3>(index+3) = new_angle * axis;
+    // Vec3 new_theta = theta + dtheta;
+    // Scalar new_angle = new_theta.norm();
+    // Vec3 axis = new_theta / new_angle;
+    // new_angle = std::fmod(new_angle, 2.0 * M_PI);
+    // if (new_angle > M_PI) {
+    //     new_angle -= 2*M_PI;
+    // }
+    // x.segment<3>(index+3) = new_angle * axis;
 
-    // const Vec3 axis_angle = compose_axis_angle(dtheta, theta);
-    // x.segment<3>(index+3) = axis_angle;
+    const Vec3 axis_angle = compose_axis_angle(dtheta, theta);
+    x.segment<3>(index+3) = axis_angle;
 }
 
 Vec3 compute_principal_moments_of_inertia(const Mat3& inertia_tensor) {
     Eigen::EigenSolver<Mat3> solver(inertia_tensor);
     const auto eigenvalues = solver.eigenvalues();
     assert(eigenvalues.imag().isZero());
+    DEBUG_LOG(eigenvalues.real());
     return eigenvalues.real();
 }

@@ -547,14 +547,14 @@ void myUpdateCamera(Camera3D& camera) {
 }
 
 void MandosViewer::drawSimulationVisualizationWindow() {
-    bool VisualizationOpen = true;
     const ImGuiWindowFlags constFlags = ImGuiWindowFlags_NoCollapse
-        | ImGuiWindowFlags_NoScrollWithMouse
-        | ImGuiWindowFlags_NoScrollbar
-        ;
+                                        | ImGuiWindowFlags_NoScrollWithMouse
+                                        | ImGuiWindowFlags_NoScrollbar
+                                        | ImGuiWindowFlags_NoBackground
+                                        ;
     static ImGuiWindowFlags flags = constFlags;
     ImGui::SetNextWindowSizeConstraints(ImVec2(300,300), ImVec2(3000,3000));
-    ImGui::Begin("Simulation view", &VisualizationOpen, flags);
+    ImGui::Begin("Simulation view", nullptr, flags);
     const bool isTitleBarHovered = ImGui::IsItemHovered();
     flags = ImGui::IsWindowHovered() && (not isTitleBarHovered) ? ImGuiWindowFlags_NoMove : 0;
     flags = flags | constFlags;

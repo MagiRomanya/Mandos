@@ -34,9 +34,13 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
     Eigen::setNbThreads(std::thread::hardware_concurrency());
     Eigen::setNbThreads(0);
     Eigen::ConjugateGradient<SparseMat, Eigen::Lower | Eigen::Upper> cg;
-    const Scalar tol = 1e-2;
-    cg.setTolerance(tol);
-    cg.compute(equation_matrix);
+    const Scalar tol = 1e-9;
+    double time = 0;
+    {
+        Clock clock(time);
+        cg.setTolerance(tol);
+        cg.compute(equation_matrix);
+    }
     dx = copuling_jacobian * cg.solve(equation_vector);
 }
 

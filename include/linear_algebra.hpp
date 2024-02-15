@@ -78,5 +78,29 @@ inline Eigen::Matrix<Scalar, 3, 9> vectorized_levi_civita() {
     return e;
 }
 
+template<int N>
+inline Eigen::Vector<Scalar, N> transpose_vectorized_vector(const Eigen::Vector<Scalar,N>& in) {
+  const int n = sqrt(N);
+  Eigen::Vector<Scalar, N> v;
+  for (int i=0; i < n; i++) {
+    for (int j=0; j < n; j++) {
+      int index = n*i + j;
+      int index_t = n*j + i;
+      v(index) = in(index_t);
+    }
+  }
+  return v;
+}
+
+template <int N, int M>
+inline Eigen::Matrix<Scalar, N, M> transpose_vectorized_matrix(const Eigen::Matrix<Scalar, N, M>& in) {
+  Eigen::Matrix<Scalar, N, M> m;
+  const int n = sqrt(N);
+  for (int i = 0; i < n; i++) {
+    m.col(i) = transpose_vectorized_vector<N>(in.col(i));
+  }
+  return m;
+}
+
 
 #endif // LINEAR_ALGEBRA_H_

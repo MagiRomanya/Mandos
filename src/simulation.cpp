@@ -59,25 +59,18 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     const unsigned int nDoF = simulation.initial_state.x.size();
     EnergyAndDerivatives f(0);
 
-    // Initial guess for our energy minimization
+    // The state at the beginning of the step (x0, v0)
     const PhysicsState state0 = state;
+    // Initial guess for our energy minimization
+    // state =  PhysicsState(state0.x + simulation.TimeStep * state0.v, state0.v);
 
     const unsigned int maxIter = 1;
-    const float gradientMinThreshold = nDoF * 1.0;
     for (unsigned int i = 0; i < maxIter; i++) {
 
         // Compute energy and derivatives
         // -----------------------------------------------------------------------------------------
-        // f = EnergyAndDerivatives(nDoF);
-        // compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
-        // DEBUG_LOG(f.gradient);
-        // SparseMat H(nDoF, nDoF);
-        // H.setFromTriplets(f.hessian_triplets.begin(), f.hessian_triplets.end());
-        // std ::cout << "H.toDense()"
-        //            << std::endl << H.toDense() << std ::endl;
         f = EnergyAndDerivatives(nDoF);
         compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
-        // if (nDoF * f.gradient.norm() < gradientMinThreshold) break;
         const Scalar energy0 = f.energy;
 
         // Integration step
@@ -173,7 +166,7 @@ inline Mat compute_energy_hessian_finite(Scalar E0, Scalar dx, Scalar TimeStep, 
 }
 
 void compute_energy_and_derivatives_finite(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out) {
-    const Scalar dx = 1e-3;
+    const Scalar dx = 1e-8;
     const unsigned int nDoF = state.get_nDoF();
 
     out.energy = compute_energy(TimeStep, energies, state, state0);
