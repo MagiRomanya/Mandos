@@ -5,6 +5,7 @@
 #include "viewmandos.hpp"
 #include "physics_state.hpp"
 #include "../differentiable.hpp"
+#include "../async_simulation_loop.hpp"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
@@ -79,6 +80,23 @@ PYBIND11_MODULE(pymandos, m) {
     m.def("get_particle", &get_particle_handle);
 
     m.def("compute_tetrahedrons", py::overload_cast<const std::vector<unsigned int>&, const std::vector<Scalar>&, TetrahedronMesh&>(&tetgen_compute_tetrahedrons));
+
+    // ASYNC SIMULATION
+    // -------------------------------------------------------------------------------------
+    m.def("simulation_async_loop", &simulation_async_loop);
+
+    m.def("simulation_async_loop_request_iteration", &simulation_async_loop_request_iteration);
+
+    m.def("simulation_async_end_thread", &simulation_async_end_thread);
+
+    m.def("get_current_physics_state", &get_current_physics_state);
+
+    m.def("set_current_physics_state", &set_current_physics_state);
+
+    m.def("get_current_energy_and_derivatives", &get_current_energy_and_derivatives);
+
+    // SIMULABLES
+    // ----------------------------------------------------------------
 
     py::class_<RigidBodyHandle>(m, "RigidBody")
         .def(py::init<Simulation&, Scalar, std::vector<Scalar>>())
