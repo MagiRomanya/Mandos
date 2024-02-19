@@ -221,7 +221,7 @@ Mat3 rotation_inertia_dgradE_dtheta0(const Vec3& theta, const Vec3& theta0, cons
     const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
     const Eigen::Matrix<Scalar,3,9> dvecRguess_dtheta0 = 2 * dvecR_dtheta_analytic_global(theta0) - dvecR_dtheta_analytic_global(theta0 - omega0 * TimeStep);
 
-    const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta0 = block_matrix<3,3>(J_inertia_tensor * R.transpose()).transpose() * dvecRguess_dtheta0.transpose();;
+    const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_dtheta0.transpose();;
     const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_dtheta0) - dvecRMR_guess_dtheta0);
 
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
@@ -235,12 +235,29 @@ Mat3 rotation_inertia_dgradE_domega0(const Vec3& theta, const Vec3& theta0, cons
     const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
     const Eigen::Matrix<Scalar,3,9> dvecRguess_domega0 = TimeStep * dvecR_dtheta_analytic_global(theta0 - omega0 * TimeStep);
 
-    const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_domega0 = block_matrix<3,3>(J_inertia_tensor * R.transpose()).transpose() * dvecRguess_domega0.transpose();;
+    const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_domega0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_domega0.transpose();;
     const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_domega0) - dvecRMR_guess_domega0);
 
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
     return H;
 }
+Mat3 rotation_inertia_dgradE_dtheta(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
+    const Mat3 J_inertia_tensor = Mat3::Identity();
+    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
+    const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - TimeStep * omega0);
+    const Mat3 Rguess = (R0 + (R0 - R0old)); // x0 + h* v0
+
+    const Scalar h2 = TimeStep * TimeStep;
+    const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
+    const Eigen::Matrix<Scalar,3,9> dvecR_dtheta = dvecR_dtheta_analytic_global(theta);
+
+    const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta = block_matrix<3,3>(Rguess * J_inertia_tensor) * dvecR_dtheta.transpose();;
+    const Eigen::Matrix<Scalar,9,3> dvecAdtheta = 0.5 * (dvecRMR_guess_dtheta - transpose_vectorized_matrix(dvecRMR_guess_dtheta));
+
+    Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta;
+    return H;
+}
+
 
 
 inline Mat3 compute_R_guess(const Mat3& R0, const Mat3 R0old) {
@@ -291,12 +308,13 @@ Eigen::Matrix<Scalar,3,9> compute_dR_guess_dtheta0(const Vec3& theta0, const Vec
 
 
 int main(void) {
-    const Vec3 theta = M_PI_2 * Vec3(0,0,0).normalized();
+    const Vec3 theta = M_PI_2 * Vec3(0,0,1.1).normalized();
     const Vec3 theta0 = M_PI_2 * Vec3(0,0,1).normalized();
     const Vec3 omega0 = M_PI_2 * Vec3(0,0,1).normalized();
     const Scalar TimeStep = 0.1;
 
-    const Mat3 dgradE_dtheta = rotation_inertia_finite_dgradE_dtheta(theta, theta0, omega0, TimeStep);
+    const Mat3 dgradE_dtheta = rotation_inertia_dgradE_dtheta(theta, theta0, omega0, TimeStep);
+    const Mat3 dgradE_dtheta_finite = rotation_inertia_finite_dgradE_dtheta(theta, theta0, omega0, TimeStep);
     const Mat3 dgradE_dtheta0 = rotation_inertia_dgradE_dtheta0(theta, theta0, omega0, TimeStep);
     const Mat3 dgradE_domega0 = rotation_inertia_dgradE_domega0(theta, theta0, omega0, TimeStep);
     const Mat3 dgradE_dtheta0_finite = rotation_inertia_finite_dgradE_dtheta0(theta, theta0, omega0, TimeStep);
@@ -307,9 +325,11 @@ int main(void) {
     std ::cout << "Hess"
                << "\n" << rotation_inertia_energy_hessian(theta, theta0, omega0, TimeStep) << std ::endl;
     std ::cout << "Rot Hess"
-               << "\n" << jac0 * rotation_inertia_energy_hessian(theta, theta0, omega0, TimeStep)<< std ::endl;
+               << "\n" << jac.transpose() * rotation_inertia_energy_hessian(theta, theta0, omega0, TimeStep) << std ::endl;
+    std ::cout << "dgradE_dtheta_finite"
+               << "\n" << dgradE_dtheta_finite << std ::endl;
     std ::cout << "dgradE_dtheta"
-               << "\n" << jac * dgradE_dtheta << std ::endl;
+               << "\n" << dgradE_dtheta << std ::endl;
     std ::cout << "dgradE_dtheta0_finite"
                << "\n" << dgradE_dtheta0_finite << std ::endl;
     std ::cout << "dgradE_dtheta0"
