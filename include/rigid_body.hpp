@@ -64,9 +64,7 @@ inline Mat3 compute_J_inertia_tensor(const Mat3& inertia_tensor) {
 
 struct RigidBody {
     RigidBody(unsigned int index, Scalar mass, Mat3 inertia_tensor0)
-        : index(index), mass(mass), J_inertia_tensor0(compute_J_inertia_tensor(inertia_tensor0)) {
-        DEBUG_LOG(J_inertia_tensor0);
-    }
+        : index(index), mass(mass), J_inertia_tensor0(compute_J_inertia_tensor(inertia_tensor0)) {}
 
     const unsigned int index;
     const Scalar mass;

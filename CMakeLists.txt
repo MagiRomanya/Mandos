@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.9)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -32,7 +32,6 @@ file(GLOB SOURCE_FILES
 
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON) # Necessary for pybind11 dynamic lib
-
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/)
@@ -41,8 +40,17 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_BUILD_TYPE Release)
 
+find_package(OpenMP)
+
 add_library(libmandos STATIC ${SOURCE_FILES})
 set_target_properties(libmandos PROPERTIES OUTPUT_NAME mandos)
+# Link time optimization support
+include(CheckIPOSupported)
+check_ipo_supported(RESULT link_time_optimization_support)
+if(link_time_optimization_support)
+  set_target_properties(libmandos PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
+
 
 add_executable(${PROJECT_NAME} src/standalone/main.cpp)
 
@@ -61,6 +69,7 @@ target_link_libraries(libmandos
   raylib
   raylib_imgui
   tetgen
+  # OpenMP::OpenMP_CXX
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC libmandos)

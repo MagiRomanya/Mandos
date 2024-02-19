@@ -62,10 +62,10 @@ Vec3 rotation_inertia_energy_gradient2(const Vec3& theta, const Vec3& theta0, co
 
 Mat3 rotation_inertia_finite_dgradE_dtheta(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
     Mat3 H;
-    const Scalar dx = 0.001;
+    const Scalar dx = 0.0001;
     const Vec3 grad0 = rotation_inertia_energy_gradient(theta, theta0, omega0, TimeStep);
     for (unsigned i = 0; i < 3; i++) {
-        Vec3 dtheta = theta0;
+        Vec3 dtheta = theta;
         dtheta[i] += dx;
         const Vec3 grad = rotation_inertia_energy_gradient(dtheta, theta0, omega0, TimeStep);
         H.col(i) = (grad - grad0) / dx;
@@ -307,7 +307,7 @@ Eigen::Matrix<Scalar,3,9> compute_dR_guess_dtheta0(const Vec3& theta0, const Vec
 
 
 int main(void) {
-    const Vec3 theta = M_PI_2 * Vec3(0,0,1.1).normalized();
+    const Vec3 theta = M_PI_2 * Vec3(0,1,1).normalized();
     const Vec3 theta0 = M_PI_2 * Vec3(0,0,1).normalized();
     const Vec3 omega0 = M_PI_2 * Vec3(0,0,1).normalized();
     const Scalar TimeStep = 0.1;

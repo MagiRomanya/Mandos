@@ -22,7 +22,7 @@ typedef Eigen::MatrixX<Scalar> Mat;
 
 // SPARSE MATRICES
 typedef Eigen::Triplet<Scalar> Triplet;
-typedef Eigen::SparseMatrix<Scalar> SparseMat;
+typedef Eigen::SparseMatrix<Scalar, Eigen::RowMajor> SparseMat;
 
 
 // Given a square DxD matrix mat, return a vector of D² components

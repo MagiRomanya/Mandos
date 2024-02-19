@@ -273,6 +273,5 @@ Vec3 compute_principal_moments_of_inertia(const Mat3& inertia_tensor) {
     Eigen::EigenSolver<Mat3> solver(inertia_tensor);
     const auto eigenvalues = solver.eigenvalues();
     assert(eigenvalues.imag().isZero());
-    DEBUG_LOG(eigenvalues.real());
     return eigenvalues.real();
 }
