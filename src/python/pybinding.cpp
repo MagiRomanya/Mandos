@@ -87,8 +87,6 @@ PYBIND11_MODULE(pymandos, m) {
 
     m.def("simulation_async_loop_request_iteration", &simulation_async_loop_request_iteration);
 
-    m.def("simulation_async_end_thread", &simulation_async_end_thread);
-
     m.def("get_current_physics_state", &get_current_physics_state);
 
     m.def("set_current_physics_state", &set_current_physics_state);

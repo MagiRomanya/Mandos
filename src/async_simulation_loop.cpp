@@ -1,6 +1,5 @@
 #include "physics_state.hpp"
 #include "simulation.hpp"
-#include "utility_functions.hpp"
 #include <iostream>
 #include <thread>
 #include <condition_variable>
@@ -12,7 +11,6 @@ static PhysicsState state_async;
 static EnergyAndDerivatives f_async(0);
 static std::condition_variable cv;
 static std::queue<int> simulation_requests;
-std::unique_ptr<std::jthread> simulation_loop_thread;
 std::atomic<bool> stop_requested = false;
 
 void __simulation_loop_async(const Simulation simulation) {
@@ -40,9 +38,27 @@ void __simulation_loop_async(const Simulation simulation) {
     }
 }
 
+/**
+ * Struct that starts a thread on creation and stops and joins it on destruction.
+ */
+struct SimulationLoopThread {
+    SimulationLoopThread(const Simulation simulation) {
+        simulation_loop_thread = std::jthread(__simulation_loop_async, simulation);
+    }
+    ~SimulationLoopThread() {
+        stop_requested = true;
+        cv.notify_one();
+        simulation_loop_thread.join();
+    }
+
+    std::jthread simulation_loop_thread;
+};
+
+static std::unique_ptr<SimulationLoopThread> simulation_loop_thread;
+
 void simulation_async_loop(Simulation simulation) {
     state_async = simulation.initial_state;
-    simulation_loop_thread = std::make_unique<std::jthread>(__simulation_loop_async, simulation);
+    simulation_loop_thread = std::make_unique<SimulationLoopThread>(simulation);
 }
 
 void simulation_async_loop_request_iteration() {
@@ -50,12 +66,6 @@ void simulation_async_loop_request_iteration() {
     if (simulation_requests.size() == 0)
         simulation_requests.push(1);
     cv.notify_one();
-}
-
-void simulation_async_end_thread() {
-    stop_requested = true;
-    cv.notify_one();
-    simulation_loop_thread.get()->join();
 }
 
 void set_current_physics_state(PhysicsState state) {

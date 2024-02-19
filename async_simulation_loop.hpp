@@ -14,6 +14,4 @@ PhysicsState get_current_physics_state();
 
 EnergyAndDerivatives get_current_energy_and_derivatives();
 
-void simulation_async_end_thread();
-
 #endif // ASYNC_SIMULATION_LOOP_H_

@@ -205,9 +205,6 @@ inline Mat3 axis_angle_local_to_global_jacobian_finite(const Vec3& phi0) {
 }
 
 Eigen::Matrix<Scalar,3,9> dvecR_dtheta_analytic_global(const Vec3& theta) {
-    // const Mat3 jac = compute_local_to_global_axis_angle_jacobian(theta);
-    // return jac.transpose() * dvecR_dtheta_analytic_local(theta);
-
     const Mat3 jac = compute_local_to_global_axis_angle_jacobian(theta);
     const Mat3 R = compute_rotation_matrix_rodrigues(theta);
     return jac.transpose() * vectorized_levi_civita() * block_matrix(R);
@@ -227,6 +224,7 @@ Mat3 rotation_inertia_dgradE_dtheta0(const Vec3& theta, const Vec3& theta0, cons
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
     return H;
 }
+
 Mat3 rotation_inertia_dgradE_domega0(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
     const Mat3 J_inertia_tensor = Mat3::Identity();
     const Mat3 R = compute_rotation_matrix_rodrigues(theta);
@@ -241,6 +239,7 @@ Mat3 rotation_inertia_dgradE_domega0(const Vec3& theta, const Vec3& theta0, cons
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
     return H;
 }
+
 Mat3 rotation_inertia_dgradE_dtheta(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
     const Mat3 J_inertia_tensor = Mat3::Identity();
     const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
