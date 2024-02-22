@@ -6,6 +6,8 @@
 #include "inertia_energies.hpp"
 #include "linear_algebra.hpp"
 #include "physics_state.hpp"
+#include "rigid_body.hpp"
+#include "utility_functions.hpp"
 
 static const Scalar threshold2 = 1e-5;
 
@@ -31,13 +33,42 @@ inline Mat3 compute_local_to_global_axis_angle_jacobian(const Vec3& phi) {
     return B.inverse() * A;
 }
 
+
+/**
+ * Compute the derivative of a rotation matrix with respect to local axis angle, evaluated at theta.
+ */
+Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local(const Vec3& theta) {
+    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
+    return vectorized_levi_civita() * block_matrix(R);
+}
+
+// Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local(const Mat3& R) {
+//     return vectorized_levi_civita() * block_matrix(R);
+// }
+
 /**
  * Compute the derivative of a rotation matrix with respect to the global axis angle theta.
  */
-inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_analytic_global(const Vec3& theta) {
+inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_global(const Vec3& theta) {
     const Mat3 jac = compute_local_to_global_axis_angle_jacobian(theta);
     const Mat3 R = compute_rotation_matrix_rodrigues(theta);
     return jac.transpose() * vectorized_levi_civita() * block_matrix(R);
+}
+
+Mat3 rotation_inertia_energy_hessian(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
+    const Mat3 J_inertia_tensor = Mat3::Identity();
+    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
+    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
+    const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - omega0 * TimeStep);
+    const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
+
+    const Mat3 rot_inertia = R * J_inertia_tensor * R_guess.transpose();
+    const Mat3 S = (rot_inertia + rot_inertia.transpose()) / 2; // Exact hessian
+    // const Mat3 S = R * J_inertia_tensor * R.transpose(); // Linear approximation
+    const Scalar h2 = TimeStep * TimeStep;
+
+    const Mat3 hessian = 1.0 / h2 * (S.trace() * Mat3::Identity() - S);
+    return hessian;
 }
 
 inline Mat3 rotation_inertia_dgradE_dtheta(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
@@ -48,7 +79,7 @@ inline Mat3 rotation_inertia_dgradE_dtheta(const Vec3& theta, const Vec3& theta0
 
     const Scalar h2 = TimeStep * TimeStep;
     const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
-    const Eigen::Matrix<Scalar,3,9> dvecR_dtheta = dvecR_dtheta_analytic_global(theta);
+    const Eigen::Matrix<Scalar,3,9> dvecR_dtheta = dvecR_dtheta_global(theta);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta = block_matrix<3,3>(Rguess * J_inertia_tensor) * dvecR_dtheta.transpose();;
     const Eigen::Matrix<Scalar,9,3> dvecAdtheta = 0.5 * (dvecRMR_guess_dtheta - transpose_vectorized_matrix(dvecRMR_guess_dtheta));
@@ -63,7 +94,7 @@ inline Mat3 rotation_inertia_dgradE_dtheta0(const Vec3& theta, const Vec3& theta
 
     const Scalar h2 = TimeStep * TimeStep;
     const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
-    const Eigen::Matrix<Scalar,3,9> dvecRguess_dtheta0 = 2 * dvecR_dtheta_analytic_global(theta0) - dvecR_dtheta_analytic_global(theta0 - omega0 * TimeStep);
+    const Eigen::Matrix<Scalar,3,9> dvecRguess_dtheta0 = 2 * dvecR_dtheta_global(theta0) - dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_dtheta0.transpose();;
     const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_dtheta0) - dvecRMR_guess_dtheta0);
@@ -78,7 +109,7 @@ inline Mat3 rotation_inertia_dgradE_domega0(const Vec3& theta, const Vec3& theta
 
     const Scalar h2 = TimeStep * TimeStep;
     const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
-    const Eigen::Matrix<Scalar,3,9> dvecRguess_domega0 = TimeStep * dvecR_dtheta_analytic_global(theta0 - omega0 * TimeStep);
+    const Eigen::Matrix<Scalar,3,9> dvecRguess_domega0 = TimeStep * dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_domega0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_domega0.transpose();;
     const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_domega0) - dvecRMR_guess_domega0);
@@ -118,6 +149,7 @@ void compute_gradient_partial_derivatives(Scalar TimeStep, const Energies& energ
         const Vec3 theta = e.rb.get_axis_angle(state.x);
         const Vec3 theta0 = e.rb.get_axis_angle(state0.x);
         const Vec3 omega0 = e.rb.get_axis_angle(state0.v);
+        // const Mat3 dgradE_dtheta = rotation_inertia_energy_hessian(theta, theta0, omega0, TimeStep);
         const Mat3 dgradE_dtheta = rotation_inertia_dgradE_dtheta(theta, theta0, omega0, TimeStep);
         const Mat3 dgradE_dtheta0 = rotation_inertia_dgradE_dtheta0(theta, theta0, omega0, TimeStep);
         const Mat3 dgradE_domega0 = rotation_inertia_dgradE_domega0(theta, theta0, omega0, TimeStep);
@@ -151,6 +183,28 @@ void compute_gradient_partial_derivatives(Scalar TimeStep, const Energies& energ
     dgradE_dv0.setFromTriplets(dgradE_dv0_triplets.begin(), dgradE_dv0_triplets.end());
 }
 
+void compute_parallel_transport_matrix(const Simulables& simulables, const PhysicsState state, SparseMat& ptm) {
+    std::vector<Triplet> ptm_triplets;
+    for (unsigned int i = 0; i < simulables.particles.size(); i++) {
+        const unsigned int idx = simulables.particles[i].index;
+        for (unsigned int j = 0; j < 3; j++) ptm_triplets.emplace_back(idx + j, idx + j, 1); // Diagonal matrix
+    }
+    for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
+        const RigidBody& rb = simulables.rigid_bodies[i];
+        const Vec3 theta = rb.get_axis_angle(state.x);
+        const Mat3 jac = compute_local_to_global_axis_angle_jacobian(theta).transpose();
+        const unsigned int idx = rb.index + 3;
+
+        for (unsigned int j = 0; j < 3; j++) {
+            ptm_triplets.emplace_back(rb.index + j, rb.index + j, 1); // Translation diagonal
+            for (unsigned int k = 0; k < 3; k++) {
+                ptm_triplets.emplace_back(idx + j, idx + k, jac(j, k));
+            }
+        }
+    }
+    ptm.setFromTriplets(ptm_triplets.begin(), ptm_triplets.end());
+}
+
 Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
                                                    const std::vector<PhysicsState>& trajectory,
                                                    const LossFunctionAndDerivatives& loss,
@@ -181,6 +235,9 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
         // NOTE: This is not always zero
         Mat dgradE_dp = Mat::Zero(nDoF, nParameters);
 
+        SparseMat ptm(nDoF, nDoF);
+        compute_parallel_transport_matrix(simulation.simulables, state, ptm);
+
         // Solve the linear system
         // -------------------------------------------------------------------------
         Eigen::ConjugateGradient<SparseMat, Eigen::Upper | Eigen::Lower> cg;
@@ -190,8 +247,16 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
 
         // Update the loss function gradients
         // -------------------------------------------------------------------------
-        loss_position_gradient = loss.loss_position_partial_derivative[i] - one_over_h * loss_velocity_gradient + dgradE_dx0 * alpha;
-        loss_velocity_gradient = loss.loss_velocity_partial_derivative[i] + dgradE_dv0 * alpha;
+        const Vec tempx = loss.loss_position_partial_derivative[i] - one_over_h * loss_velocity_gradient + dgradE_dx0 * alpha;
+        const Vec tempv = loss.loss_velocity_partial_derivative[i] + dgradE_dv0 * alpha;
+        loss_position_gradient = (loss.loss_position_partial_derivative[i] - one_over_h * loss_velocity_gradient + dgradE_dx0 * alpha);
+        loss_velocity_gradient = (loss.loss_velocity_partial_derivative[i] + dgradE_dv0 * alpha);
+        std ::cout << "dgradE_dx0" << "\n" << dgradE_dx0 << std ::endl;
+        std ::cout << "dgradE_dv0" << "\n" << dgradE_dv0 << std ::endl;
+
+        // DEBUG_LOG(i);
+        // DEBUG_LOG(loss_position_gradient[4]);
+        // DEBUG_LOG(loss_velocity_gradient[4]);
         loss_gradient += dgradE_dp * alpha;
     }
 

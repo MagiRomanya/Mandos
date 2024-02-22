@@ -28,13 +28,16 @@ void ImGuiInitialize() {
     // ImGui::StyleColorsDark();
     ImGui::StyleColorsLight();
 
+
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
     ImGuiStyle& style = ImGui::GetStyle();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-    }
+    style.WindowRounding           = 5.0f;
+    style.FrameRounding            = 4.0f;
+    style.IndentSpacing            = 25.0f;
+    style.ScrollbarSize            = 15.0f;
+    style.ScrollbarRounding        = 9.0f;
+    style.GrabMinSize              = 5.0f;
+    style.GrabRounding             = 3.0f;
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);

@@ -92,7 +92,7 @@ Mat3 rotation_inertia_finite_dgradE_domega0(const Vec3& theta, const Vec3& theta
     const Scalar dx = 0.0001;
     const Vec3 grad0 = rotation_inertia_energy_gradient2(theta, theta0, omega0, TimeStep);
     for (unsigned i = 0; i < 3; i++) {
-        Vec3 domega0 = theta0;
+        Vec3 domega0 = omega0;
         domega0[i] += dx;
         const Vec3 grad = rotation_inertia_energy_gradient2(theta, theta0, domega0, TimeStep);
         H.col(i) = (grad - grad0) / dx;
@@ -128,7 +128,7 @@ Eigen::Matrix<Scalar,3,9> dvecR_dtheta_finite_global(const Vec3& theta) {
     return dvecR_dtheta;
 }
 
-Eigen::Matrix<Scalar,3,9> dvecR_dtheta_analytic_local(const Vec3& theta) {
+Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local(const Vec3& theta) {
     const Mat3 R = compute_rotation_matrix_rodrigues(theta);
     return vectorized_levi_civita() * block_matrix(R);
 }
@@ -204,7 +204,7 @@ inline Mat3 axis_angle_local_to_global_jacobian_finite(const Vec3& phi0) {
     return dtheta_dphi;
 }
 
-Eigen::Matrix<Scalar,3,9> dvecR_dtheta_analytic_global(const Vec3& theta) {
+Eigen::Matrix<Scalar,3,9> dvecR_dtheta_global(const Vec3& theta) {
     const Mat3 jac = compute_local_to_global_axis_angle_jacobian(theta);
     const Mat3 R = compute_rotation_matrix_rodrigues(theta);
     return jac.transpose() * vectorized_levi_civita() * block_matrix(R);
@@ -216,7 +216,7 @@ Mat3 rotation_inertia_dgradE_dtheta0(const Vec3& theta, const Vec3& theta0, cons
 
     const Scalar h2 = TimeStep * TimeStep;
     const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
-    const Eigen::Matrix<Scalar,3,9> dvecRguess_dtheta0 = 2 * dvecR_dtheta_analytic_global(theta0) - dvecR_dtheta_analytic_global(theta0 - omega0 * TimeStep);
+    const Eigen::Matrix<Scalar,3,9> dvecRguess_dtheta0 = 2 * dvecR_dtheta_global(theta0) - dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_dtheta0.transpose();;
     const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_dtheta0) - dvecRMR_guess_dtheta0);
@@ -231,7 +231,7 @@ Mat3 rotation_inertia_dgradE_domega0(const Vec3& theta, const Vec3& theta0, cons
 
     const Scalar h2 = TimeStep * TimeStep;
     const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
-    const Eigen::Matrix<Scalar,3,9> dvecRguess_domega0 = TimeStep * dvecR_dtheta_analytic_global(theta0 - omega0 * TimeStep);
+    const Eigen::Matrix<Scalar,3,9> dvecRguess_domega0 = TimeStep * dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_domega0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_domega0.transpose();;
     const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_domega0) - dvecRMR_guess_domega0);
@@ -248,7 +248,7 @@ Mat3 rotation_inertia_dgradE_dtheta(const Vec3& theta, const Vec3& theta0, const
 
     const Scalar h2 = TimeStep * TimeStep;
     const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
-    const Eigen::Matrix<Scalar,3,9> dvecR_dtheta = dvecR_dtheta_analytic_global(theta);
+    const Eigen::Matrix<Scalar,3,9> dvecR_dtheta = dvecR_dtheta_global(theta);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta = block_matrix<3,3>(Rguess * J_inertia_tensor) * dvecR_dtheta.transpose();;
     const Eigen::Matrix<Scalar,9,3> dvecAdtheta = 0.5 * (dvecRMR_guess_dtheta - transpose_vectorized_matrix(dvecRMR_guess_dtheta));
@@ -302,14 +302,14 @@ Eigen::Matrix<Scalar,3,9> compute_dR_guessT_dtheta0_finite(const Vec3& theta0, c
 }
 
 Eigen::Matrix<Scalar,3,9> compute_dR_guess_dtheta0(const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    return 2 * dvecR_dtheta_analytic_global(theta0) - dvecR_dtheta_analytic_global(theta0 - omega0 * TimeStep);
+    return 2 * dvecR_dtheta_global(theta0) - dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 }
 
 
 int main(void) {
-    const Vec3 theta = M_PI_2 * Vec3(0,1,1).normalized();
-    const Vec3 theta0 = M_PI_2 * Vec3(0,0,1).normalized();
-    const Vec3 omega0 = M_PI_2 * Vec3(0,0,1).normalized();
+    const Vec3 theta = M_PI_2 * Vec3(0,1,0).normalized();
+    const Vec3 theta0 = M_PI_2 * Vec3(0,0,0).normalized();
+    const Vec3 omega0 = M_PI_2 * Vec3(0,1,0).normalized();
     const Scalar TimeStep = 0.1;
 
     const Mat3 dgradE_dtheta = rotation_inertia_dgradE_dtheta(theta, theta0, omega0, TimeStep);
@@ -344,9 +344,9 @@ int main(void) {
     std ::cout << "dvecR_dtheta_finite_local(theta)"
                << "\n" << dvecR_dtheta_finite_local(theta) << std ::endl;
     std ::cout << "dvecR_dtheta_analytic(theta)"
-               << "\n" << dvecR_dtheta_analytic_local(theta) << std ::endl;
+               << "\n" << dvecR_dtheta_local(theta) << std ::endl;
     std ::cout << "dvecR_dtheta_analytic_global(theta)"
-               << "\n" << dvecR_dtheta_analytic_global(theta) << std ::endl;
+               << "\n" << dvecR_dtheta_global(theta) << std ::endl;
     std ::cout << "dvecR_dtheta_finite_global(theta)"
                << "\n" << dvecR_dtheta_finite_global(theta) << std ::endl;
 
@@ -365,6 +365,12 @@ int main(void) {
                << "\n"
                << compute_dR_guessT_dtheta0_finite(theta0, omega0, TimeStep)
                << std ::endl;
+
+    MandosViewer viewer;
+    while (!viewer.window_should_close()) {
+        viewer.begin_drawing();
+        viewer.end_drawing();
+    }
 
     return 0;
 }

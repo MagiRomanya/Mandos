@@ -64,7 +64,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     // Initial guess for our energy minimization
     // state =  PhysicsState(state0.x + simulation.TimeStep * state0.v, state0.v);
 
-    const unsigned int maxIter = 1;
+    const unsigned int maxIter = 2;
     for (unsigned int i = 0; i < maxIter; i++) {
 
         // Compute energy and derivatives
@@ -83,6 +83,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         const PhysicsState stepState = state;
         update_simulation_state(simulation.simulables, dx, state.x); // x_new
         state.v = (state.x - state0.x) / simulation.TimeStep; // v_new
+        std ::cout << "i" << " " << i << " "<< "f.gradient.norm()" << " " << f.gradient.norm() << std ::endl;
 
         // Line search
         // -----------------------------------------------------------------------------------------
@@ -98,6 +99,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
             alpha /= 2.0f;
             state = stepState;
             update_simulation_state(simulation.simulables, alpha * dx, state.x);
+            state.v = (state.x - state0.x) / simulation.TimeStep; // v_new
             lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
         }
     }
@@ -172,13 +174,6 @@ void compute_energy_and_derivatives_finite(Scalar TimeStep, const Energies& ener
     out.energy = compute_energy(TimeStep, energies, state, state0);
     out.gradient = compute_energy_gradient_finite(out.energy, dx, TimeStep, energies, state, state0);
     Mat hess = compute_energy_hessian_finite(out.energy, dx, TimeStep, energies, state, state0);
-    hess.block<3,3>(0,0) = Mat3::Identity() * 100;
-    hess.block<3,3>(3,0) = Mat3::Zero();
-    hess.block<3,3>(0,3) = Mat3::Zero();
-    out.gradient.segment<3>(0) = Vec3::Zero();
-    DEBUG_LOG(out.gradient.transpose());
-    std ::cout << "hess"
-               << std::endl << hess << std ::endl;
     const Scalar tol = dx;
     for (unsigned int i = 0; i < nDoF; i++) {
         for (unsigned int j = 0; j < nDoF; j++) {

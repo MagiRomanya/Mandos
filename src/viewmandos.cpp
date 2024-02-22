@@ -47,6 +47,17 @@ inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
     return r;
 }
 
+inline Matrix raylib_transform_matrix(const Mat3& rot, const Mat3& scale, const Vec3& pos) {
+    const Mat3 m = rot * scale;
+    Matrix r = {
+    (float) m(0,0), (float) m(0,1), (float) m(0, 2), (float) pos(0),
+    (float) m(1,0), (float) m(1,1), (float) m(1, 2), (float) pos(1),
+    (float) m(2,0), (float) m(2,1), (float) m(2, 2), (float) pos(2),
+                 0,              0,               0,               1,
+    };
+    return r;
+}
+
 inline Matrix matrix_eigen_to_raylib(const Mat3& m) {
     Matrix r = {
     (float) m(0,0), (float) m(0,1), (float) m(0, 2), 0,
@@ -271,6 +282,7 @@ struct RenderState {
     // -------------------------------------------------------------
     Texture2D diffuseTexture;
     Texture2D normalMapTexture;
+    Texture2D backgroundTexture;
     RenderTexture2D screenFBO;
 
     // GEOMETRY
@@ -317,8 +329,9 @@ void RenderState::initialize() {
     base_material = createMaterialFromShader(base_shader);
 
     // Texture loading
-    diffuseTexture = LoadTexture("resources/textures/terracota.png");
+    diffuseTexture = LoadTexture("resources/textures/DiffuseMap.png");
     normalMapTexture = LoadTexture("resources/textures/NormalMap.png");
+    backgroundTexture = LoadTexture("resources/textures/background.png");
     SetMaterialTexture(&base_material, MATERIAL_MAP_DIFFUSE, diffuseTexture);
     SetMaterialTexture(&base_material, MATERIAL_MAP_NORMAL, normalMapTexture);
 
@@ -414,8 +427,17 @@ bool MandosViewer::window_should_close() {
 
 void MandosViewer::begin_drawing() {
     mem_pool.reset();
+
     BeginDrawing();
+    // BACKGROUND
     ClearBackground(WHITE);
+    Texture2D bg_texture = renderState->backgroundTexture;
+    DrawTexture(bg_texture, 0, 0, WHITE); // Draw santa
+    Rectangle source = {0,0, (float) bg_texture.width, (float) bg_texture.height};
+    Rectangle dest = {0,0, (float) GetScreenWidth(), (float) GetScreenHeight()};
+    DrawTexturePro(bg_texture, source, dest, Vector2(0,0), 0, WHITE);
+
+    // 3D scene framebuffer
     BeginTextureMode(renderState->screenFBO);
     // Update slice plane uniform
     float slice_plane_data[4] = {(float)slicePlane.x(), (float)slicePlane.y(), (float)slicePlane.z(), (float)slicePlane.w()};
@@ -426,7 +448,12 @@ void MandosViewer::begin_drawing() {
     SetShaderValue(renderState->base_shader, renderState->base_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
     SetShaderValue(renderState->instancing_shader, renderState->instancing_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
 
-    ClearBackground(RAYWHITE);
+    // ClearBackground(RAYWHITE);
+    rlSetBlendMode(RL_BLEND_SRC_ALPHA);
+    ClearBackground(Color(0,0,0,0));
+
+    BeginMode3D(renderState->camera);
+    // DrawGrid(100, 1.0f);
 }
 
 inline void getFloatsFromColor(float* fc, Color color) {
@@ -551,14 +578,18 @@ void MandosViewer::drawSimulationVisualizationWindow() {
     const ImGuiWindowFlags constFlags = ImGuiWindowFlags_NoCollapse
                                         | ImGuiWindowFlags_NoScrollWithMouse
                                         | ImGuiWindowFlags_NoScrollbar
-                                        | ImGuiWindowFlags_NoBackground
                                         ;
     static ImGuiWindowFlags flags = constFlags;
+
     ImGui::SetNextWindowSizeConstraints(ImVec2(300,300), ImVec2(3000,3000));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
+
     ImGui::Begin("Simulation view", nullptr, flags);
+    ImGui::PopStyleVar();
     const bool isTitleBarHovered = ImGui::IsItemHovered();
     flags = ImGui::IsWindowHovered() && (not isTitleBarHovered) ? ImGuiWindowFlags_NoMove : 0;
     flags = flags | constFlags;
+    if (transparent_background) flags = flags | ImGuiWindowFlags_NoBackground;
 
     if (ImGui::IsWindowHovered() && not isTitleBarHovered && not ImGuizmo::IsOver()) {
         myUpdateCamera(renderState->camera);
@@ -571,7 +602,6 @@ void MandosViewer::drawSimulationVisualizationWindow() {
 
     // Resizing the FBO
     UpdateRenderTexture2D(renderState->screenFBO, window_width, window_height);
-    rlViewport(0, 0, window_width, window_height);
 
     // Screen position of the window
     ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -606,6 +636,7 @@ void MandosViewer::drawGUI() {
             if (ImGui::MenuItem("Camera")) {
                 renderState->cameraFrameOpen = true;
             }
+            ImGui::MenuItem("Toggle transparency", NULL, &transparent_background);
             if (ImGui::BeginMenu("Logs")) {
                 if (ImGui::MenuItem("Raylib Logs"))
                     renderState->RaylibLogsOpen = true;
@@ -646,6 +677,7 @@ void MandosViewer::drawGUI() {
         ImGui::SeparatorText("Simulation state visualization");
         ImGui::Checkbox("Render simulable meshes", &enable_draw_simulable_meshes);
         ImGui::Checkbox("Render particles", &enable_draw_particles);
+        ImGui::Checkbox("Render rigid bodies", &enable_draw_rigid_bodies);
         ImGui::Checkbox("Render springs", &enable_draw_springs);
         static bool bool_draw_fem_tetrahedrons = false;
         if (ImGui::Checkbox("Render tetrahedrons", &bool_draw_fem_tetrahedrons)) {
@@ -696,17 +728,6 @@ void MandosViewer::drawGUI() {
     ImGuiEndDrawing();
 }
 
-void MandosViewer::end_drawing() {
-    EndTextureMode();
-    drawGUI();
-    EndDrawing();
-}
-
-void MandosViewer::begin_3D_mode() {
-    BeginMode3D(renderState->camera);
-    DrawGrid(100, 1.0f);
-}
-
 void draw_mesh_color(const Mat4& transform, const MeshGPU& mesh, MemoryPool& mem_pool, Color color) {
     renderState->base_material.maps[MATERIAL_MAP_DIFFUSE].color = color;
     Mesh raymesh = MeshGPUtoRaymesh(mesh, mem_pool);
@@ -752,12 +773,20 @@ void DrawAxis3D(MemoryPool& mem_pool) {
     EndMode3D();
 }
 
-void MandosViewer::end_3D_mode() {
+void MandosViewer::end_drawing() {
     EndMode3D();
+
     DrawAxis3D(mem_pool);
+
     if (enable_draw_particle_indices && SavedSim && SavedState) {
         draw_particle_indices(*SavedSim, *SavedState);
     }
+
+    EndTextureMode();
+
+    drawGUI();
+
+    EndDrawing();
 }
 
 bool MandosViewer::is_key_pressed(int Key) { return IsKeyPressed(Key); }
@@ -1001,12 +1030,12 @@ void MandosViewer::draw_particle_indices(const Simulation& simulation, const Phy
 void MandosViewer::draw_simulation_state(const Simulation& simulation, const PhysicsState& state) {
     SavedSim = &simulation;
     SavedState = &state;
-    if (enable_draw_springs) {
-        // draw_springs(simulation, state);
+    if (enable_draw_springs)
         draw_springs(simulation, state);
-    }
     if (enable_draw_particles)
         draw_particles(simulation, state);
+    if (enable_draw_rigid_bodies)
+        draw_rigid_bodies(simulation, state);
     if (enable_draw_fem_tetrahedrons ==TET_LINES)
         draw_FEM_tetrahedrons_lines(simulation, state);
     else if (enable_draw_fem_tetrahedrons ==TET_MESH)
@@ -1016,4 +1045,21 @@ void MandosViewer::draw_simulation_state(const Simulation& simulation, const Phy
 
 void MandosViewer::disable_render_logs() {
     SetTraceLogLevel(LOG_NONE);
+}
+
+void MandosViewer::draw_rigid_bodies(const Simulation& simulation, const PhysicsState& state) {
+    std::vector<Matrix> transforms;
+    for (unsigned int i = 0; i < simulation.simulables.rigid_bodies.size(); i++) {
+        const RigidBody& rb = simulation.simulables.rigid_bodies[i];
+        const Mat3 R = rb.compute_rotation_matrix(state.x);
+        const Mat3 I = 10 * rb.J_inertia_tensor0.normalized();
+        const Vec3 com = rb.get_COM_position(state.x);
+        Matrix transform = raylib_transform_matrix(R, I, com);
+        transforms.push_back(transform);
+    }
+
+    Material matInstances = LoadMaterialDefault();
+    matInstances.shader = renderState->instancing_shader;
+    matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RB_COLOR;
+    DrawMeshInstanced(renderState->sphere_mesh, matInstances, transforms.data(), transforms.size());
 }

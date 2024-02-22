@@ -147,10 +147,6 @@ struct MandosViewer {
 
     void end_drawing();
 
-    void begin_3D_mode();
-
-    void end_3D_mode();
-
     bool is_key_pressed(int Key);
 
     void draw_particle(const ParticleHandle& particle, const PhysicsState& state);
@@ -158,6 +154,8 @@ struct MandosViewer {
     void draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh);
 
     void draw_particles(const Simulation& simulation, const PhysicsState& state);
+
+    void draw_rigid_bodies(const Simulation& simulation, const PhysicsState& state);
 
     void draw_FEM(const FEMHandle& fem, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh);
 
@@ -182,9 +180,11 @@ private:
     void drawGUI();
     void drawSimulationVisualizationWindow();
 
+    bool transparent_background = false;
     bool enable_draw_particle_indices = false;
     bool enable_draw_simulable_meshes = true;
     bool enable_draw_particles = false;
+    bool enable_draw_rigid_bodies = false;
     bool enable_draw_springs = false;
     enum FEM_TETRAHEDRON_VISUALIZATION {TET_NONE, TET_MESH, TET_LINES};
     int enable_draw_fem_tetrahedrons = TET_NONE;

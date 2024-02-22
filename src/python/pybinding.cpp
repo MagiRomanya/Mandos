@@ -161,8 +161,6 @@ PYBIND11_MODULE(pymandos, m) {
         .def("window_should_close", &MandosViewer::window_should_close)
         .def("begin_drawing", &MandosViewer::begin_drawing)
         .def("end_drawing", &MandosViewer::end_drawing)
-        .def("begin_3D_mode", &MandosViewer::begin_3D_mode)
-        .def("end_3D_mode", &MandosViewer::end_3D_mode)
         .def("is_key_pressed", &MandosViewer::is_key_pressed)
         .def("draw_particle", &MandosViewer::draw_particle)
         .def("draw_rigid_body", &MandosViewer::draw_rigid_body)

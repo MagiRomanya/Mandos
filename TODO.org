@@ -1,4 +1,4 @@
-#+title: MANDOS Project Pending Tasks
+#+title: MANDOS Simulator Project Pending Tasks
 
 * DONE Set a mode to render simulation by simulables and meshes :RENDER:
 CLOSED: [2023-11-22 Wed 16:49]
@@ -22,16 +22,20 @@ CLOSED: [2023-12-08 dv. 19:59]
 CLOSED: [2023-12-09 ds. 16:01]
 * NO Add rigid body to the Simulation editor :GUI:
 CLOSED: [2024-01-21 dg. 01:12]
-* NO Implement axis angle rotation to axis angle update
+* DONE Implement axis angle rotation to axis angle update
 CLOSED: [2024-01-21 dg. 01:13]
 * NO Add a way for the editor to manage frozen DoF :GUI:
 CLOSED: [2024-01-21 dg. 01:12]
 
-* TODO Manage simulation and render meshes separately :RENDER:
-* TODO Add a GUI to the render :GUI:RENDER:
+* DONE Manage simulation and render meshes separately :RENDER:
+CLOSED: [2024-02-20 Tue 09:26]
+* DONE Add a GUI to the render :GUI:RENDER:
+CLOSED: [2024-02-20 Tue 09:26]
 The GUI must be simple and rely only on the simulation and the render.
-** TODO GUI to change the materials of the meshes
-* TODO Create a better camera :RENDER:
+** DONE GUI to change the materials of the meshes
+CLOSED: [2024-02-20 Tue 09:26]
+* DONE Create a better camera :RENDER:
+CLOSED: [2024-02-20 Tue 09:26]
 * TODO Implement an arena to avoid heap allocations in every simulation step :PERFORMANCE:
 ** DONE Memory arena implemented
 CLOSED: [2023-12-08 dv. 20:01]
@@ -46,4 +50,10 @@ CLOSED: [2023-11-23 Thu 16:58]
 ** TODO Implement embedded mesh to handle contact and render :GEOMETRY:
 ** DONE Implement Neo Hookean material :SIMULATION:
 CLOSED: [2024-01-21 dg. 01:13]
-** TODO Implement positive definite Hessian projection :SIMULATION:
+** DONE Implement positive definite Hessian projection :SIMULATION:
+CLOSED: [2024-02-20 Tue 09:26]
+
+
+* TODO Put most of the headers to the src directory and only let the user include mandos and viewmandos
+** TODO Figure out a way to hide the underlying structs e.g. RigidBody, Particle etc and only use the mandos API.
+Maybe this can be done using forward declaration struct RigidBody; and pointers.

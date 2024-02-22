@@ -161,7 +161,13 @@ inline Vec3 compose_axis_angle(const Vec3& a, const Vec3& b) {
     const Vec3 a_axis = a / a_angle;
 
     const Scalar b_angle = b.norm();
-    if (b_angle < 1e-4) return b + a;
+    if (b_angle < 1e-8) {
+        Scalar a_angle_bounded = std::fmod(a_angle, 2.0 * M_PI);
+        if (a_angle_bounded > M_PI) {
+            a_angle_bounded -= 2*M_PI;
+        }
+        return a_angle_bounded * a_axis;
+    }
     const Vec3 b_axis = b / b_angle;
 
     // https://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
@@ -173,7 +179,7 @@ inline Vec3 compose_axis_angle(const Vec3& a, const Vec3& b) {
     Scalar new_angle = 2.0 * std::acos(cos_a_angle2 * cos_b_angle2
                                       - sin_a_angle2 * sin_b_angle2 * b_axis.dot(a_axis));
 
-    if (fabs(new_angle) < 1e-7) { return Vec3::Zero(); }
+    if (fabs(new_angle) < 1e-8) { return Vec3::Zero(); }
 
     const Vec3 new_axis = 1.0 / std::sin(new_angle/2.0) * (
         sin_a_angle2 * cos_b_angle2 * a_axis

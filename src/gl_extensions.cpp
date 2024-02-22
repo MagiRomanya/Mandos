@@ -41,10 +41,10 @@ void DisableUserDefinedClipping() {
 
 void UpdateRenderTexture2D(RenderTexture2D& fbo, int width, int height) {
     if (width <= 0 or height <= 0) return;
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo.id);
+    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fbo.id));
 
     GL_CALL(glBindTexture(GL_TEXTURE_2D, fbo.texture.id));
-    GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL));
+    GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
     GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
     GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
     GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo.texture.id, 0));
@@ -54,8 +54,10 @@ void UpdateRenderTexture2D(RenderTexture2D& fbo, int width, int height) {
     GL_CALL(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height));
     GL_CALL(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fbo.depth.id));
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
+    rlSetFramebufferWidth(width);
+    rlSetFramebufferHeight(height);
     fbo.texture.width = width;
     fbo.texture.height = height;
     fbo.depth.width = width;
