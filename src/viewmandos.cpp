@@ -631,7 +631,7 @@ void MandosViewer::drawSimulationVisualizationWindow() {
     ImGui::End();
 }
 
-static inline bool draw_texture_GUI(Texture2D& texture) {
+static inline bool draw_texture_button_GUI(Texture2D& texture) {
     const float aspectRatio = (float)texture.width / (float)texture.height;
     const float imageWidth = ImGui::GetContentRegionAvail().x;
     const float imageHeight = imageWidth / aspectRatio;
@@ -657,15 +657,15 @@ static inline void prompt_user_browse_texture(Texture2D& texture) {
 inline void draw_GUI_texure_selector(bool& open) {
     ImGui::Begin("Texture editor", &open);
     ImGui::SeparatorText("Diffuse color");
-    if (draw_texture_GUI(renderState->diffuseTexture)) {
+    if (draw_texture_button_GUI(renderState->diffuseTexture)) {
         prompt_user_browse_texture(renderState->diffuseTexture);
     }
     ImGui::SeparatorText("Normal map");
-    if (draw_texture_GUI(renderState->normalMapTexture)) {
+    if (draw_texture_button_GUI(renderState->normalMapTexture)) {
         prompt_user_browse_texture(renderState->normalMapTexture);
     }
     if (ImGui::CollapsingHeader("Background image")) {
-        if (draw_texture_GUI(renderState->backgroundTexture)) {
+        if (draw_texture_button_GUI(renderState->backgroundTexture)) {
             prompt_user_browse_texture(renderState->backgroundTexture);
         }
     }
