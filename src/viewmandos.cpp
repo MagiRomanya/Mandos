@@ -12,6 +12,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+#include <nfd.h>
 #include <imgui.h>
 #include <ImGuizmo.h>
 #include <raylib.h>
@@ -296,6 +297,7 @@ struct RenderState {
     // GUI
     // -------------------------------------------------------------
     bool renderFrameOpen = false;
+    bool textureFrameOpen = false;
     bool cameraFrameOpen = false;
     bool ImGuiLogsOpen = false;
     bool RaylibLogsOpen = false;
@@ -402,6 +404,9 @@ void MandosViewer::initialize_graphical_context() {
     renderState = new RenderState;
     renderState->initialize();
 
+    // Initialize native file dialog
+    NFD_Init();
+
     SetTargetFPS(200);
 }
 
@@ -418,6 +423,8 @@ MandosViewer::~MandosViewer() {
     renderState->deinitialize();
     delete renderState;
     ImGuiDeinitialize();
+
+    NFD_Quit();
     CloseWindow(); // Destroys the opengl context
 }
 
@@ -624,6 +631,48 @@ void MandosViewer::drawSimulationVisualizationWindow() {
     ImGui::End();
 }
 
+static inline bool draw_texture_GUI(Texture2D& texture) {
+    const float aspectRatio = (float)texture.width / (float)texture.height;
+    const float imageWidth = ImGui::GetContentRegionAvail().x;
+    const float imageHeight = imageWidth / aspectRatio;
+    return ImGui::ImageButton(reinterpret_cast<ImTextureID>(texture.id), ImVec2(imageWidth, imageHeight));
+}
+static inline void prompt_user_browse_texture(Texture2D& texture) {
+    const nfdfilteritem_t filterItem[1] = {{"Images", "png, jpg"}};
+    nfdchar_t* outPath;
+    nfdresult_t file_selected = NFD_OpenDialog(&outPath, filterItem, 1, NULL);
+    if (file_selected == NFD_OKAY) {
+        UnloadTexture(texture);
+        texture = LoadTexture(outPath);
+        NFD_FreePath(outPath);
+    }
+    else if (file_selected == NFD_CANCEL) {
+        // SKIP
+    }
+    else {
+        std::cerr << "NativeFileDialog::ERROR: " << NFD_GetError() << std::endl;
+    }
+}
+
+inline void draw_GUI_texure_selector(bool& open) {
+    ImGui::Begin("Texture editor", &open);
+    ImGui::SeparatorText("Diffuse color");
+    if (draw_texture_GUI(renderState->diffuseTexture)) {
+        prompt_user_browse_texture(renderState->diffuseTexture);
+    }
+    ImGui::SeparatorText("Normal map");
+    if (draw_texture_GUI(renderState->normalMapTexture)) {
+        prompt_user_browse_texture(renderState->normalMapTexture);
+    }
+    if (ImGui::CollapsingHeader("Background image")) {
+        if (draw_texture_GUI(renderState->backgroundTexture)) {
+            prompt_user_browse_texture(renderState->backgroundTexture);
+        }
+    }
+    // draw_texture_GUI(renderState->normalMapTexture);
+    ImGui::End();
+}
+
 void MandosViewer::drawGUI() {
     ImGuiBeginDrawing();
     drawSimulationVisualizationWindow();
@@ -674,6 +723,10 @@ void MandosViewer::drawGUI() {
         if (ImGui::Button("Solid Color", buttonBox)) {
             renderState->base_shader = renderState->solid_shader;
         }
+        if (ImGui::Button("Texture editor")) {
+            renderState->textureFrameOpen = not renderState->textureFrameOpen;
+        }
+
         ImGui::SeparatorText("Simulation state visualization");
         ImGui::Checkbox("Render simulable meshes", &enable_draw_simulable_meshes);
         ImGui::Checkbox("Render particles", &enable_draw_particles);
@@ -724,6 +777,9 @@ void MandosViewer::drawGUI() {
         ImGui::Begin("Raylib Logs", &renderState->RaylibLogsOpen);
         GUI_ShowRaylibLogs();
         ImGui::End();
+    }
+    if (renderState->textureFrameOpen) {
+        draw_GUI_texure_selector(renderState->textureFrameOpen);
     }
     ImGuiEndDrawing();
 }

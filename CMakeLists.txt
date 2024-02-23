@@ -36,6 +36,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/nativefiledialog-extended/)
 
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_BUILD_TYPE Release)
@@ -63,12 +64,14 @@ target_include_directories(libmandos PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/src/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/include/
+  ${CMAKE_CURRENT_SOURCE_DIR}/external/nativefiledialog-extended/src/include/
 )
 
 target_link_libraries(libmandos
   raylib
   raylib_imgui
   tetgen
+  nfd
   # OpenMP::OpenMP_CXX
 )
 
