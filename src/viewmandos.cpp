@@ -941,7 +941,7 @@ void MandosViewer::draw_FEM(const FEMHandle& fem, const PhysicsState& state, Mes
     if (!enable_draw_simulable_meshes) return;
     const unsigned int dof_index = fem.bounds.dof_index;
 
-    assert(simMesh.vertices.size() <= nDoF);
+    assert(simMesh.vertices.size() <= fem.bounds.nDoF);
 
     // We should update the simulation mesh from the tetrahedra
     for (unsigned int i = 0; i < simMesh.vertices.size(); i++) {
@@ -957,7 +957,7 @@ void MandosViewer::draw_MassSpring(const MassSpringHandle& mass_spring, const Ph
     if (!enable_draw_simulable_meshes) return;
     const unsigned int dof_index = mass_spring.bounds.dof_index;
 
-    assert(simMesh.vertices.size() == nDoF);
+    assert(simMesh.vertices.size() == mass_spring.bounds.nDoF);
 
     // We should update the simulation mesh from the tetrahedra
     for (unsigned int i = 0; i < simMesh.vertices.size(); i++) {
