@@ -812,7 +812,7 @@ void DrawAxis3D(MemoryPool& mem_pool) {
     float pitch, yaw;
     getPitchYaw(renderState->camera, pitch, yaw);
     const Eigen::AngleAxis<Scalar> pitchRotation(pitch, Vec3(1.0f,0.0f,0.0f));
-    const Eigen::AngleAxis<Scalar> yawRotation(-yaw - M_PI_2, Vec3(renderState->camera.up.x,renderState->camera.up.y,renderState->camera.up.z));
+    const Eigen::AngleAxis<Scalar> yawRotation(-yaw - PI / 2, Vec3(renderState->camera.up.x,renderState->camera.up.y,renderState->camera.up.z));
     transform = pitchRotation.toRotationMatrix() * yawRotation.toRotationMatrix() * transform;
     Mesh raymesh = MeshGPUtoRaymesh(*renderState->axis3D, mem_pool);
 
@@ -907,7 +907,7 @@ void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState
         }
         Matrix transform = MatrixTranslate(center.x(), center.y(), center.z());
         const Matrix rotation4 = matrix_eigen_to_raylib(Rotation);
-        const Matrix rotateX = MatrixRotateX(M_PI_2);
+        const Matrix rotateX = MatrixRotateX(PI / 2);
         transform = MatrixMultiply(rotation4, transform);
         transform = MatrixMultiply(rotateX, transform);
         const Matrix scale = MatrixScale(1, length, 1);
