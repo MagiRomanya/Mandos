@@ -74,7 +74,7 @@ inline Vector3 vector3_eigen_to_raylib(const Vec3& v) {
 }
 
 Camera3D create_camera() {
-    Camera3D camera = { 0 };
+    Camera3D camera = {};
     camera.position = Vector3( 0.0f, 5.0f, 20.0f );  // Camera position
     camera.target = Vector3( 0.0f, 0.0f, 0.0f );      // Camera looking at point
     camera.up = Vector3( 0.0f, 1.0f, 0.0f );          // Camera up vector (rotation towards target)
@@ -126,7 +126,7 @@ MeshGPU::MeshGPU(const RenderMesh& mesh) {
     copy_tangents_as_vec_4(tangents, mesh.tangents);
 
     // Upload the mesh to GPU
-    Mesh raymesh = {0};
+    Mesh raymesh = {};
     raymesh.vertexCount = mesh.vertices.size() / 3; // 3 coordinates per vertex
     raymesh.triangleCount = raymesh.vertexCount / 3; // 3 vertices per triangle
     raymesh.vertices = vertices;
@@ -189,7 +189,7 @@ MeshGPU::~MeshGPU() {
  * to another and no memory management is being done.
  */
 Mesh MeshGPUtoRaymesh(const MeshGPU& mesh, MemoryPool& pool) {
-    Mesh raymesh = {0};
+    Mesh raymesh = {};
     raymesh.vertexCount = mesh.nVertices;
     raymesh.triangleCount = raymesh.vertexCount / 3; // 3 vertices per triangle
     raymesh.vertices = mesh.vertices;
@@ -209,7 +209,7 @@ Mesh MeshGPUtoRaymesh(const MeshGPU& mesh, MemoryPool& pool) {
 }
 
 Material createMaterialFromShader(Shader shader) {
-    Material material = { 0 };
+    Material material = {};
     material.maps = (MaterialMap *)calloc(12, sizeof(MaterialMap));
 
     // Using rlgl default shader
@@ -940,7 +940,6 @@ void MandosViewer::draw_particles(const Simulation& simulation, const PhysicsSta
 void MandosViewer::draw_FEM(const FEMHandle& fem, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh) {
     if (!enable_draw_simulable_meshes) return;
     const unsigned int dof_index = fem.bounds.dof_index;
-    const unsigned int nDoF = fem.bounds.nDoF;
 
     assert(simMesh.vertices.size() <= nDoF);
 
@@ -957,7 +956,6 @@ void MandosViewer::draw_FEM(const FEMHandle& fem, const PhysicsState& state, Mes
 void MandosViewer::draw_MassSpring(const MassSpringHandle& mass_spring, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh) {
     if (!enable_draw_simulable_meshes) return;
     const unsigned int dof_index = mass_spring.bounds.dof_index;
-    const unsigned int nDoF = mass_spring.bounds.nDoF;
 
     assert(simMesh.vertices.size() == nDoF);
 

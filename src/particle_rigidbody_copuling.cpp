@@ -38,11 +38,13 @@ void compute_copuling_jacobian(const Copulings& copulings, const PhysicsState& s
 
   std::vector<Triplet> sparse_triplets;
 
-  // Construct the fixed particle jacobian matrix
-  // dp = A rb
-  // / dp  \   /A  0\ / dp  \
-  // | rb  | = |I  0| | rb  |
-  // \other/   \0  I/ \other/
+  /**
+  * Construct the fixed particle jacobian matrix
+  * dp = A rb
+  * / dp  \   /A  0\ / dp  \
+  * | rb  | = |I  0| | rb  |
+  * \other/   \0  I/ \other/
+  */
   unsigned int index_offset = 0;
   for (unsigned int dof_index = 0; dof_index < nDoF; dof_index++) {
     if (copulings.dof_index_to_copuling.contains(dof_index)) {
