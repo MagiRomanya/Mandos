@@ -1,7 +1,7 @@
 # Mandos
 General porpuse simulator for c++ and python.
 
-# Build
+## Build
 
 This project is built using CMake and should work on Windows and Linux. To build the project one needs to have `git`. `cmake`, and a c++ compiler installed. To clone the repository and build it run the following commands:
 ```sh
