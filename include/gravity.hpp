@@ -3,6 +3,7 @@
 
 #include "linear_algebra.hpp"
 #include "physics_state.hpp"
+#include "utility_functions.hpp"
 
 struct GravityParameters {
   Scalar intensity;
@@ -25,7 +26,7 @@ struct Gravity {
     const Scalar height = state.x(index);
     out.energy += - parameters.intensity * (height + default_height);
 
-    out.gradient(index) -= parameters.intensity; // Grad = - force
+    out.gradient(index) += - parameters.intensity; // Grad = - force
 
     // ** Higher order derivatives banish **
   }

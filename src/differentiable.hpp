@@ -1,10 +1,6 @@
 #ifndef DIFFERENTIABLE_H_
 #define DIFFERENTIABLE_H_
 
-
-#include "inertia_energies.hpp"
-#include "linear_algebra.hpp"
-#include "physics_state.hpp"
 #include "simulation.hpp"
 
 struct LossFunctionAndDerivatives {

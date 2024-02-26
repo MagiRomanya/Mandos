@@ -42,10 +42,6 @@ Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local(const Vec3& theta) {
     return vectorized_levi_civita() * block_matrix(R);
 }
 
-// Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local(const Mat3& R) {
-//     return vectorized_levi_civita() * block_matrix(R);
-// }
-
 /**
  * Compute the derivative of a rotation matrix with respect to the global axis angle theta.
  */
@@ -115,6 +111,61 @@ inline Mat3 rotation_inertia_dgradE_domega0(const Vec3& theta, const Vec3& theta
     const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_domega0) - dvecRMR_guess_domega0);
 
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
+    return H;
+}
+
+Vec3 rotation_inertia_energy_gradient2(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
+    const Mat3 J_inertia_tensor = Mat3::Identity();
+    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
+    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
+    const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - omega0 * TimeStep);
+    const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
+
+    const Mat3 rot_inertia = R * J_inertia_tensor * R_guess.transpose();
+    const Mat3 A = (rot_inertia - rot_inertia.transpose()) / 2;
+    const Scalar h2 = TimeStep * TimeStep;
+
+    const Vec3 gradient = 1.0 / h2 * vectorized_levi_civita() * vectorize_matrix<3>(A);
+    return gradient;
+}
+
+Mat3 rotation_inertia_finite_dgradE_dtheta(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
+    Mat3 H;
+    const Scalar dx = 0.0001;
+    const Vec3 grad0 = rotation_inertia_energy_gradient2(theta, theta0, omega0, TimeStep);
+    for (unsigned i = 0; i < 3; i++) {
+        Vec3 dtheta = theta;
+        dtheta[i] += dx;
+        const Vec3 grad = rotation_inertia_energy_gradient2(dtheta, theta0, omega0, TimeStep);
+        H.col(i) = (grad - grad0) / dx;
+    }
+    return H;
+}
+
+
+Mat3 rotation_inertia_finite_dgradE_dtheta0(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
+    Mat3 H;
+    const Scalar dx = 0.0001;
+    const Vec3 grad0 = rotation_inertia_energy_gradient2(theta, theta0, omega0, TimeStep);
+    for (unsigned i = 0; i < 3; i++) {
+        Vec3 dtheta0 = theta0;
+        dtheta0[i] += dx;
+        const Vec3 grad = rotation_inertia_energy_gradient2(theta, dtheta0, omega0, TimeStep);
+        H.col(i) = (grad - grad0) / dx;
+    }
+    return H;
+}
+
+Mat3 rotation_inertia_finite_dgradE_domega0(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
+    Mat3 H;
+    const Scalar dx = 0.0001;
+    const Vec3 grad0 = rotation_inertia_energy_gradient2(theta, theta0, omega0, TimeStep);
+    for (unsigned i = 0; i < 3; i++) {
+        Vec3 domega0 = omega0;
+        domega0[i] += dx;
+        const Vec3 grad = rotation_inertia_energy_gradient2(theta, theta0, domega0, TimeStep);
+        H.col(i) = (grad - grad0) / dx;
+    }
     return H;
 }
 
@@ -213,19 +264,25 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
     const unsigned int nParameters = loss.loss_parameter_partial_derivative.size();
     const unsigned int nDoF = trajectory.at(0).x.size();
     const unsigned int nStates = trajectory.size();
+    const unsigned int nSteps = nStates - 1;
 
     // Initialize the loss function gradients dg_dp, dg_dx and dg_dv
     // -------------------------------------------------------------------------
     Vec loss_gradient = loss.loss_parameter_partial_derivative;
-    Vec loss_position_gradient = loss.loss_position_partial_derivative[nStates-1];
-    Vec loss_velocity_gradient = loss.loss_velocity_partial_derivative[nStates-1];
+    Vec loss_position_gradient = loss.loss_position_partial_derivative[nSteps];
+    Vec loss_velocity_gradient = loss.loss_velocity_partial_derivative[nSteps];
+
 
     // Backward loop
     // -------------------------------------------------------------------------
     const Scalar one_over_h = 1.0f / simulation.TimeStep;
-    for (int i = nStates-2; i >= 0; i--) {
+    for (int i = nSteps - 1; i >= 0; i--) {
         const PhysicsState& state = trajectory[i+1];
         const PhysicsState& state0 = trajectory[i];
+        // DEBUG_LOG(i+1);
+        // DEBUG_LOG(state.x.transpose());
+        // DEBUG_LOG(i);
+        // DEBUG_LOG(state0.x.transpose());
 
         // Compute the hessian matrix and other sparse matrices
         // -------------------------------------------------------------------------
@@ -235,28 +292,21 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
         // NOTE: This is not always zero
         Mat dgradE_dp = Mat::Zero(nDoF, nParameters);
 
-        SparseMat ptm(nDoF, nDoF);
-        compute_parallel_transport_matrix(simulation.simulables, state, ptm);
+        // SparseMat ptm(nDoF, nDoF);
+        // compute_parallel_transport_matrix(simulation.simulables, state, ptm);
 
         // Solve the linear system
         // -------------------------------------------------------------------------
         Eigen::ConjugateGradient<SparseMat, Eigen::Upper | Eigen::Lower> cg;
         cg.compute(hessian);
-        const Vec equation_vector = - one_over_h * loss_velocity_gradient - loss_position_gradient;
+        const Vec equation_vector = - (one_over_h * loss_velocity_gradient + loss_position_gradient);
         Vec alpha = cg.solve(equation_vector);
 
         // Update the loss function gradients
         // -------------------------------------------------------------------------
-        const Vec tempx = loss.loss_position_partial_derivative[i] - one_over_h * loss_velocity_gradient + dgradE_dx0 * alpha;
-        const Vec tempv = loss.loss_velocity_partial_derivative[i] + dgradE_dv0 * alpha;
         loss_position_gradient = (loss.loss_position_partial_derivative[i] - one_over_h * loss_velocity_gradient + dgradE_dx0 * alpha);
         loss_velocity_gradient = (loss.loss_velocity_partial_derivative[i] + dgradE_dv0 * alpha);
-        std ::cout << "dgradE_dx0" << "\n" << dgradE_dx0 << std ::endl;
-        std ::cout << "dgradE_dv0" << "\n" << dgradE_dv0 << std ::endl;
 
-        // DEBUG_LOG(i);
-        // DEBUG_LOG(loss_position_gradient[4]);
-        // DEBUG_LOG(loss_velocity_gradient[4]);
         loss_gradient += dgradE_dp * alpha;
     }
 

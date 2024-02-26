@@ -394,6 +394,7 @@ void raylib_to_imgui_tracelog_callback(int logLevel, const char *text, va_list a
 
 
 void MandosViewer::initialize_graphical_context() {
+    SetConfigFlags(FLAG_MSAA_4X_HINT);
     InitWindow(initialScreenWidth, initialScreenHeight, "Mandos");
     ImGuiInitialize();
     SetTraceLogCallback(raylib_to_imgui_tracelog_callback);

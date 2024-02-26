@@ -26,13 +26,13 @@ void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const Physic
     const Vec3 x0 = p.get_position(state0);
     const Vec3 v0 = p.get_velocity(state0);
     const Vec3 x_guess = x0 + TimeStep * v0;
-    const Scalar h2 = TimeStep * TimeStep;
+    const Scalar one_over_h2 = 1 / (TimeStep * TimeStep);
 
     // Compute the energy derivatives
     // ---------------------------------------------------------------
-    const Scalar energy = 1.0 / (2.0 * h2) * (x - x_guess).transpose() * Mass * (x - x_guess);
-    const Vec3 gradient = 1.0 / h2 * Mass * (x - x_guess);
-    const Mat3 hessian = 1.0 / h2 * Mass;
+    const Scalar energy = 0.5 * one_over_h2 * (x - x_guess).transpose() * Mass * (x - x_guess);
+    const Vec3 gradient = one_over_h2 * Mass * (x - x_guess);
+    const Mat3 hessian = one_over_h2 * Mass;
 
     // Add the energy derivatives to the global structure
     // ---------------------------------------------------------------
