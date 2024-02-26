@@ -1,12 +1,12 @@
 #ifndef VIEWMANDOS_H_
 #define VIEWMANDOS_H_
 
-#include "linear_algebra.hpp"
+#include "../src/linear_algebra.hpp"
 #include "mandos.hpp"
-#include "mesh.hpp"
-#include "physics_state.hpp"
-#include "memory_pool.hpp"
-#include "simulation.hpp"
+#include "../src/mesh.hpp"
+#include "../src/physics_state.hpp"
+#include "../src/memory_pool.hpp"
+#include "../src/simulation.hpp"
 #include <vector>
 
 enum KeyboardKeys {

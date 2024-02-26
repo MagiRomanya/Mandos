@@ -6,14 +6,14 @@
 #include <vector>
 #include <Eigen/Dense> // for inverse
 
-#include "linear_algebra.hpp"
 #include "mandos.hpp"
-#include "mesh.hpp"
-#include "rigid_body.hpp"
-#include "clock.hpp"
-#include "simulation.hpp"
-#include "utility_functions.hpp"
 #include "viewmandos.hpp"
+#include "clock.hpp"
+#include "../linear_algebra.hpp"
+#include "../mesh.hpp"
+#include "../rigid_body.hpp"
+#include "../simulation.hpp"
+#include "../utility_functions.hpp"
 
 Vec3 rotation_inertia_energy_gradient(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
     const Mat3 J_inertia_tensor = Mat3::Identity();

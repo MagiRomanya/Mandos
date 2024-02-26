@@ -1,9 +1,9 @@
-#include "edge.hpp"
-#include "inertia_energies.hpp"
-#include "mesh.hpp"
-#include "particle.hpp"
-#include "spring.hpp"
-#include "simulable_generator.hpp"
+#include "../edge.hpp"
+#include "../inertia_energies.hpp"
+#include "../mesh.hpp"
+#include "../particle.hpp"
+#include "../spring.hpp"
+#include "../simulable_generator.hpp"
 
 #include <vector>
 

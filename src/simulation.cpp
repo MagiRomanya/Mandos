@@ -73,6 +73,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         f = EnergyAndDerivatives(nDoF);
         compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
         const Scalar energy0 = f.energy;
+        // DEBUG_LOG(f.gradient.norm());
 
         // Integration step
         // -----------------------------------------------------------------------------------------

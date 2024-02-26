@@ -1,9 +1,9 @@
 #include "mandos.hpp"
-#include "mesh.hpp"
-#include "rigid_body.hpp"
-#include "simulation.hpp"
 #include "viewmandos.hpp"
-#include "physics_state.hpp"
+#include "../mesh.hpp"
+#include "../rigid_body.hpp"
+#include "../simulation.hpp"
+#include "../physics_state.hpp"
 #include "../differentiable.hpp"
 #include "../async_simulation_loop.hpp"
 

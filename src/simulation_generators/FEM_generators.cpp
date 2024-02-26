@@ -1,8 +1,8 @@
-#include "fem_unit.hpp"
-#include "inertia_energies.hpp"
-#include "particle.hpp"
-#include "simulable_generator.hpp"
-#include "simulation.hpp"
+#include "../fem_unit.hpp"
+#include "../inertia_energies.hpp"
+#include "../particle.hpp"
+#include "../simulable_generator.hpp"
+#include "../simulation.hpp"
 
 template <typename MaterialType>
 SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus) {

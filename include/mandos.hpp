@@ -4,9 +4,19 @@
 #include <cassert>
 #include <vector>
 
-#include "particle.hpp"
-#include "simulable_generator.hpp"
-#include "simulation.hpp"
+#include "../src/simulable_generator.hpp"
+#include "../src/simulation.hpp"
+
+/**
+ * Here there are the definitions of simulable handles, that are a front end of the simulation for the user to interact with.
+ *
+ * The handle objects proide the user with a friendly way of creating simulables and creating interactions and constraints between them.
+ * This abstracts the user from the implementation details of the creation process of simulabes, that have to allocate degrees of freedom and construct the simulables from atomic energies.
+ *
+ * The main idea here is that in order to create the simulable, the user must pass a simulation instance where it wants the simulable to be created.
+ * All the important state is thus in the simulation instance and the simulable Handle only serves as an easy way to edit the simulation instance.
+ * NO REAL STATE IS STORED IN THE HANDLES.
+ */
 
 /**
  * Rigid Body wrapper with utility functions.
