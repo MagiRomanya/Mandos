@@ -148,6 +148,11 @@ PYBIND11_MODULE(pymandos, m) {
 
     m.def("compute_loss_function_gradient_backpropagation", &compute_loss_function_gradient_backpropagation);
 
+    m.def("compute_loss_function_gradient_backpropagation_1_step_position", &compute_loss_function_gradient_backpropagation_1_step_position);
+
+    m.def("compute_loss_function_gradient_backpropagation_1_step_velocity", &compute_loss_function_gradient_backpropagation_1_step_velocity);
+
+
     // RENDERING
     // -----------------------------------------------------------------------------
     py::class_<MeshGPU>(m, "MeshGPU")

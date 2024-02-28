@@ -15,4 +15,16 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
                                                    const LossFunctionAndDerivatives& loss,
                                                    const Mat& dx0_dp, const Mat& dv0_dp);
 
+Vec compute_loss_function_gradient_backpropagation_1_step_velocity(const Simulation& simulation,
+                                                                   const PhysicsState state0,
+                                                                   const PhysicsState state1,
+                                                                   const Vec dg_dphi,
+                                                                   const Vec dg_dphi_dot);
+
+Vec compute_loss_function_gradient_backpropagation_1_step_position(const Simulation& simulation,
+                                                                   const PhysicsState state0,
+                                                                   const PhysicsState state1,
+                                                                   const Vec dg_dphi,
+                                                                   const Vec dg_dphi_dot);
+
 #endif // DIFFERENTIABLE_H_
