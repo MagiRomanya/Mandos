@@ -3,7 +3,9 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <memory>
 #include <string>
 #include <stdlib.h>
@@ -266,6 +268,7 @@ TetrahedronMeshVisualization::~TetrahedronMeshVisualization() {
 struct RenderState {
     void initialize();
     void deinitialize();
+    void update_shader_textures();
 
     // MISC
     // -------------------------------------------------------------
@@ -306,6 +309,12 @@ struct RenderState {
 
 #define SHADER_LOC_SLICE_PLANE SHADER_LOC_COLOR_AMBIENT
 
+
+void RenderState::update_shader_textures() {
+    SetMaterialTexture(&base_material, MATERIAL_MAP_DIFFUSE, diffuseTexture);
+    SetMaterialTexture(&base_material, MATERIAL_MAP_NORMAL, normalMapTexture);
+}
+
 void RenderState::initialize() {
     camera = create_camera();
 
@@ -334,8 +343,7 @@ void RenderState::initialize() {
     diffuseTexture = LoadTexture("resources/textures/DiffuseMap.png");
     normalMapTexture = LoadTexture("resources/textures/NormalMap.png");
     backgroundTexture = LoadTexture("resources/textures/background.png");
-    SetMaterialTexture(&base_material, MATERIAL_MAP_DIFFUSE, diffuseTexture);
-    SetMaterialTexture(&base_material, MATERIAL_MAP_NORMAL, normalMapTexture);
+    update_shader_textures();
 
     // Meshes
     spring_model = LoadModel("resources/obj/spring.obj");
@@ -638,13 +646,15 @@ static inline bool draw_texture_button_GUI(Texture2D& texture) {
     const float imageHeight = imageWidth / aspectRatio;
     return ImGui::ImageButton(reinterpret_cast<ImTextureID>(texture.id), ImVec2(imageWidth, imageHeight));
 }
+
 static inline void prompt_user_browse_texture(Texture2D& texture) {
     const nfdfilteritem_t filterItem[1] = {{"Images", "png, jpg"}};
     nfdchar_t* outPath;
-    nfdresult_t file_selected = NFD_OpenDialog(&outPath, filterItem, 1, NULL);
+    nfdresult_t file_selected = NFD_OpenDialog(&outPath, filterItem, 1, "resources/textures/");
     if (file_selected == NFD_OKAY) {
         UnloadTexture(texture);
         texture = LoadTexture(outPath);
+        renderState->update_shader_textures();
         NFD_FreePath(outPath);
     }
     else if (file_selected == NFD_CANCEL) {
@@ -655,7 +665,7 @@ static inline void prompt_user_browse_texture(Texture2D& texture) {
     }
 }
 
-inline void draw_GUI_texure_selector(bool& open) {
+inline void draw_GUI_texture_selector(bool& open) {
     ImGui::Begin("Texture editor", &open);
     ImGui::SeparatorText("Diffuse color");
     if (draw_texture_button_GUI(renderState->diffuseTexture)) {
@@ -780,7 +790,7 @@ void MandosViewer::drawGUI() {
         ImGui::End();
     }
     if (renderState->textureFrameOpen) {
-        draw_GUI_texure_selector(renderState->textureFrameOpen);
+        draw_GUI_texture_selector(renderState->textureFrameOpen);
     }
     ImGuiEndDrawing();
 }

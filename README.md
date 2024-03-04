@@ -12,3 +12,6 @@ cd build
 cmake ..
 cmake --build .
 ```
+
+## Project architecture
+[](./resources/mandos.svg "A simplified high level overview of the Mandos simulator and how it is structured.")
