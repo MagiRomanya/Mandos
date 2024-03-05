@@ -6,6 +6,11 @@
 #include "utility_functions.hpp"
 
 /**
+ * Clamps the angle part of the axis angle to be between -pi and pi.
+ */
+Vec3 clamp_axis_angle(const Vec3& axis_angle);
+
+/**
  * Compute the inertia tensor as if the object is made out of mass particles in their vertices.
  *
  * @param rb_total_mass total mass of the object.

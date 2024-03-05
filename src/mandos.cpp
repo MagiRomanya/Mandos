@@ -2,6 +2,7 @@
 
 #include "mandos.hpp"
 #include "fem_unit.hpp"
+#include "rigid_body.hpp"
 #include "utility_functions.hpp"
 #include "gravity.hpp"
 #include "particle_rigid_body_copuling.hpp"
@@ -34,7 +35,7 @@ RigidBodyHandle RigidBodyHandle::set_COM_initial_position(Vec3 pos) const {
 }
 
 RigidBodyHandle RigidBodyHandle::set_initial_orientation(Vec3 axis_angle) const {
-    simulation.initial_state.x.segment<3>(rb.index + 3) = axis_angle;
+    simulation.initial_state.x.segment<3>(rb.index + 3) = clamp_axis_angle(axis_angle);
     return *this;
 }
 

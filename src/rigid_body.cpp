@@ -281,3 +281,12 @@ Vec3 compute_principal_moments_of_inertia(const Mat3& inertia_tensor) {
     assert(eigenvalues.imag().isZero());
     return eigenvalues.real();
 }
+
+Vec3 clamp_axis_angle(const Vec3& axis_angle) {
+    constexpr Scalar tau = 2 * M_PI;
+    const Scalar angle = axis_angle.norm();
+    if (std::abs(angle) < 0.1) return axis_angle;
+    Scalar clamped = std::fmod(angle, tau);
+    if (clamped > M_PI) clamped -= tau;
+    return axis_angle / angle * clamped;
+}
