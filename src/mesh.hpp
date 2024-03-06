@@ -18,11 +18,13 @@ struct RenderMesh {
     RenderMesh(const SimulationMesh& simMesh);
 
     void updateFromSimulationMesh(const SimulationMesh& sim_mesh);
+    void smoothNormals();
 
     std::vector<Scalar> vertices;
     std::vector<Scalar> normals;
     std::vector<Scalar> tangents;
     std::vector<Scalar> texcoords;
+    std::vector<unsigned int> indices;
 };
 
 /**

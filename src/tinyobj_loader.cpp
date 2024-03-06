@@ -118,9 +118,10 @@ SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
 }
 
 void LoadRenderMeshTinyOBJ(std::string inputfile,
-                                   std::vector<Scalar> &out_vertices,
-                                   std::vector<Scalar> &out_normals,
-                                   std::vector<Scalar> &out_tex_coord) {
+                           std::vector<Scalar> &out_vertices,
+                           std::vector<Scalar> &out_normals,
+                           std::vector<Scalar> &out_tex_coord,
+                           std::vector<unsigned int> &out_indices) {
     tinyobj::ObjReaderConfig reader_config;
     tinyobj::ObjReader reader;
     if (!reader.ParseFromFile(inputfile, reader_config)) {
@@ -133,7 +134,7 @@ void LoadRenderMeshTinyOBJ(std::string inputfile,
     }
 
     if (!reader.Warning().empty()) {
-        std::cout << "WARNING::TinyObjReader: " << reader.Warning();
+        std::cout << "WARNING::TinyObjReader: " << reader.Warning() << std::endl;
     }
 
     auto &attrib = reader.GetAttrib();
@@ -143,6 +144,15 @@ void LoadRenderMeshTinyOBJ(std::string inputfile,
     for (size_t s = 0; s < shapes.size(); s++) {
         // Loop over faces(polygon)
         size_t index_offset = 0;
+        if (shapes[s].mesh.num_face_vertices.size() != 3) {
+            std::cout << "WARNING:TinyObjReader: The mesh " << inputfile << " has not triangular faces!" << std::endl;
+        }
+
+        for (size_t i = 0; i < shapes[s].mesh.indices.size(); i++){
+            size_t index = shapes[s].mesh.indices[i].vertex_index;
+            out_indices.push_back(index);
+        }
+
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
             size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
 
@@ -174,7 +184,8 @@ void LoadRenderMeshTinyOBJ(std::string inputfile,
               // texcoord data
               if (idx.texcoord_index >= 0) {
                 tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
-                tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
+                // Flip the y coordinates to display the textures correctly
+                tinyobj::real_t ty = 1 - attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
                 out_tex_coord.push_back(tx);
                 out_tex_coord.push_back(ty);
               }
@@ -235,7 +246,7 @@ inline void computeRenderMeshTangentVectors(RenderMesh& mesh) {
 }
 
 RenderMesh::RenderMesh(std::string filename) {
-    LoadRenderMeshTinyOBJ(filename, vertices, normals, texcoords);
+    LoadRenderMeshTinyOBJ(filename, vertices, normals, texcoords, indices);
     computeRenderMeshTangentVectors(*this);
 }
 
@@ -286,6 +297,9 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<Scalar>& o
 
     for (size_t s = 0; s < shapes.size(); s++) {
         const tinyobj::shape_t& shape = shapes[s];
+        if (shape.mesh.num_face_vertices.size() != 3) {
+            std::cout << "WARNING:TinyObjReader: The mesh " << inputfile << " has not triangular faces!" << std::endl;
+        }
         for (size_t i = 0; i < shape.mesh.indices.size(); i++){
             size_t index = shape.mesh.indices[i].vertex_index;
             out_indices.push_back(index);
@@ -307,6 +321,7 @@ void RenderMesh::updateFromSimulationMesh(const SimulationMesh& sim_mesh) {
     if (tangents.size() == 0)
         tangents.resize(vertices.size());
 
+    indices = sim_mesh.indices;
     const unsigned int nTriangles = sim_mesh.indices.size() / 3;
     for (unsigned int i = 0; i < nTriangles; i++) {
         // each triangle has 3 mesh.vertices -> 9 coordinates
@@ -346,5 +361,62 @@ void RenderMesh::updateFromSimulationMesh(const SimulationMesh& sim_mesh) {
         }
 
     }
+}
 
+Vec3 compute_triangle_angles(const Vec3& p1, const Vec3& p2, const Vec3& p3) {const Vec3 AB = p2 - p1;
+    const Vec3 AC = p3 - p1;
+    const Vec3 BC = p3 - p2;
+
+    const Scalar AC_len = AC.norm();
+    const Scalar AB_len = AB.norm();
+    const Scalar BC_len = BC.norm();
+    const Scalar threshold = 1e-8;
+    if (AC_len < threshold or AB_len < threshold or BC_len < threshold) return Vec3::Zero();
+
+    const Scalar cos1 = AB.dot(AC) / (AC_len * AB_len);
+    const Scalar cos2 = - BC.dot(AC) / (AC_len * BC_len);
+
+    const Scalar TRIANGLE_TOTAL_ANGLE = M_PI;
+    const Scalar angle1 = std::acos(cos1);
+    const Scalar angle2 = std::acos(cos2);
+    const Scalar angle3 = M_PI - angle1 - angle2;
+    return Vec3(angle1, angle2, angle3);
+}
+
+void RenderMesh::smoothNormals() {
+    std::vector<Scalar> new_normals;
+    new_normals.resize(3*indices.size(), 0.0);
+
+    // Compute smooth normals
+    const unsigned int nTriangles = indices.size() / 3;
+    for (unsigned int i = 0; i < nTriangles; i++) {
+        // The triangle only has one normal!
+        const Vec3 normal = Vec3(normals[9*i + 0 + 3*0], normals[9*i + 1 + 3*0], normals[9*i + 2 + 3*0]);
+
+        // const Vec3 vertexA = Vec3(vertices[9*i + 0 + 3*0], vertices[9*i + 1 + 3*0], vertices[9*i + 2 + 3*0]);
+        // const Vec3 vertexB = Vec3(vertices[9*i + 0 + 3*1], vertices[9*i + 1 + 3*1], vertices[9*i + 2 + 3*1]);
+        // const Vec3 vertexC = Vec3(vertices[9*i + 0 + 3*2], vertices[9*i + 1 + 3*2], vertices[9*i + 2 + 3*2]);
+
+        // const Scalar TRIANGLE_TOTAL_ANGLE = M_PI;
+        // const Vec3 angles = compute_triangle_angles(vertexA, vertexB, vertexC);
+
+        for (unsigned int j = 0; j < 3; j++) {
+            // const Scalar coeff = angles[j] / TRIANGLE_TOTAL_ANGLE;
+            const Scalar coeff = 1;
+            const unsigned int idx = 3*indices[3*i+j];
+            new_normals[idx + 0] += coeff * normal.x();
+            new_normals[idx + 1] += coeff * normal.y();
+            new_normals[idx + 2] += coeff * normal.z();
+        }
+    }
+
+    // Update the normals
+    for (unsigned int i = 0; i < nTriangles; i++) {
+        for (unsigned int j=0; j < 3; j++) { // j is x, y, z
+            // The same normal for each vertex of the triangle
+            normals[9*i + j + 3*0] = new_normals[3*indices[3*i + 0] + j];
+            normals[9*i + j + 3*1] = new_normals[3*indices[3*i + 1] + j];
+            normals[9*i + j + 3*2] = new_normals[3*indices[3*i + 2] + j];
+        }
+    }
 }

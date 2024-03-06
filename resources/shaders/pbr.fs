@@ -72,13 +72,19 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 
     return ggx1 * ggx2;
 }
-void main()
-{
-    // Texture mapping
+
+vec3 normalMapping() {
     vec3 Normal = normalize(fragNormal);
     Normal = texture(texture2, fragTexCoord).rgb;
     Normal = Normal * 2.0 - 1.0;
     Normal = normalize(TBN * Normal);
+    return Normal;
+}
+
+void main()
+{
+    // Normal mapping
+    vec3 Normal = normalMapping();
 
     // Light definition
     Light light;
@@ -90,8 +96,9 @@ void main()
 
     /// PBR
     //Material definition
-    vec3 albedo = texture(texture0, fragTexCoord).rgb;
-    const float metallic = 0.2;
+    vec3 albedo = texture(texture0, fragTexCoord).rgb * 4;
+    // vec3 albedo = colDiffuse.xyz * 4;
+    const float metallic = 0.0;
     const float roughness = 0.3;
     const float ambientOclusion = 1.0;
 
@@ -127,12 +134,13 @@ void main()
     Lo += (kD * albedo / PI + specular) * radiance * NdotL;
 
     // Ambient lighting
-    vec3 ambient = vec3(0.03) * albedo * ambientOclusion;
+    vec3 ambient = vec3(0.05) * albedo * ambientOclusion;
     vec3 color   = ambient + Lo;
+    // vec3 color   = Lo;
 
     // HDR and Tone Mapping
-    color = color / (color + vec3(1.0));
-    color = pow(color, vec3(1.0/2.2));
+    // color = color / (color + vec3(1.0));
+    // color = pow(color, vec3(1.0/2.2));
 
     finalColor = vec4(color, 1.0);
 }

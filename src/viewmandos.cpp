@@ -257,7 +257,8 @@ TetrahedronMeshVisualization::~TetrahedronMeshVisualization() {
     SHADER(bling_phong_texture_shader, "resources/shaders/lighting.vs", "resources/shaders/bling-phong-textures.fs") \
     SHADER(axis_shader, "resources/shaders/axis.vs", "resources/shaders/axis.fs") \
     SHADER(instancing_shader, "resources/shaders/lighting_instancing.vs", "resources/shaders/lighting.fs") \
-    SHADER(solid_shader, "resources/shaders/lighting.vs", "resources/shaders/diffuse_solid_color.fs")
+    SHADER(solid_shader, "resources/shaders/lighting.vs", "resources/shaders/diffuse_solid_color.fs") \
+    SHADER(texture_coordinates_shader, "resources/shaders/lighting.vs", "resources/shaders/uv.fs")
 
 /**
  * INFO Global data for our renderer that will be used throughout the runtime of the application.
@@ -292,8 +293,10 @@ struct RenderState {
     // GEOMETRY
     // -------------------------------------------------------------
     Mesh sphere_mesh;
+    Model sky_box_model;
     Model spring_model;
-    MeshGPU* axis3D = nullptr;
+    Model axis3D_model;
+    // MeshGPU* axis3D = nullptr;
     LinesGPU* tetLines = nullptr;
     TetrahedronMeshVisualization* tetVis = nullptr;
 
@@ -348,10 +351,19 @@ void RenderState::initialize() {
     // Meshes
     spring_model = LoadModel("resources/obj/spring.obj");
     sphere_mesh = GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS);
-    RenderMesh axis3Drender = RenderMesh("resources/obj/axis.obj");
-    axis3D = new MeshGPU(axis3Drender);
+    axis3D_model = LoadModel("resources/obj/axis.obj");
     std::vector<float> vertices = {0.0f, 1.0f, 4.0f, 2.0f};
     tetLines = new LinesGPU(vertices);
+
+    // Sky Box
+    const Mesh cube = GenMeshCube(1.0f, 1.0f, 1.0f);
+    sky_box_model = LoadModelFromMesh(cube);
+    sky_box_model.materials[0].shader = LoadShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
+    Image skyBoxImage = LoadImage("resources/textures/skybox.png");
+    sky_box_model.materials[0].maps[MATERIAL_MAP_CUBEMAP].texture = LoadTextureCubemap(skyBoxImage, CUBEMAP_LAYOUT_AUTO_DETECT);
+    UnloadImage(skyBoxImage);
+    int cubemapTextureIndex = MATERIAL_MAP_CUBEMAP;
+    SetShaderValue(sky_box_model.materials[0].shader, GetShaderLocation(sky_box_model.materials[0].shader, "environmentMap"), (void*) &cubemapTextureIndex, SHADER_UNIFORM_INT);
 
     // Set up the FBO
     screenFBO = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
@@ -361,7 +373,7 @@ void RenderState::deinitialize() {
     // Unload geometry
     UnloadMesh(sphere_mesh);
     UnloadModel(spring_model);
-    delete axis3D;
+    UnloadModel(axis3D_model);
     delete tetLines;
     delete tetVis;
 
@@ -374,6 +386,12 @@ void RenderState::deinitialize() {
     UnloadTexture(diffuseTexture);
     UnloadTexture(normalMapTexture);
     UnloadRenderTexture(screenFBO);
+
+    // SkyBox
+    UnloadTexture(sky_box_model.materials[0].maps[MATERIAL_MAP_CUBEMAP].texture);
+    UnloadShader(sky_box_model.materials[0].shader);
+    UnloadModel(sky_box_model);
+
 }
 
 static RenderState* renderState = nullptr;
@@ -470,6 +488,10 @@ void MandosViewer::begin_drawing() {
 
     BeginMode3D(renderState->camera);
     // DrawGrid(100, 1.0f);
+
+    rlDisableDepthMask();
+    DrawModel(renderState->sky_box_model, renderState->camera.position, 1.0f, WHITE);
+    rlEnableDepthMask();
 }
 
 inline void getFloatsFromColor(float* fc, Color color) {
@@ -719,17 +741,20 @@ void MandosViewer::drawGUI() {
 
         ImGui::SeparatorText("Simulable shaders");
         ImVec2 buttonBox = ImVec2(ImGui::GetContentRegionAvail().x, 30);
-        if (ImGui::Button("Bling Phong shader", buttonBox)) {
+        if (ImGui::Button("Bling Phong", buttonBox)) {
             renderState->base_shader = renderState->bling_phong_shader;
         }
-        if (ImGui::Button("Bling Phong texture shader", buttonBox)) {
+        if (ImGui::Button("Bling Phong Texture", buttonBox)) {
             renderState->base_shader = renderState->bling_phong_texture_shader;
         }
         if (ImGui::Button("PBR", buttonBox)) {
             renderState->base_shader = renderState->pbr_shader;
         }
-        if (ImGui::Button("Normals shader", buttonBox)) {
+        if (ImGui::Button("Normals", buttonBox)) {
             renderState->base_shader = renderState->normals_shader;
+        }
+        if (ImGui::Button("Texture Coordinates", buttonBox)) {
+            renderState->base_shader = renderState->texture_coordinates_shader;
         }
         if (ImGui::Button("Solid Color", buttonBox)) {
             renderState->base_shader = renderState->solid_shader;
@@ -737,6 +762,7 @@ void MandosViewer::drawGUI() {
         if (ImGui::Button("Texture editor")) {
             renderState->textureFrameOpen = not renderState->textureFrameOpen;
         }
+        ImGui::Checkbox("Smooth normals", &enable_normal_smoothing);
 
         ImGui::SeparatorText("Simulation state visualization");
         ImGui::Checkbox("Render simulable meshes", &enable_draw_simulable_meshes);
@@ -825,7 +851,7 @@ void DrawAxis3D(MemoryPool& mem_pool) {
     const Eigen::AngleAxis<Scalar> pitchRotation(pitch, Vec3(1.0f,0.0f,0.0f));
     const Eigen::AngleAxis<Scalar> yawRotation(-yaw - PI / 2, Vec3(renderState->camera.up.x,renderState->camera.up.y,renderState->camera.up.z));
     transform = pitchRotation.toRotationMatrix() * yawRotation.toRotationMatrix() * transform;
-    Mesh raymesh = MeshGPUtoRaymesh(*renderState->axis3D, mem_pool);
+    Mesh raymesh = renderState->axis3D_model.meshes[0];
 
     Matrix rayTransform = {
     (float)transform(0,0), (float)transform(0,1), (float)transform(0, 2), axisPosition.x,
@@ -960,6 +986,7 @@ void MandosViewer::draw_FEM(const FEMHandle& fem, const PhysicsState& state, Mes
     }
 
     renderMesh.updateFromSimulationMesh(simMesh);
+    if (enable_normal_smoothing) renderMesh.smoothNormals();
     gpuMesh.updateData(renderMesh);
     draw_mesh_color(Mat4::Identity(), gpuMesh, mem_pool, FEM_COLOR);
 }
@@ -976,6 +1003,7 @@ void MandosViewer::draw_MassSpring(const MassSpringHandle& mass_spring, const Ph
     }
 
     renderMesh.updateFromSimulationMesh(simMesh);
+    if (enable_normal_smoothing) renderMesh.smoothNormals();
     gpuMesh.updateData(renderMesh);
     draw_mesh_color(Mat4::Identity(), gpuMesh, mem_pool, MASS_SPRING_COLOR);
 
