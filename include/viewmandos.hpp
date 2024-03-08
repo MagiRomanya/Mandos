@@ -181,7 +181,7 @@ private:
     void drawSimulationVisualizationWindow();
 
     bool enable_normal_smoothing = false;
-    bool transparent_background = false;
+    bool enable_transparent_background = false;
     bool enable_draw_particle_indices = false;
     bool enable_draw_simulable_meshes = true;
     bool enable_draw_particles = false;

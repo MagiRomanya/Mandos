@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <stdlib.h>
+#include <thread>
 #include <vector>
 
 #include <Eigen/Core>
@@ -360,7 +361,7 @@ void RenderState::initialize() {
     sky_box_model = LoadModelFromMesh(cube);
     sky_box_model.materials[0].shader = LoadShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
     Image skyBoxImage = LoadImage("resources/textures/skybox.png");
-    sky_box_model.materials[0].maps[MATERIAL_MAP_CUBEMAP].texture = LoadTextureCubemap(skyBoxImage, CUBEMAP_LAYOUT_AUTO_DETECT);
+    sky_box_model.materials[0].maps[MATERIAL_MAP_CUBEMAP].texture = LoadTextureCubemap(skyBoxImage, CUBEMAP_LAYOUT_CROSS_FOUR_BY_THREE);
     UnloadImage(skyBoxImage);
     int cubemapTextureIndex = MATERIAL_MAP_CUBEMAP;
     SetShaderValue(sky_box_model.materials[0].shader, GetShaderLocation(sky_box_model.materials[0].shader, "environmentMap"), (void*) &cubemapTextureIndex, SHADER_UNIFORM_INT);
@@ -489,9 +490,12 @@ void MandosViewer::begin_drawing() {
     BeginMode3D(renderState->camera);
     // DrawGrid(100, 1.0f);
 
-    rlDisableDepthMask();
-    DrawModel(renderState->sky_box_model, renderState->camera.position, 1.0f, WHITE);
-    rlEnableDepthMask();
+    // Render SkyBox
+    if (!enable_transparent_background) {
+        rlDisableDepthMask();
+        DrawModel(renderState->sky_box_model, renderState->camera.position, 1.0f, WHITE);
+        rlEnableDepthMask();
+    }
 }
 
 inline void getFloatsFromColor(float* fc, Color color) {
@@ -627,7 +631,7 @@ void MandosViewer::drawSimulationVisualizationWindow() {
     const bool isTitleBarHovered = ImGui::IsItemHovered();
     flags = ImGui::IsWindowHovered() && (not isTitleBarHovered) ? ImGuiWindowFlags_NoMove : 0;
     flags = flags | constFlags;
-    if (transparent_background) flags = flags | ImGuiWindowFlags_NoBackground;
+    if (enable_transparent_background) flags = flags | ImGuiWindowFlags_NoBackground;
 
     if (ImGui::IsWindowHovered() && not isTitleBarHovered && not ImGuizmo::IsOver()) {
         myUpdateCamera(renderState->camera);
@@ -689,13 +693,15 @@ static inline void prompt_user_browse_texture(Texture2D& texture) {
 
 inline void draw_GUI_texture_selector(bool& open) {
     ImGui::Begin("Texture editor", &open);
-    ImGui::SeparatorText("Diffuse color");
-    if (draw_texture_button_GUI(renderState->diffuseTexture)) {
-        prompt_user_browse_texture(renderState->diffuseTexture);
+    if (ImGui::CollapsingHeader("Diffuse color", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (draw_texture_button_GUI(renderState->diffuseTexture)) {
+            prompt_user_browse_texture(renderState->diffuseTexture);
+        }
     }
-    ImGui::SeparatorText("Normal map");
-    if (draw_texture_button_GUI(renderState->normalMapTexture)) {
-        prompt_user_browse_texture(renderState->normalMapTexture);
+    if (ImGui::CollapsingHeader("Normal map")) {
+        if (draw_texture_button_GUI(renderState->normalMapTexture)) {
+            prompt_user_browse_texture(renderState->normalMapTexture);
+        }
     }
     if (ImGui::CollapsingHeader("Background image")) {
         if (draw_texture_button_GUI(renderState->backgroundTexture)) {
@@ -718,7 +724,7 @@ void MandosViewer::drawGUI() {
             if (ImGui::MenuItem("Camera")) {
                 renderState->cameraFrameOpen = true;
             }
-            ImGui::MenuItem("Toggle transparency", NULL, &transparent_background);
+            ImGui::MenuItem("Toggle transparency", NULL, &enable_transparent_background);
             if (ImGui::BeginMenu("Logs")) {
                 if (ImGui::MenuItem("Raylib Logs"))
                     renderState->RaylibLogsOpen = true;
@@ -980,7 +986,7 @@ void MandosViewer::draw_FEM(const FEMHandle& fem, const PhysicsState& state, Mes
 
     assert(simMesh.vertices.size() <= fem.bounds.nDoF);
 
-    // We should update the simulation mesh from the tetrahedra
+    // We update the simulation mesh from the tetrahedra
     for (unsigned int i = 0; i < simMesh.vertices.size(); i++) {
         simMesh.vertices[i] = state.x[dof_index+i];
     }

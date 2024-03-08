@@ -22,35 +22,6 @@ SimulationMesh::SimulationMesh(std::string filename) {
     recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
 }
 
-struct h_vec3 {
-    h_vec3() {}
-    h_vec3(Scalar x, Scalar y, Scalar z) : x(x), y(y), z(z) {}
-    Scalar x, y, z;
-
-    size_t hash() const {
-        // Large prime numbers
-        const size_t a = 73856093;
-        const size_t b = 19349663;
-        const size_t c = 83492791;
-        const size_t n = std::numeric_limits<size_t>::max();
-        return (((size_t)x)*a xor ((size_t)y)*b xor ((size_t)z)*c) % n;
-    }
-
-    bool operator==(const h_vec3& other) const {
-        const Scalar epsilon = 1e-6;
-        return abs(x - other.x) < epsilon && abs(y - other.y) < epsilon && abs(z - other.z) < epsilon;
-    }
-};
-
-namespace std {
-    template <>
-    struct hash<h_vec3> {
-        size_t operator()(const h_vec3& v) const {
-            return v.hash();
-        }
-    };
-}
-
 /**
  * Initialize the simulation mesh from a render mesh.
  *
@@ -61,59 +32,20 @@ namespace std {
  * @param render_mesh A render mesh (only necessary to have the vertices and indices vectors initialized)
  */
 SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
-    std::unordered_map<h_vec3, unsigned int> vertex_index_map; // Maps the vertex to the new simulation mesh index
-
-    for (unsigned int i = 0; i < render_mesh.vertices.size()/9; i++) {
-        // Get the triangle vertices
-        const unsigned int a = 9*i + 0;
-        const unsigned int b = 9*i + 3;
-        const unsigned int c = 9*i + 6;
-        const h_vec3 va = h_vec3(render_mesh.vertices[a], render_mesh.vertices[a+1], render_mesh.vertices[a+2]);
-        const h_vec3 vb = h_vec3(render_mesh.vertices[b], render_mesh.vertices[b+1], render_mesh.vertices[b+2]);
-        const h_vec3 vc = h_vec3(render_mesh.vertices[c], render_mesh.vertices[c+1], render_mesh.vertices[c+2]);
-
-        // The new triangle indices
-        unsigned int a_new;
-        unsigned int b_new;
-        unsigned int c_new;
-
-        // Save only the vertices not already found
-        // and initialize the new indices accordingly
-        if (not vertex_index_map.contains(va)) {
-            a_new = vertices.size()/3;
-            vertex_index_map[va] = a_new;
-            vertices.push_back(va.x);
-            vertices.push_back(va.y);
-            vertices.push_back(va.z);
+    indices = render_mesh.indices;
+    const unsigned int nVertices = 1 + *std::max_element(indices.begin(), indices.end());
+    const unsigned int nTriangles = indices.size() / 3;
+    vertices.resize(3*nVertices, 0.0);
+    for (unsigned int i = 0; i < nTriangles; i++) {
+        for (unsigned int j = 0; j < 3; j++) { // Iterate the 3 vertices of the triangle i
+            const unsigned int idx = 3*indices[3*i+j];
+            const Vec3 vert = Vec3(render_mesh.vertices[9*i + 0 + 3*j], render_mesh.vertices[9*i + 1 + 3*j], render_mesh.vertices[9*i + 2 + 3*j]);
+            // Here we overwrite the vertices that are repeated in the Render Mesh,
+            // resulting in a simulation mesh with no repeated vertices!
+            vertices[idx + 0] = vert.x();
+            vertices[idx + 1] = vert.y();
+            vertices[idx + 2] = vert.z();
         }
-        else {
-            a_new = vertex_index_map[va];
-        }
-        if (not vertex_index_map.contains(vb)) {
-            b_new = vertices.size()/3;
-            vertex_index_map[vb] = b_new;
-            vertices.push_back(vb.x);
-            vertices.push_back(vb.y);
-            vertices.push_back(vb.z);
-        }
-        else {
-            b_new = vertex_index_map[vb];
-        }
-        if (not vertex_index_map.contains(vc)) {
-            c_new = vertices.size()/3;
-            vertex_index_map[vc] = c_new;
-            vertices.push_back(vc.x);
-            vertices.push_back(vc.y);
-            vertices.push_back(vc.z);
-        }
-        else {
-            c_new = vertex_index_map[vc];
-        }
-
-        // Store the new triangle indices
-        indices.push_back(a_new);
-        indices.push_back(b_new);
-        indices.push_back(c_new);
     }
 }
 
@@ -144,10 +76,6 @@ void LoadRenderMeshTinyOBJ(std::string inputfile,
     for (size_t s = 0; s < shapes.size(); s++) {
         // Loop over faces(polygon)
         size_t index_offset = 0;
-        if (shapes[s].mesh.num_face_vertices.size() != 3) {
-            std::cout << "WARNING:TinyObjReader: The mesh " << inputfile << " has not triangular faces!" << std::endl;
-        }
-
         for (size_t i = 0; i < shapes[s].mesh.indices.size(); i++){
             size_t index = shapes[s].mesh.indices[i].vertex_index;
             out_indices.push_back(index);
@@ -155,43 +83,46 @@ void LoadRenderMeshTinyOBJ(std::string inputfile,
 
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
             size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
+            if (fv != 3) {
+                std::cout << "WARNING:TinyObjReader: The mesh " << inputfile << " faces with " << fv <<" vertices!" << std::endl;
+            }
 
             // Loop over vertices in the face.
             for (size_t v = 0; v < fv; v++) {
-              // access to vertex
-              tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-              tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
-              tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
-              tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
-              out_vertices.push_back(vx);
-              out_vertices.push_back(vy);
-              out_vertices.push_back(vz);
+                // access to vertex
+                tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+                tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
+                tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
+                tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
+                out_vertices.push_back(vx);
+                out_vertices.push_back(vy);
+                out_vertices.push_back(vz);
 
-              // Check if `normal_index` is zero or positive. negative = no normal data
-              if (idx.normal_index >= 0) {
-                tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
-                tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
-                tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
-                out_normals.push_back(nx);
-                out_normals.push_back(ny);
-                out_normals.push_back(nz);
-              }
-              else {
-                  std::cerr << "ERROR: Mesh does not have Normals!" << std::endl;
-              }
+                // Check if `normal_index` is zero or positive. negative = no normal data
+                if (idx.normal_index >= 0) {
+                    tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
+                    tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
+                    tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
+                    out_normals.push_back(nx);
+                    out_normals.push_back(ny);
+                    out_normals.push_back(nz);
+                }
+                else {
+                    std::cerr << "ERROR: Mesh does not have Normals!" << std::endl;
+                }
 
-              // Check if `texcoord_index` is zero or positive. negative = no
-              // texcoord data
-              if (idx.texcoord_index >= 0) {
-                tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
-                // Flip the y coordinates to display the textures correctly
-                tinyobj::real_t ty = 1 - attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
-                out_tex_coord.push_back(tx);
-                out_tex_coord.push_back(ty);
-              }
-              else {
-                  std::cerr << "ERROR: Mesh does not have texture coordinates!" << std::endl;
-              }
+                // Check if `texcoord_index` is zero or positive. negative = no
+                // texcoord data
+                if (idx.texcoord_index >= 0) {
+                    tinyobj::real_t tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
+                    // Flip the y coordinates to display the textures correctly
+                    tinyobj::real_t ty = 1 - attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
+                    out_tex_coord.push_back(tx);
+                    out_tex_coord.push_back(ty);
+                }
+                else {
+                    std::cerr << "ERROR: Mesh does not have texture coordinates!" << std::endl;
+                }
             }
             index_offset += fv;
         }
@@ -297,8 +228,12 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<Scalar>& o
 
     for (size_t s = 0; s < shapes.size(); s++) {
         const tinyobj::shape_t& shape = shapes[s];
-        if (shape.mesh.num_face_vertices.size() != 3) {
-            std::cout << "WARNING:TinyObjReader: The mesh " << inputfile << " has not triangular faces!" << std::endl;
+        for (unsigned int j = 0; j < shape.mesh.num_face_vertices.size(); j++)
+        {
+            const int fv = shape.mesh.num_face_vertices[j];
+            if (fv != 3) {
+                std::cout << "WARNING:TinyObjReader: The mesh " << inputfile << " faces with " << fv <<" vertices!" << std::endl;
+            }
         }
         for (size_t i = 0; i < shape.mesh.indices.size(); i++){
             size_t index = shape.mesh.indices[i].vertex_index;
@@ -383,6 +318,7 @@ Vec3 compute_triangle_angles(const Vec3& p1, const Vec3& p2, const Vec3& p3) {co
     return Vec3(angle1, angle2, angle3);
 }
 
+// #define ANGLE_WEIGHTED_NORMAL_SMOOTHING
 void RenderMesh::smoothNormals() {
     std::vector<Scalar> new_normals;
     new_normals.resize(3*indices.size(), 0.0);
@@ -393,16 +329,21 @@ void RenderMesh::smoothNormals() {
         // The triangle only has one normal!
         const Vec3 normal = Vec3(normals[9*i + 0 + 3*0], normals[9*i + 1 + 3*0], normals[9*i + 2 + 3*0]);
 
-        // const Vec3 vertexA = Vec3(vertices[9*i + 0 + 3*0], vertices[9*i + 1 + 3*0], vertices[9*i + 2 + 3*0]);
-        // const Vec3 vertexB = Vec3(vertices[9*i + 0 + 3*1], vertices[9*i + 1 + 3*1], vertices[9*i + 2 + 3*1]);
-        // const Vec3 vertexC = Vec3(vertices[9*i + 0 + 3*2], vertices[9*i + 1 + 3*2], vertices[9*i + 2 + 3*2]);
+#ifdef ANGLE_WEIGHTED_NORMAL_SMOOTHING
+        const Vec3 vertexA = Vec3(vertices[9*i + 0 + 3*0], vertices[9*i + 1 + 3*0], vertices[9*i + 2 + 3*0]);
+        const Vec3 vertexB = Vec3(vertices[9*i + 0 + 3*1], vertices[9*i + 1 + 3*1], vertices[9*i + 2 + 3*1]);
+        const Vec3 vertexC = Vec3(vertices[9*i + 0 + 3*2], vertices[9*i + 1 + 3*2], vertices[9*i + 2 + 3*2]);
 
-        // const Scalar TRIANGLE_TOTAL_ANGLE = M_PI;
-        // const Vec3 angles = compute_triangle_angles(vertexA, vertexB, vertexC);
+        const Scalar TRIANGLE_TOTAL_ANGLE = M_PI;
+        const Vec3 angles = compute_triangle_angles(vertexA, vertexB, vertexC);
+#endif
 
-        for (unsigned int j = 0; j < 3; j++) {
-            // const Scalar coeff = angles[j] / TRIANGLE_TOTAL_ANGLE;
+        for (unsigned int j = 0; j < 3; j++) { // 3 vertices in a triangle
+#ifdef ANGLE_WEIGHTED_NORMAL_SMOOTHING
+            const Scalar coeff = angles[j] / TRIANGLE_TOTAL_ANGLE;
+#else
             const Scalar coeff = 1;
+#endif
             const unsigned int idx = 3*indices[3*i+j];
             new_normals[idx + 0] += coeff * normal.x();
             new_normals[idx + 1] += coeff * normal.y();

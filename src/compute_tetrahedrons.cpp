@@ -73,3 +73,7 @@ void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indic
         out_tetrahedron_vertices.push_back(out.pointlist[i*3+2]);
     }
 }
+
+TetrahedronMesh::TetrahedronMesh(const SimulationMesh& simMesh) {
+    tetgen_compute_tetrahedrons(simMesh.indices,simMesh.vertices, *this);
+}

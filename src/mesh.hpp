@@ -48,6 +48,8 @@ struct SimulationMesh {
  * The tetrahedrons are described by the vector of indices which has a size of nTetrahedrons * 4.
  */
 struct TetrahedronMesh {
+    TetrahedronMesh() {};
+    TetrahedronMesh(const SimulationMesh& simMesh);
     std::vector<Scalar> vertices;
     std::vector<unsigned int> indices;
 };
