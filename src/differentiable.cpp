@@ -1,7 +1,6 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/SparseLU>
 #include <Eigen/Dense> // For inverse
-#include <cassert>
 #include "differentiable.hpp"
 #include "inertia_energies.hpp"
 #include "linear_algebra.hpp"
@@ -9,30 +8,18 @@
 #include "rigid_body.hpp"
 #include "simulation.hpp"
 #include "utility_functions.hpp"
-#include "sinc.hpp"
 
 static const Scalar threshold2 = 1e-5;
 
-inline Vec3 rotation_inertia_energy_gradient_global(const Scalar TimeStep, const Mat3& inertia_tensor, const Vec3& phi, const Vec3& phi0, const Vec3& omega0) {
-    // Analytic gradient
-    const Mat3 R0 = compute_rotation_matrix_rodrigues(phi0);
-    const Mat3 R0old = compute_rotation_matrix_rodrigues(phi0 - TimeStep * omega0);
-    const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
-    const Scalar one_over_2h2 = 1.0 / (2.0 * TimeStep * TimeStep);
-    const Mat3 rot_inertia = inertia_tensor * R_guess.transpose();
-    const Mat3 A = rot_inertia.transpose() - rot_inertia;
-    const Mat3 S = (rot_inertia + rot_inertia.transpose()) / 2.0;
-    const Mat3 SS = (S.trace()* Mat3::Identity() - S);
-    const Vec3 v = Vec3(A(1,2), -A(0,2), A(0,1));
-    const Scalar phi_norm = phi.norm();
-    const Scalar sinc_phi_2 = sinc(phi_norm/2);
-    const Vec3 grad = (
-                        2.0*grad_sinc(phi) * v.dot(phi)
-                        + 2.0 * sinc(phi_norm) * v
-                        + sinc_phi_2 * grad_sinc(phi/2) * phi.transpose() * SS * phi
-                        + 2.0 * sinc_phi_2 * sinc_phi_2 * SS * phi
-                        ) * one_over_2h2;
-    return grad;
+inline Mat3 compute_global_axis_angle_jacobian(const Vec3& phi) {
+    const Scalar angle = phi.norm();
+    if (angle < threshold2) return Mat3::Identity();
+    const Vec3 axis = phi / angle;
+    const Scalar half_angle = 0.5 * angle;
+    const Mat3 axisaxisT = axis * axis.transpose();
+    return half_angle / tan(half_angle) * (Mat3::Identity() - axisaxisT)
+        + axisaxisT
+        - skew(0.5 * phi);
 }
 
 inline void compute_axis_angle_jacobian_parts(const Vec3& phi, Mat3& A, Mat3& B) {
@@ -111,7 +98,7 @@ inline Mat3 rotation_inertia_dgradE_dtheta0(const Mat3& J_inertia_tensor, const 
 
     const Scalar h2 = TimeStep * TimeStep;
     const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
-    const Eigen::Matrix<Scalar,3,9> dvecRguess_dtheta0 = 2 * dvecR_dtheta_local(theta0) - dvecR_dtheta_local(theta0 - omega0 * TimeStep);
+    const Eigen::Matrix<Scalar,3,9> dvecRguess_dtheta0 = 2 * dvecR_dtheta_global(theta0) - dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_dtheta0.transpose();;
     const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_dtheta0) - dvecRMR_guess_dtheta0);
@@ -125,7 +112,7 @@ inline Mat3 rotation_inertia_dgradE_domega0(const Mat3& J_inertia_tensor, const 
 
     const Scalar h2 = TimeStep * TimeStep;
     const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
-    const Eigen::Matrix<Scalar,3,9> dvecRguess_domega0 = TimeStep * dvecR_dtheta_local(theta0 - omega0 * TimeStep);
+    const Eigen::Matrix<Scalar,3,9> dvecRguess_domega0 = TimeStep * dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_domega0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_domega0.transpose();;
     const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_domega0) - dvecRMR_guess_domega0);
@@ -134,60 +121,7 @@ inline Mat3 rotation_inertia_dgradE_domega0(const Mat3& J_inertia_tensor, const 
     return H;
 }
 
-Vec3 rotation_inertia_energy_gradient2(const Mat3& J_inertia_tensor, const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
-    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
-    const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - omega0 * TimeStep);
-    const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
-
-    const Mat3 rot_inertia = R * J_inertia_tensor * R_guess.transpose();
-    const Mat3 A = (rot_inertia - rot_inertia.transpose()) / 2;
-    const Scalar h2 = TimeStep * TimeStep;
-
-    const Vec3 gradient = 1.0 / h2 * vectorized_levi_civita() * vectorize_matrix<3>(A);
-    return gradient;
-}
-
-Mat3 rotation_inertia_finite_dgradE_dtheta(const Mat3& J_inertia_tensor, const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    Mat3 H;
-    const Scalar dx = 0.0001;
-    const Vec3 grad0 = rotation_inertia_energy_gradient2(J_inertia_tensor, theta, theta0, omega0, TimeStep);
-    for (unsigned i = 0; i < 3; i++) {
-        Vec3 dtheta = theta;
-        dtheta[i] += dx;
-        const Vec3 grad = rotation_inertia_energy_gradient2(J_inertia_tensor, dtheta, theta0, omega0, TimeStep);
-        H.col(i) = (grad - grad0) / dx;
-    }
-    return H;
-}
-
-
-Mat3 rotation_inertia_finite_dgradE_dtheta0(const Mat3& J_inertia_tensor, const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    Mat3 H;
-    const Scalar dx = 0.0001;
-    const Vec3 grad0 = rotation_inertia_energy_gradient2(J_inertia_tensor, theta, theta0, omega0, TimeStep);
-    for (unsigned i = 0; i < 3; i++) {
-        Vec3 dtheta0 = theta0;
-        dtheta0[i] += dx;
-        const Vec3 grad = rotation_inertia_energy_gradient2(J_inertia_tensor, theta, dtheta0, omega0, TimeStep);
-        H.col(i) = (grad - grad0) / dx;
-    }
-    return H;
-}
-
-Mat3 rotation_inertia_finite_dgradE_domega0(const Mat3& J_inertia_tensor, const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    Mat3 H;
-    const Scalar dx = 0.0001;
-    const Vec3 grad0 = rotation_inertia_energy_gradient2(J_inertia_tensor, theta, theta0, omega0, TimeStep);
-    for (unsigned i = 0; i < 3; i++) {
-        Vec3 domega0 = omega0;
-        domega0[i] += dx;
-        const Vec3 grad = rotation_inertia_energy_gradient2(J_inertia_tensor, theta, theta0, domega0, TimeStep);
-        H.col(i) = (grad - grad0) / dx;
-    }
-    return H;
-}
-
+// #define DIFF_LOCAL_RB
 void compute_gradient_partial_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, SparseMat& dgradE_dx, SparseMat& dgradE_dx0, SparseMat& dgradE_dv0) {
     const unsigned int nDoF = state.get_nDoF();
     EnergyAndDerivatives f(nDoF);
@@ -220,11 +154,13 @@ void compute_gradient_partial_derivatives(Scalar TimeStep, const Energies& energ
         const Vec3 theta = e.rb.get_axis_angle(state.x);
         const Vec3 theta0 = e.rb.get_axis_angle(state0.x);
         const Vec3 omega0 = e.rb.get_axis_angle(state0.v);
-        // const Mat3 dgradE_dtheta = rotation_inertia_energy_hessian(J_inertia_tensor, theta, theta0, omega0, TimeStep);
-        const Mat3 dgradE_dtheta = rotation_inertia_finite_dgradE_dtheta(J_inertia_tensor, theta, theta0, omega0, TimeStep);
-        const Mat3 dgradE_dtheta0 = rotation_inertia_finite_dgradE_dtheta0(J_inertia_tensor, theta, theta0, omega0, TimeStep);
-        const Mat3 dgradE_domega0 = rotation_inertia_finite_dgradE_domega0(J_inertia_tensor, theta, theta0, omega0, TimeStep);
-        // const Mat3 dgradE_domega0 = rotation_inertia_finite_dgradE_domega0(J_inertia_tensor, theta, theta0, omega0, TimeStep) / TimeStep;
+#ifdef DIFF_LOCAL_RB
+        const Mat3 dgradE_dtheta = rotation_inertia_energy_hessian(J_inertia_tensor, theta, theta0, omega0, TimeStep);
+#else
+        const Mat3 dgradE_dtheta = rotation_inertia_dgradE_dtheta(J_inertia_tensor, theta, theta0, omega0, TimeStep);
+#endif
+        const Mat3 dgradE_dtheta0 = rotation_inertia_dgradE_dtheta0(J_inertia_tensor, theta, theta0, omega0, TimeStep);
+        const Mat3 dgradE_domega0 = rotation_inertia_dgradE_domega0(J_inertia_tensor, theta, theta0, omega0, TimeStep);
 
         for (unsigned int i = 0; i < 3; i++) {
             for (unsigned int j = 0; j < 3; j++) {
@@ -255,51 +191,29 @@ void compute_gradient_partial_derivatives(Scalar TimeStep, const Energies& energ
     dgradE_dv0.setFromTriplets(dgradE_dv0_triplets.begin(), dgradE_dv0_triplets.end());
 }
 
-void compute_parallel_transport_matrix(const Simulables& simulables, const PhysicsState state, SparseMat& ptm) {
-    std::vector<Triplet> ptm_triplets;
+void compute_simulation_global_to_local_jacobian(const Simulables& simulables, const PhysicsState state, SparseMat& ptm) {
+    std::vector<Triplet> jac_triplets;
     for (unsigned int i = 0; i < simulables.particles.size(); i++) {
         const unsigned int idx = simulables.particles[i].index;
-        for (unsigned int j = 0; j < 3; j++) ptm_triplets.emplace_back(idx + j, idx + j, 1); // Diagonal matrix
+        for (unsigned int j = 0; j < 3; j++) jac_triplets.emplace_back(idx + j, idx + j, 1); // Diagonal matrix
     }
     for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
         const RigidBody& rb = simulables.rigid_bodies[i];
         const Vec3 theta = rb.get_axis_angle(state.x);
         const Mat3 jac = compute_global_to_local_axis_angle_jacobian(theta);
+        // const Mat3 jac = compute_global_axis_angle_jacobian(theta);
 
         const unsigned int idx = rb.index + 3;
 
         for (unsigned int j = 0; j < 3; j++) {
-            ptm_triplets.emplace_back(rb.index + j, rb.index + j, 1); // Translation diagonal
+            jac_triplets.emplace_back(rb.index + j, rb.index + j, 1); // Translation diagonal
             for (unsigned int k = 0; k < 3; k++) {
-                ptm_triplets.emplace_back(idx + j, idx + k, jac(j, k));
+                jac_triplets.emplace_back(idx + j, idx + k, jac(j, k));
             }
         }
     }
-    ptm.setFromTriplets(ptm_triplets.begin(), ptm_triplets.end());
+    ptm.setFromTriplets(jac_triplets.begin(), jac_triplets.end());
 }
-void compute_inverse_parallel_transport_matrix(const Simulables& simulables, const PhysicsState state, SparseMat& ptm) {
-    std::vector<Triplet> ptm_triplets;
-    for (unsigned int i = 0; i < simulables.particles.size(); i++) {
-        const unsigned int idx = simulables.particles[i].index;
-        for (unsigned int j = 0; j < 3; j++) ptm_triplets.emplace_back(idx + j, idx + j, 1); // Diagonal matrix
-    }
-    for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
-        const RigidBody& rb = simulables.rigid_bodies[i];
-        const Vec3 theta = rb.get_axis_angle(state.x);
-        const Mat3 jac = compute_local_to_global_axis_angle_jacobian(theta);
-
-        const unsigned int idx = rb.index + 3;
-
-        for (unsigned int j = 0; j < 3; j++) {
-            ptm_triplets.emplace_back(rb.index + j, rb.index + j, 1); // Translation diagonal
-            for (unsigned int k = 0; k < 3; k++) {
-                ptm_triplets.emplace_back(idx + j, idx + k, jac(j, k));
-            }
-        }
-    }
-    ptm.setFromTriplets(ptm_triplets.begin(), ptm_triplets.end());
-}
-
 
 
 Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
@@ -324,10 +238,6 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
     for (int i = nSteps - 1; i >= 0; i--) {
         const PhysicsState& state = trajectory[i+1];
         const PhysicsState& state0 = trajectory[i];
-        // DEBUG_LOG(i+1);
-        // DEBUG_LOG(state.x.transpose());
-        // DEBUG_LOG(i);
-        // DEBUG_LOG(state0.x.transpose());
 
         // Compute the hessian matrix and other sparse matrices
         // -------------------------------------------------------------------------
@@ -338,23 +248,18 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
         // NOTE: This is not always zero
         Mat dgradE_dp = Mat::Zero(nDoF, nParameters);
 
-        SparseMat ptm(nDoF, nDoF);
-        compute_parallel_transport_matrix(simulation.simulables, state, ptm);
-
         // Solve the linear system
         // -------------------------------------------------------------------------
-        // Eigen::ConjugateGradient<SparseMat> cg;
-        // cg.setTolerance(1e-9);
-        // cg.compute(hessian);
-        // // const Vec equation_vector = - (loss_position_gradient.transpose() + one_over_h * loss_velocity_gradient.transpose() * ptm);
-        // const Vec equation_vector = - (loss_position_gradient.transpose() + one_over_h * loss_velocity_gradient.transpose());
-        // Vec alpha = cg.solve(equation_vector);
-
-        // Vec alpha = - (loss_position_gradient + one_over_h * loss_velocity_gradient).transpose() * hessian.toDense().inverse();
-
-        Eigen::SparseLU<SparseMat> solver;
-        solver.compute(hessian.transpose());
+#ifdef DIFF_LOCAL_RB
+        Eigen::ConjugateGradient<SparseMat> solver;
+        SparseMat jac_global_to_local(nDoF, nDoF);
+        compute_simulation_global_to_local_jacobian(simulation.simulables, state, jac_global_to_local);
+        const Vec equation_vector = - (loss_position_gradient + one_over_h * loss_velocity_gradient).transpose() * jac_global_to_local;
+#else
         const Vec equation_vector = - (loss_position_gradient + one_over_h * loss_velocity_gradient);
+        Eigen::SparseLU<SparseMat> solver;
+#endif
+        solver.compute(hessian.transpose());
         Vec alpha = solver.solve(equation_vector);
 
         // Update the loss function gradients
@@ -388,7 +293,7 @@ Vec compute_loss_function_gradient_backpropagation_1_step_velocity(const Simulat
     const Mat dgradE_dphi_dot0 = dgradE_dv0.toDense();
 
     SparseMat ptm(nDoF, nDoF);
-    compute_parallel_transport_matrix(simulation.simulables, state1, ptm);
+    compute_simulation_global_to_local_jacobian(simulation.simulables, state1, ptm);
 
     Eigen::ConjugateGradient<Mat> cg;
     cg.compute(-dgradE_dphi);
@@ -417,12 +322,12 @@ Vec compute_loss_function_gradient_backpropagation_1_step_position(const Simulat
     const Mat dgradE_dphi_dot0 = dgradE_dv0.toDense();
 
     SparseMat ptm(nDoF, nDoF);
-    compute_parallel_transport_matrix(simulation.simulables, state1, ptm);
+    compute_simulation_global_to_local_jacobian(simulation.simulables, state1, ptm);
 
     Eigen::ConjugateGradient<Mat> cg;
-    cg.compute(dgradE_dphi);
-    // const Vec eq_vec = dg_dphi.transpose() + 1.0 / simulation.TimeStep * dg_dphi_dot.transpose() * ptm;
-    const Vec eq_vec = - dg_dphi;
+    cg.compute(-dgradE_dphi);
+    const Vec eq_vec = dg_dphi.transpose()*ptm + 1.0 / simulation.TimeStep * dg_dphi_dot.transpose() * ptm;
+    // const Vec eq_vec = dg_dphi;
     Vec adjoint = cg.solve(eq_vec);
 
     const Mat dphi_dphi0 = - dgradE_dphi.inverse() * dgradE_dphi0;
@@ -430,12 +335,6 @@ Vec compute_loss_function_gradient_backpropagation_1_step_position(const Simulat
     const Vec dgdp_adj = - 1.0 / simulation.TimeStep * dg_dphi_dot.transpose() + adjoint.transpose() * dgradE_dphi0;
 
     const Vec dgdp = dg_dphi.transpose() * dphi_dphi0;
-
-    // DEBUG_LOG(dphi_dphi0);
-    DEBUG_LOG(dg_dphi.transpose());
-    std ::cout << "dgdp.transpose()" << " " << dgdp.transpose() << std ::endl;
-    DEBUG_LOG(dgdp_adj.transpose());
-    DEBUG_LOG("Hello");
 
     // return dgdp;
     return dgdp_adj;
