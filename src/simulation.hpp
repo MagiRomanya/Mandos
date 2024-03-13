@@ -1,9 +1,7 @@
 #ifndef SIMULABLE_H_
 #define SIMULABLE_H_
 
-#include <memory>
 #include <vector>
-#include <cassert>
 
 #include "gravity.hpp"
 #include "inertia_energies.hpp"
@@ -26,7 +24,8 @@ struct Simulables {
  */
 #define INERTIAL_ENERGY_MEMBERS \
     X(std::vector<LinearInertia>, linear_inertias) \
-    X(std::vector<RotationalInertia>, rotational_inertias)
+    X(std::vector<RotationalInertia>, rotational_inertias) \
+    X(std::vector<RotationalInertiaGlobal>, rotational_global_inertias)
 
 #define MAT(type, name) X(std::vector<FEM_Element3D<type>>, fem_elements_##name)
 #define POTENTIAL_ENERGY_MEMBERS \
@@ -68,6 +67,6 @@ void simulation_step(const Simulation& simulation, PhysicsState& state);
 
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out);
 
-void update_simulation_state(const Simulables& simulables, const Vec& dx, Vec& x);
+void update_simulation_state(const Energies& energies, const Vec& dx, Vec& x);
 
 #endif // SIMULABLE_H_

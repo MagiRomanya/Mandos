@@ -5,6 +5,7 @@
 #include "../spring.hpp"
 #include "../simulable_generator.hpp"
 
+#include <cassert>
 #include <vector>
 
 Scalar distance(const std::vector<Scalar>& vertices, unsigned int i1, unsigned int i2) {

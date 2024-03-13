@@ -37,6 +37,12 @@ Mat3 compute_deformation_tensor(const Eigen::Matrix<Scalar,9,12>& dvecF_dx, cons
 // The energy derivatives are computed with respect to the vectorized deformation tensor vecF.
 // To compute the derivatives with respect to the vertices, one must use the jacobian dvecF_dx.
 // ----------------------------------------------------------------------------------------
+template <typename T>
+concept FEM_Material_Type = requires(T Object) {
+  Object.get_phi(Mat3::Identity());
+  Object.get_phi_gradient(Mat3::Identity());
+  Object.get_phi_hessian(Mat3::Identity());
+};
 
 /**
  * FEM Linear Material
@@ -78,7 +84,7 @@ struct FEM_NeoHookeanMaterial {
 };
 // ----------------------------------------------------------------------------------------
 
-template <typename MaterialType>
+template <FEM_Material_Type MaterialType>
 struct FEM_Element3D {
     FEM_Element3D(Particle p1,Particle p2, Particle p3, Particle p4, Eigen::Matrix<Scalar, 4, 3> ds_dx, MaterialType material);
 

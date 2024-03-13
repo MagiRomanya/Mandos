@@ -98,8 +98,10 @@ PYBIND11_MODULE(pymandos, m) {
     // ----------------------------------------------------------------
 
     py::class_<RigidBodyHandle>(m, "RigidBody")
-        .def(py::init<Simulation&, Scalar, std::vector<Scalar>>())
-        .def(py::init<Simulation&, Scalar, Mat3>())
+        .def(py::init<Simulation&, Scalar, std::vector<Scalar>, bool>(),
+             py::arg("simulation"), py::arg("mass"), py::arg("vertices"), py::arg("global") = false)
+        .def(py::init<Simulation&, Scalar, Mat3, bool>(),
+             py::arg("simulation"), py::arg("mass"), py::arg("inertia_tensor"), py::arg("global") = false)
         .def("set_com_initial_position", &RigidBodyHandle::set_COM_initial_position)
         .def("set_com_initial_velocity", &RigidBodyHandle::set_COM_initial_velocity)
         .def("set_initial_orientation", &RigidBodyHandle::set_initial_orientation)

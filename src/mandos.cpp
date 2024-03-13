@@ -8,22 +8,22 @@
 #include "particle_rigid_body_copuling.hpp"
 #include "spring.hpp"
 
-RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const std::vector<Scalar> vertices)
+RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const std::vector<Scalar> vertices, bool global)
     : rb(simulation.initial_state.get_nDoF(), mass, compute_initial_inertia_tensor_PARTICLES(mass, vertices)),
       rb_index(simulation.simulables.rigid_bodies.size()), simulation(simulation)
 {
     simulation.initial_state.add_size(6);
-    add_rigid_body_to_simulation(simulation, rb);
+    add_rigid_body_to_simulation(simulation, rb, global);
     simulation.initial_state.x.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
     simulation.initial_state.v.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
 }
 
-RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const Mat3& inertia_tensor)
+RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const Mat3& inertia_tensor, bool global)
     : rb(simulation.initial_state.get_nDoF(), mass, inertia_tensor),
       rb_index(simulation.simulables.rigid_bodies.size()), simulation(simulation)
 {
     simulation.initial_state.add_size(6);
-    add_rigid_body_to_simulation(simulation, rb);
+    add_rigid_body_to_simulation(simulation, rb, global);
     simulation.initial_state.x.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
     simulation.initial_state.v.segment<6>(rb.index) = Eigen::Vector<Scalar,6>::Zero();
 }

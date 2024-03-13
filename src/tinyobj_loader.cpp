@@ -1,8 +1,6 @@
 #include <cassert>
 #include <cstddef>
-#include <limits>
 #include <string>
-#include <unordered_set>
 #include <vector>
 #include <iostream>
 #include <raylib.h>
@@ -47,6 +45,7 @@ SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
             vertices[idx + 2] = vert.z();
         }
     }
+    recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
 }
 
 void LoadRenderMeshTinyOBJ(std::string inputfile,

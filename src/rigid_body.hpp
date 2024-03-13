@@ -63,9 +63,16 @@ inline Mat3 compute_J_inertia_tensor(const Vec3& I) {
  * @param inertia_tensor the regular inertia tensor.
  */
 inline Mat3 compute_J_inertia_tensor(const Mat3& inertia_tensor) {
-    const Vec3 I = compute_principal_moments_of_inertia(inertia_tensor);
+    // const Vec3 I = compute_principal_moments_of_inertia(inertia_tensor);
+    const Vec3 I = inertia_tensor.diagonal();
     return compute_J_inertia_tensor(I);
 }
+
+inline Vec3 compute_principal_moments_of_inertia_from_J(const Mat3& J) {
+    return Vec3(J(1,1) + J(2,2), J(2,2) + J(0,0), J(0,0) + J(1,1));
+}
+
+Vec3 compose_axis_angle(const Vec3& a, const Vec3& b);
 
 struct RigidBody {
     RigidBody(unsigned int index, Scalar mass, Mat3 inertia_tensor0)
@@ -78,8 +85,6 @@ struct RigidBody {
     Vec3 get_COM_position(const Vec& x) const;
     Vec3 get_axis_angle(const Vec& x) const;
     Mat3 compute_rotation_matrix(const Vec& x) const;
-    Mat3 compute_inertia_tensor(const Mat3& rotation_matrix) const;
-    void update_state(const Vec& dx, Vec& x) const;
 };
 
 #endif // RIGID_BODY_H_

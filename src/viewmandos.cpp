@@ -29,6 +29,7 @@
 #include "mandos.hpp"
 #include "memory_pool.hpp"
 #include "mesh.hpp"
+#include "rigid_body.hpp"
 #include "spring.hpp"
 #include "viewmandos.hpp"
 #include "utility_functions.hpp"
@@ -721,8 +722,26 @@ void MandosViewer::drawGUI() {
             if (ImGui::MenuItem("Render")) {
                 renderState->renderFrameOpen = true;
             }
-            if (ImGui::MenuItem("Camera")) {
+            if (ImGui::BeginMenu("Camera")) {
                 renderState->cameraFrameOpen = true;
+                if (ImGui::MenuItem("Look towards X")) {
+                    renderState->camera.position = Vector3( -20.0f, 5.0f, 0.0f );
+                    renderState->camera.target = Vector3(0,0,0);
+                }
+                if (ImGui::MenuItem("Look towards -X")) {
+                    renderState->camera.position = Vector3( 20.0f, 5.0f, 0.0f );
+                    renderState->camera.target = Vector3(0,0,0);
+                }
+
+                if (ImGui::MenuItem("Look towards Z")) {
+                    renderState->camera.position = Vector3( 0.0f, 5.0f, -20.0f );
+                    renderState->camera.target = Vector3(0,0,0);
+                }
+                if (ImGui::MenuItem("Look towards -Z")) {
+                    renderState->camera.position = Vector3( 0.0f, 5.0f, 20.0f );
+                    renderState->camera.target = Vector3(0,0,0);
+                }
+                ImGui::EndMenu();
             }
             ImGui::MenuItem("Toggle transparency", NULL, &enable_transparent_background);
             if (ImGui::BeginMenu("Logs")) {
@@ -1151,7 +1170,7 @@ void MandosViewer::draw_rigid_bodies(const Simulation& simulation, const Physics
     for (unsigned int i = 0; i < simulation.simulables.rigid_bodies.size(); i++) {
         const RigidBody& rb = simulation.simulables.rigid_bodies[i];
         const Mat3 R = rb.compute_rotation_matrix(state.x);
-        const Mat3 I = 10 * rb.J_inertia_tensor0.normalized();
+        const Mat3 I = 30 * rb.J_inertia_tensor0.normalized();
         const Vec3 com = rb.get_COM_position(state.x);
         Matrix transform = raylib_transform_matrix(R, I, com);
         transforms.push_back(transform);

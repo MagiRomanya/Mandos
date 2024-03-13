@@ -65,7 +65,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     // Initial guess for our energy minimization
     // state =  PhysicsState(state0.x + simulation.TimeStep * state0.v, state0.v);
 
-    const unsigned int maxIter = 3;
+    const unsigned int maxIter = 1;
     for (unsigned int i = 0; i < maxIter; i++) {
 
         // Compute energy and derivatives
@@ -83,7 +83,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         // Update state
         // -----------------------------------------------------------------------------------------
         const PhysicsState stepState = state;
-        update_simulation_state(simulation.simulables, dx, state.x); // x_new
+        update_simulation_state(simulation.energies, dx, state.x); // x_new
         state.v = (state.x - state0.x) / simulation.TimeStep; // v_new
 
         // Line search
@@ -99,7 +99,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
             if (alpha < alpha_min_threshold or std::isnan(energy0)) break;
             alpha /= 2.0f;
             state = stepState;
-            update_simulation_state(simulation.simulables, alpha * dx, state.x);
+            update_simulation_state(simulation.energies, alpha * dx, state.x);
             state.v = (state.x - state0.x) / simulation.TimeStep; // v_new
             lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
         }
@@ -113,13 +113,13 @@ void simulation_step(const Simulation& simulation, PhysicsState& state) {
     simulation_step(simulation, state, f);
 }
 
-void update_simulation_state(const Simulables& simulables, const Vec& dx, Vec& x) {
-    for (unsigned int i = 0; i < simulables.particles.size(); i++) {
-        simulables.particles[i].update_state(dx, x);
+void update_simulation_state(const Energies& energies, const Vec& dx, Vec& x) {
+#define X(type, energy) \
+    for (size_t i = 0; i < energies.energy.size(); i++) { \
+        energies.energy[i].update_state(dx, x); \
     }
-    for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
-        simulables.rigid_bodies[i].update_state(dx, x);
-    }
+    INERTIAL_ENERGY_MEMBERS
+#undef X
 }
 
 #define MAT(type, name) template void add_FEM_element(Energies& energies, FEM_Element3D<type> element);

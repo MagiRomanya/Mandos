@@ -23,9 +23,9 @@
  */
 class RigidBodyHandle {
     public:
-        RigidBodyHandle(Simulation& simulation, Scalar mass, const std::vector<Scalar> vertices);
+        RigidBodyHandle(Simulation& simulation, Scalar mass, const std::vector<Scalar> vertices, bool global = false);
 
-        RigidBodyHandle(Simulation& simulation, Scalar mass, const Mat3& inertia_tensor);
+        RigidBodyHandle(Simulation& simulation, Scalar mass, const Mat3& inertia_tensor, bool global = false);
 
         /**
          * Set the Rigid Body center of mass position in world coordinates.
