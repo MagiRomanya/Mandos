@@ -5,11 +5,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <exception>
-#include <memory>
 #include <string>
 #include <stdlib.h>
-#include <thread>
 #include <vector>
 
 #include <Eigen/Core>
@@ -298,6 +295,8 @@ struct RenderState {
     Model sky_box_model;
     Model spring_model;
     Model axis3D_model;
+    Model vector_model;
+
     // MeshGPU* axis3D = nullptr;
     LinesGPU* tetLines = nullptr;
     TetrahedronMeshVisualization* tetVis = nullptr;
@@ -352,6 +351,7 @@ void RenderState::initialize() {
 
     // Meshes
     spring_model = LoadModel("resources/obj/spring.obj");
+    vector_model = LoadModel("resources/obj/vector.obj");
     sphere_mesh = GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS);
     axis3D_model = LoadModel("resources/obj/axis.obj");
     std::vector<float> vertices = {0.0f, 1.0f, 4.0f, 2.0f};
@@ -375,6 +375,7 @@ void RenderState::deinitialize() {
     // Unload geometry
     UnloadMesh(sphere_mesh);
     UnloadModel(spring_model);
+    UnloadModel(vector_model);
     UnloadModel(axis3D_model);
     delete tetLines;
     delete tetVis;
@@ -920,6 +921,10 @@ void MandosViewer::draw_particle(const ParticleHandle& particle, const PhysicsSt
 
 void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh) {
     if (!enable_draw_simulable_meshes) return;
+    if (SavedSim){
+        const Vec3 L = rb.rb.compute_angular_momentum(SavedSim->TimeStep, state);
+        draw_vector(L, rb.rb.get_COM_position(state.x));
+    }
     draw_mesh_color(rb.get_transformation_matrix(state), mesh, mem_pool, RB_COLOR);
 }
 void MandosViewer::draw_mesh(const Mat4& transform, const MeshGPU& mesh) {
@@ -947,6 +952,20 @@ void MandosViewer::draw_springs_lines(const Simulation& simulation, const Physic
     free(material.maps);
 }
 
+inline Mat3 rotation_from_vector(const Vec3& vec, const Vec3& up) {
+    Mat3 rotation = Mat3::Identity();
+    const Vec3 v = vec.normalized();
+    const Vec3 nup = up.normalized();
+    const Vec3 tangent = cross(v, nup).normalized();
+    if (tangent.squaredNorm() > 1e-4) {
+        const Vec3 bitangent = cross(v, tangent).normalized();
+        rotation.col(0) = tangent;
+        rotation.col(1) = bitangent;
+        rotation.col(2) = v;
+    }
+    return rotation;
+}
+
 void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState& state) {
     std::vector<Matrix> transforms;
     transforms.reserve(simulation.energies.particle_springs.size());
@@ -958,15 +977,8 @@ void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState
         const Vec3 center = (x1 + x2) * 0.5f;
         const Scalar length = (x1 - x2).norm();
         const Vec3 align_axis = (x1 - x2) / length;
-        Mat3 Rotation = Mat3::Identity();
         const Vec3 up = Vec3(0.0, 0.0, 1.0);
-        if (cross(up, align_axis).squaredNorm() > 1e-3) {
-            Vec3 tangent = cross(align_axis, up).normalized();
-            Vec3 bitangent = cross(align_axis, tangent).normalized();
-            Rotation.col(0) = tangent;
-            Rotation.col(1) = bitangent;
-            Rotation.col(2) = align_axis;
-        }
+        Mat3 Rotation = rotation_from_vector(align_axis, up);
         Matrix transform = MatrixTranslate(center.x(), center.y(), center.z());
         const Matrix rotation4 = matrix_eigen_to_raylib(Rotation);
         const Matrix rotateX = MatrixRotateX(PI / 2);
@@ -1180,4 +1192,13 @@ void MandosViewer::draw_rigid_bodies(const Simulation& simulation, const Physics
     matInstances.shader = renderState->instancing_shader;
     matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RB_COLOR;
     DrawMeshInstanced(renderState->sphere_mesh, matInstances, transforms.data(), transforms.size());
+}
+
+
+void MandosViewer::draw_vector(const Vec3& vector, const Vec3& origin) {
+    const Vec3 up = Vec3(0, 1, 0);
+    const Mat3 rotation = rotation_from_vector(vector, up);
+    const Mat3 scale = Mat3::Identity() * vector.norm() / 10.0;
+    const Matrix transform = raylib_transform_matrix(rotation, scale, origin);
+    DrawMesh(renderState->vector_model.meshes[0], renderState->base_material, transform);
 }

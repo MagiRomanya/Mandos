@@ -175,6 +175,8 @@ struct MandosViewer {
 
     void draw_particle_indices(const Simulation& simulation, const PhysicsState& state);
 
+    void draw_vector(const Vec3& vector, const Vec3& origin);
+
 private:
     void initialize_graphical_context();
     void drawGUI();

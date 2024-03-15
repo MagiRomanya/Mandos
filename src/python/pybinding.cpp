@@ -110,6 +110,7 @@ PYBIND11_MODULE(pymandos, m) {
         .def("freeze_translation", &RigidBodyHandle::freeze_translation)
         .def("freeze_rotation", &RigidBodyHandle::freeze_rotation)
         .def("get_transformation_matrix", &RigidBodyHandle::get_transformation_matrix)
+        .def("compute_energy", &RigidBodyHandle::compute_energy)
         ;
 
     py::class_<MassSpringHandle>(m, "MassSpring")

@@ -2,6 +2,7 @@
 
 #include "mandos.hpp"
 #include "fem_unit.hpp"
+#include "inertia_energies.hpp"
 #include "rigid_body.hpp"
 #include "utility_functions.hpp"
 #include "gravity.hpp"
@@ -74,6 +75,11 @@ Mat4 RigidBodyHandle::get_transformation_matrix(const PhysicsState& state) const
     transformation.linear() = rb.compute_rotation_matrix(state.x);
     transformation.translation() = rb.get_COM_position(state.x);
     return transformation.matrix();
+}
+
+Scalar RigidBodyHandle::compute_energy(const PhysicsState& state, const PhysicsState& state0) {
+    RotationalInertia i = RotationalInertia(rb);
+    return i.compute_energy(simulation.TimeStep, state, state0);
 }
 
 MassSpringHandle::MassSpringHandle(Simulation& simulation,

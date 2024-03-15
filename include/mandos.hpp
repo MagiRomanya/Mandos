@@ -86,6 +86,8 @@ class RigidBodyHandle {
          */
         Mat4 get_transformation_matrix(const PhysicsState& state) const;
 
+        Scalar compute_energy(const PhysicsState& state, const PhysicsState& state0);
+
         const RigidBody rb;
         const unsigned int rb_index;
     private:

@@ -123,6 +123,7 @@ std::array<unsigned int, 2> count_springs(const std::vector<Scalar>& vertices, c
  * @param com the center of mass of the given mesh
  */
 void recenter_mesh(SimulationMesh& mesh, const Vec3& com);
+void recenter_mesh(RenderMesh& mesh, const Vec3& com);
 
 
 /**

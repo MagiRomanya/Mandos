@@ -9,59 +9,6 @@
 #include "simulation.hpp"
 #include "utility_functions.hpp"
 
-static const Scalar threshold2 = 1e-5;
-
-inline Mat3 compute_global_axis_angle_jacobian(const Vec3& phi) {
-    const Scalar angle = phi.norm();
-    if (angle < threshold2) return Mat3::Identity();
-    const Vec3 axis = phi / angle;
-    const Scalar half_angle = 0.5 * angle;
-    const Mat3 axisaxisT = axis * axis.transpose();
-    return half_angle / tan(half_angle) * (Mat3::Identity() - axisaxisT)
-        + axisaxisT
-        - skew(0.5 * phi);
-}
-
-inline void compute_axis_angle_jacobian_parts(const Vec3& phi, Mat3& A, Mat3& B) {
-    const Mat3 phi_phiT = phi * phi.transpose();
-    A = compute_rotation_matrix_rodrigues(phi) - Mat3::Identity() + phi_phiT;
-    B = skew(phi) + phi_phiT;
-}
-
-inline Mat3 compute_global_to_local_axis_angle_jacobian(const Vec3& phi) {
-    if (phi.squaredNorm() < threshold2) return Mat3::Identity();
-
-    Mat3 A, B;
-    compute_axis_angle_jacobian_parts(phi, A, B);
-    return A.inverse() * B;
-}
-
-inline Mat3 compute_local_to_global_axis_angle_jacobian(const Vec3& phi) {
-    if (phi.squaredNorm() < threshold2) return Mat3::Identity();
-
-    Mat3 A, B;
-    compute_axis_angle_jacobian_parts(phi, A, B);
-    return B.inverse() * A;
-}
-
-
-/**
- * Compute the derivative of a rotation matrix with respect to local axis angle, evaluated at theta.
- */
-Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local(const Vec3& theta) {
-    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
-    return vectorized_levi_civita() * block_matrix(R);
-}
-
-/**
- * Compute the derivative of a rotation matrix with respect to the global axis angle theta.
- */
-inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_global(const Vec3& theta) {
-    const Mat3 jac = compute_local_to_global_axis_angle_jacobian(theta);
-    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
-    return jac.transpose() * vectorized_levi_civita() * block_matrix(R);
-}
-
 Mat3 rotation_inertia_energy_hessian(const Mat3& J_inertia_tensor, const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
     const Mat3 R = compute_rotation_matrix_rodrigues(theta);
     const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
@@ -201,7 +148,6 @@ void compute_simulation_global_to_local_jacobian(const Simulables& simulables, c
         const RigidBody& rb = simulables.rigid_bodies[i];
         const Vec3 theta = rb.get_axis_angle(state.x);
         const Mat3 jac = compute_global_to_local_axis_angle_jacobian(theta);
-        // const Mat3 jac = compute_global_axis_angle_jacobian(theta);
 
         const unsigned int idx = rb.index + 3;
 

@@ -67,6 +67,6 @@ void simulation_step(const Simulation& simulation, PhysicsState& state);
 
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out);
 
-void update_simulation_state(const Energies& energies, const Vec& dx, Vec& x);
+void update_simulation_state(const Scalar TimeStep, const Energies& energies, const Vec& dx, PhysicsState& state, const PhysicsState& state0);
 
 #endif // SIMULABLE_H_

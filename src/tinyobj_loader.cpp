@@ -178,6 +178,7 @@ inline void computeRenderMeshTangentVectors(RenderMesh& mesh) {
 RenderMesh::RenderMesh(std::string filename) {
     LoadRenderMeshTinyOBJ(filename, vertices, normals, texcoords, indices);
     computeRenderMeshTangentVectors(*this);
+    recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
 }
 
 RenderMesh::RenderMesh(const SimulationMesh& simMesh) {
@@ -202,6 +203,7 @@ RenderMesh::RenderMesh(const SimulationMesh& simMesh) {
     }
     // Compute normals and tangents
     updateFromSimulationMesh(simMesh);
+    recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
 }
 
 void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<Scalar>& out_vertices, std::vector<unsigned int>& out_indices) {
@@ -242,6 +244,14 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<Scalar>& o
 }
 
 void recenter_mesh(SimulationMesh& mesh, const Vec3& com) {
+    for (unsigned int i = 0; i < mesh.vertices.size() / 3; i++) {
+        mesh.vertices[3*i+0] -= com.x();
+        mesh.vertices[3*i+1] -= com.y();
+        mesh.vertices[3*i+2] -= com.z();
+    }
+}
+
+void recenter_mesh(RenderMesh& mesh, const Vec3& com) {
     for (unsigned int i = 0; i < mesh.vertices.size() / 3; i++) {
         mesh.vertices[3*i+0] -= com.x();
         mesh.vertices[3*i+1] -= com.y();

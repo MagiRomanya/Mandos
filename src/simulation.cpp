@@ -83,8 +83,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         // Update state
         // -----------------------------------------------------------------------------------------
         const PhysicsState stepState = state;
-        update_simulation_state(simulation.energies, dx, state.x); // x_new
-        state.v = (state.x - state0.x) / simulation.TimeStep; // v_new
+        update_simulation_state(simulation.TimeStep, simulation.energies, dx, state, state0);
 
         // Line search
         // -----------------------------------------------------------------------------------------
@@ -99,8 +98,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
             if (alpha < alpha_min_threshold or std::isnan(energy0)) break;
             alpha /= 2.0f;
             state = stepState;
-            update_simulation_state(simulation.energies, alpha * dx, state.x);
-            state.v = (state.x - state0.x) / simulation.TimeStep; // v_new
+            update_simulation_state(simulation.TimeStep, simulation.energies, alpha * dx, state, state0);
             lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
         }
     }
@@ -113,10 +111,10 @@ void simulation_step(const Simulation& simulation, PhysicsState& state) {
     simulation_step(simulation, state, f);
 }
 
-void update_simulation_state(const Energies& energies, const Vec& dx, Vec& x) {
+void update_simulation_state(const Scalar TimeStep, const Energies& energies, const Vec& dx, PhysicsState& state, const PhysicsState& state0) {
 #define X(type, energy) \
     for (size_t i = 0; i < energies.energy.size(); i++) { \
-        energies.energy[i].update_state(dx, x); \
+        energies.energy[i].update_state(TimeStep, dx, state, state0); \
     }
     INERTIAL_ENERGY_MEMBERS
 #undef X

@@ -72,9 +72,9 @@ inline Eigen::Matrix<Scalar, 3*N, 3*M> block_matrix(const Eigen::Matrix<Scalar,N
  */
 inline Eigen::Matrix<Scalar, 3, 9> vectorized_levi_civita() {
     Eigen::Matrix<Scalar, 3, 9> e;
-    e << 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,-1.0f, 0.0f,
-         0.0f, 0.0f,-1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-         0.0f, 1.0f, 0.0f,-1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f;
+    e << 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,-1.0, 0.0,
+         0.0, 0.0,-1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+         0.0, 1.0, 0.0,-1.0, 0.0, 0.0, 0.0, 0.0, 0.0;
     return e;
 }
 

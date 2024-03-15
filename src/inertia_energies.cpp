@@ -60,7 +60,6 @@ Scalar RotationalInertia::compute_energy(Scalar TimeStep, const PhysicsState& st
     // ---------------------------------------------------------------
     const Scalar KE = (deltaR * rb.J_inertia_tensor0 * deltaR.transpose()).trace() / (2.0f*h2);
     return KE;
-
 }
 
 static const Scalar threshold2 = 1e-7;
@@ -160,9 +159,38 @@ void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const Ph
     const Mat3 hessian = 1.0 / h2 * (S.trace() * Mat3::Identity() - S);
 
     // eigenvalues
-    Eigen::EigenSolver<Mat3> solver(hessian);
-    std ::cout << "Local eigenvalues "
-               << " " << solver.eigenvalues().real().transpose() << std ::endl;
+    // Eigen::EigenSolver<Mat3> solver(hessian);
+    // std ::cout << "Local eigenvalues " << " " << solver.eigenvalues().real().transpose() << std ::endl;
+
+    // SVD
+    // Eigen::Matrix<Scalar, 3, 9> dvecR_dphi = dvecR_dtheta_global(theta0);
+    // Eigen::Matrix<Scalar, 3, 9> dvecR_dtheta = dvecR_dtheta_local(theta0);
+    // Eigen::JacobiSVD<Eigen::Matrix<Scalar,3, 9>> global_svd(dvecR_dphi);
+    // Eigen::JacobiSVD<Eigen::Matrix<Scalar,3, 9>> local_svd(dvecR_dtheta);
+    // std ::cout << "Global SVD" << " " << global_svd.singularValues().transpose() << std ::endl;
+    // std ::cout << "Local SVD" << " " << local_svd.singularValues().transpose() << std ::endl;
+
+    // Mat3 ex, ey, ez;
+    // ex << 0.0, 0.0, 0.0,
+    //       0.0, 0.0,-1.0,
+    //       0.0, 1.0, 0.0;
+
+    // ey <<  0.0, 0.0, 1.0,
+    //        0.0, 0.0, 0.0,
+    //       -1.0, 0.0, 0.0;
+
+    // ez << 0.0,-1.0, 0.0,
+    //       1.0, 0.0, 0.0,
+    //       0.0, 0.0, 0.0;
+
+    // Eigen::EigenSolver<Mat3> solverX(ex * R0);
+    // std ::cout << "Local eigenvalues x" << " " << solverX.eigenvalues().transpose() << std ::endl;
+    // std ::cout << "Local eigenvalues x magnitude" << " " << solverX.eigenvalues().norm() << std ::endl;
+    // std ::cout << "Local eigenvalues x sum" << " " << solverX.eigenvalues().sum() << std ::endl;
+    // std ::cout << "Local trace" << " " << -2 * sinc(theta0.norm()) * theta0.x() << std ::endl;
+    // std ::cout << "Eigenvalues?" << " (" << -std::cos(theta0.norm()) * theta0.normalized().x() << ", " << -std::sin(theta0.norm()) * theta0.normalized().x() << ")" << " ";
+    // std::cout << " (" << -std::cos(-theta0.norm()) * theta0.normalized().x() << ", " << -std::sin(-theta0.norm()) * theta0.normalized().x() << ")";
+    // std::cout << std::endl;
 
     // Add the energy derivatives to the global structure
     // ---------------------------------------------------------------
@@ -175,17 +203,21 @@ void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const Ph
     }
 }
 
-void RotationalInertia::update_state(const Vec& dx, Vec& x) const {
-    const Vec3 theta = rb.get_axis_angle(x);
+void RotationalInertia::update_state(const Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0) const {
+    const Vec3 theta = rb.get_axis_angle(state.x);
+    const Vec3 theta0 = rb.get_axis_angle(state0.x);
     const Vec3 dtheta = rb.get_axis_angle(dx);
 
-    const Vec3 axis_angle = compose_axis_angle(dtheta, theta);
-    x.segment<3>(rb.index+3) = axis_angle;
+    const Vec3 new_theta = compose_axis_angle(dtheta, theta);
+    state.x.segment<3>(rb.index+3) = new_theta; // x_new
+    const Vec3 delta_theta = new_theta - theta0;
+    state.v.segment<3>(rb.index+3) = (delta_theta) / TimeStep; // v_new
 }
 
 Scalar RotationalInertiaGlobal::compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const {
-    RotationalInertia i = RotationalInertia(rb);
-    return i.compute_energy(TimeStep, state, state0);
+    const RotationalInertia i = RotationalInertia(rb);
+    Scalar energy = i.compute_energy(TimeStep, state, state0);
+    return energy;
 }
 
 void RotationalInertiaGlobal::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
@@ -234,9 +266,8 @@ void RotationalInertiaGlobal::compute_energy_and_derivatives(Scalar TimeStep, co
         ) * one_over_2h2;
 
     // eigenvalues
-    Eigen::EigenSolver<Mat3> solver(hessian);
-    std ::cout << "Global eigenvalues"
-               << " " << solver.eigenvalues().real().transpose() << std ::endl;
+    // Eigen::EigenSolver<Mat3> solver(hessian);
+    // std ::cout << "Global eigenvalues" << " " << solver.eigenvalues().real().transpose() << std ::endl;
 
     // Add the energy derivatives to the global structure
     // ---------------------------------------------------------------
@@ -249,18 +280,25 @@ void RotationalInertiaGlobal::compute_energy_and_derivatives(Scalar TimeStep, co
     }
 }
 
-void RotationalInertiaGlobal::update_state(const Vec& dx, Vec& x) const {
-    const Vec3 theta = rb.get_axis_angle(x);
+void RotationalInertiaGlobal::update_state(const Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0) const {
+    const Vec3 theta = rb.get_axis_angle(state.x);
+    const Vec3 theta0 = rb.get_axis_angle(state0.x);
     const Vec3 dtheta = rb.get_axis_angle(dx);
 
-    Vec3 new_theta = theta + dtheta;
+    const Vec3 new_theta = theta + dtheta;
     Scalar new_angle = new_theta.norm();
-    Vec3 axis = new_theta / new_angle;
+    const Vec3 axis = new_theta / new_angle;
+    const Vec3 delta_theta = new_theta - theta0; // Compute delta theta before clamping the angle between -pi and pi
+
+    // Clamp the new angle betwenn -pi and pi
     new_angle = std::fmod(new_angle, 2.0 * M_PI);
     if (new_angle > M_PI) {
         new_angle -= 2*M_PI;
     }
-    x.segment<3>(rb.index+3) = new_angle * axis;
+
+    // Update the simulation state
+    state.x.segment<3>(rb.index+3) = new_angle * axis; // x_new
+    state.v.segment<3>(rb.index+3) = (delta_theta) / TimeStep; // v_new
 }
 
 void add_particle_to_simulation(Simulation& simulation, const Particle& p) {

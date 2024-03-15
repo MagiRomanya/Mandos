@@ -40,8 +40,8 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
         Clock clock(time);
         cg.setTolerance(tol);
         cg.compute(equation_matrix);
+        dx = copuling_jacobian * cg.solve(equation_vector);
     }
-    dx = copuling_jacobian * cg.solve(equation_vector);
 }
 
 struct FrozenDoFPredicate {

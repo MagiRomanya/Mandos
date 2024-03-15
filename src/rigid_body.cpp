@@ -1,5 +1,4 @@
 #include <cassert>
-#include <iostream>
 #include <vector>
 #include <Eigen/Geometry>
 #include <Eigen/Dense>
@@ -221,4 +220,40 @@ Vec3 clamp_axis_angle(const Vec3& axis_angle) {
     Scalar clamped = std::fmod(angle, tau);
     if (clamped > M_PI) clamped -= tau;
     return axis_angle / angle * clamped;
+}
+
+Vec3 RigidBody::compute_angular_momentum(Scalar TimeStep, const PhysicsState& state) const {
+    const Vec3 phi = get_axis_angle(state.x);
+    const Vec3 phi_dot = get_axis_angle(state.v);
+    const Mat3 R = compute_rotation_matrix_rodrigues(phi);
+    const Mat3 R0 = compute_rotation_matrix_rodrigues(phi - TimeStep * phi_dot);
+    const Mat3 R_dot = (R - R0) / TimeStep;
+    const Mat3 W = R.transpose() * R_dot;
+    const Mat3 Y = W * J_inertia_tensor0;
+    const Mat3 skewY = Y - Y.transpose();
+    const Vec3 angular_momentum = Vec3(-skewY(1,2), skewY(0,2), -skewY(0,1));
+    return angular_momentum;
+}
+
+inline void compute_axis_angle_jacobian_parts(const Vec3& phi, Mat3& A, Mat3& B) {
+    const Mat3 phi_phiT = phi * phi.transpose();
+    A = compute_rotation_matrix_rodrigues(phi) - Mat3::Identity() + phi_phiT;
+    B = skew(phi) + phi_phiT;
+}
+
+static const Scalar threshold2 = 1e-5;
+Mat3 compute_global_to_local_axis_angle_jacobian(const Vec3& phi) {
+    if (phi.squaredNorm() < threshold2) return Mat3::Identity();
+
+    Mat3 A, B;
+    compute_axis_angle_jacobian_parts(phi, A, B);
+    return A.inverse() * B;
+}
+
+Mat3 compute_local_to_global_axis_angle_jacobian(const Vec3& phi) {
+    if (phi.squaredNorm() < threshold2) return Mat3::Identity();
+
+    Mat3 A, B;
+    compute_axis_angle_jacobian_parts(phi, A, B);
+    return B.inverse() * A;
 }

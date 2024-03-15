@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "linear_algebra.hpp"
+#include "physics_state.hpp"
 #include "utility_functions.hpp"
 
 /**
@@ -84,7 +85,30 @@ struct RigidBody {
 
     Vec3 get_COM_position(const Vec& x) const;
     Vec3 get_axis_angle(const Vec& x) const;
+    Vec3 compute_angular_momentum(Scalar TimeStep, const PhysicsState& state) const;
     Mat3 compute_rotation_matrix(const Vec& x) const;
 };
+
+Mat3 compute_global_to_local_axis_angle_jacobian(const Vec3& phi);
+
+Mat3 compute_local_to_global_axis_angle_jacobian(const Vec3& phi);
+
+/**
+ * Compute the derivative of a rotation matrix with respect to local axis angle, evaluated at theta.
+ */
+inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local(const Vec3& theta) {
+    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
+    return vectorized_levi_civita() * block_matrix(R);
+}
+
+/**
+ * Compute the derivative of a rotation matrix with respect to the global axis angle theta.
+ */
+inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_global(const Vec3& theta) {
+    const Mat3 jac = compute_local_to_global_axis_angle_jacobian(theta);
+    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
+    return jac.transpose() * vectorized_levi_civita() * block_matrix(R);
+}
+
 
 #endif // RIGID_BODY_H_
