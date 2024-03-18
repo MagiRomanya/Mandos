@@ -55,6 +55,12 @@ Mat3 RigidBody::compute_rotation_matrix(const Vec& x) const {
     return compute_rotation_matrix_rodrigues(theta);
 }
 
+Mat3 RigidBody::compute_rotation_velocity_matrix(const Scalar TimeStep, const PhysicsState& state) const {
+    const Vec3 theta = get_axis_angle(state.x);
+    const Vec3 theta_dot = get_axis_angle(state.v);
+    return compute_rotation_matrix_rodrigues(theta - TimeStep * theta_dot) / TimeStep;
+}
+
 Scalar compute_tetrahedron_volume(const Vec3& AB, const Vec3& AC, const Vec3& AD) {
     return cross(AB, AC).dot(AD) / 6.;
 }
@@ -257,3 +263,4 @@ Mat3 compute_local_to_global_axis_angle_jacobian(const Vec3& phi) {
     compute_axis_angle_jacobian_parts(phi, A, B);
     return B.inverse() * A;
 }
+

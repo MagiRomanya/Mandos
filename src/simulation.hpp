@@ -9,9 +9,10 @@
 #include "particle_rigid_body_copuling.hpp"
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
-#include "fem_unit.hpp"
+#include "fem_element.hpp"
 #include "spring.hpp"
 #include "particle.hpp"
+#include "rod_segment.hpp"
 
 
 struct Simulables {
@@ -30,6 +31,7 @@ struct Simulables {
 #define MAT(type, name) X(std::vector<FEM_Element3D<type>>, fem_elements_##name)
 #define POTENTIAL_ENERGY_MEMBERS \
     X(std::vector<ParticleSpring>, particle_springs) \
+    X(std::vector<RodSegment>, rod_elements) \
     FEM_MATERIAL_MEMBERS \
     X(std::vector<Gravity>, gravities)
 

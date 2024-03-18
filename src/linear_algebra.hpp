@@ -12,8 +12,9 @@ typedef Eigen::Vector3<Scalar> Vec3;
 typedef Eigen::Matrix3<Scalar> Mat3;
 typedef Eigen::Vector4<Scalar> Vec4;
 typedef Eigen::Matrix4<Scalar> Mat4;
-typedef Eigen::Matrix4<Scalar> Mat4;
+typedef Eigen::Matrix<Scalar,6,6> Mat6;
 typedef Eigen::Matrix<Scalar,9,9> Mat9;
+typedef Eigen::Vector<Scalar,6> Vec6;
 typedef Eigen::Vector<Scalar,9> Vec9;
 
 // DYNAMIC VECTORS AND MATRICES
@@ -93,13 +94,23 @@ inline Eigen::Vector<Scalar, N> transpose_vectorized_vector(const Eigen::Vector<
 }
 
 template <int N, int M>
-inline Eigen::Matrix<Scalar, N, M> transpose_vectorized_matrix(const Eigen::Matrix<Scalar, N, M>& in) {
-  Eigen::Matrix<Scalar, N, M> m;
-  const int n = sqrt(N);
+inline Eigen::Matrix<Scalar, N, M> transpose_vectorized_matrix_N(const Eigen::Matrix<Scalar, N, M>& in) {
+  Eigen::Matrix<Scalar, N, M> mat;
+  const int n = static_cast<int>(sqrt(N));
   for (int i = 0; i < n; i++) {
-    m.col(i) = transpose_vectorized_vector<N>(in.col(i));
+    mat.col(i) = transpose_vectorized_vector<N>(in.col(i));
   }
-  return m;
+  return mat;
+}
+
+template <int N, int M>
+inline Eigen::Matrix<Scalar, N, M> transpose_vectorized_matrix_M(const Eigen::Matrix<Scalar, N, M>& in) {
+  Eigen::Matrix<Scalar, N, M> mat;
+  const int m = static_cast<int>(sqrt(M));
+  for (int i = 0; i < m; i++) {
+    mat.row(i) = transpose_vectorized_vector<M>(in.row(i));
+  }
+  return mat;
 }
 
 

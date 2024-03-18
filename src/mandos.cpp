@@ -1,10 +1,9 @@
 #include <Eigen/Geometry>
 
 #include "mandos.hpp"
-#include "fem_unit.hpp"
+#include "fem_element.hpp"
 #include "inertia_energies.hpp"
 #include "rigid_body.hpp"
-#include "utility_functions.hpp"
 #include "gravity.hpp"
 #include "particle_rigid_body_copuling.hpp"
 #include "spring.hpp"

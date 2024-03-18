@@ -21,7 +21,7 @@
 #include <rlgl.h>
 #include <rcamera.h>
 
-#include "fem_unit.hpp"
+#include "fem_element.hpp"
 #include "linear_algebra.hpp"
 #include "mandos.hpp"
 #include "memory_pool.hpp"
@@ -921,10 +921,10 @@ void MandosViewer::draw_particle(const ParticleHandle& particle, const PhysicsSt
 
 void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState& state, const MeshGPU& mesh) {
     if (!enable_draw_simulable_meshes) return;
-    if (SavedSim){
-        const Vec3 L = rb.rb.compute_angular_momentum(SavedSim->TimeStep, state);
-        draw_vector(L, rb.rb.get_COM_position(state.x));
-    }
+    // if (SavedSim){
+    //     const Vec3 L = rb.rb.compute_angular_momentum(SavedSim->TimeStep, state);
+    //     draw_vector(L, rb.rb.get_COM_position(state.x));
+    // }
     draw_mesh_color(rb.get_transformation_matrix(state), mesh, mem_pool, RB_COLOR);
 }
 void MandosViewer::draw_mesh(const Mat4& transform, const MeshGPU& mesh) {

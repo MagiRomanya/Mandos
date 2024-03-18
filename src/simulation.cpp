@@ -1,7 +1,7 @@
 #include <cmath>
 #include <vector>
 
-#include "fem_unit.hpp"
+#include "fem_element.hpp"
 #include "simulation.hpp"
 #include "integrators.hpp"
 #include "linear_algebra.hpp"

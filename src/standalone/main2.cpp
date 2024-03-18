@@ -36,7 +36,6 @@ Mat3 rotation_inertia_energy_hessian(const Vec3& theta, const Vec3& theta0, cons
     const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
     const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - omega0 * TimeStep);
     const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
-
     const Mat3 rot_inertia = R * J_inertia_tensor * R_guess.transpose();
     const Mat3 S = (rot_inertia + rot_inertia.transpose()) / 2; // Exact hessian
     // const Mat3 S = R * J_inertia_tensor * R.transpose(); // Linear approximation
@@ -205,7 +204,7 @@ inline Mat3 axis_angle_local_to_global_jacobian_finite(const Vec3& phi0) {
     return dtheta_dphi;
 }
 
-Eigen::Matrix<Scalar,3,9> dvecR_dtheta_global(const Vec3& theta) {
+Eigen::Matrix<Scalar,3,9> __dvecR_dtheta_global(const Vec3& theta) {
     const Mat3 jac = compute_local_to_global_axis_angle_jacobian(theta);
     const Mat3 R = compute_rotation_matrix_rodrigues(theta);
     return jac.transpose() * vectorized_levi_civita() * block_matrix(R);
@@ -220,7 +219,7 @@ Mat3 rotation_inertia_dgradE_dtheta0(const Vec3& theta, const Vec3& theta0, cons
     const Eigen::Matrix<Scalar,3,9> dvecRguess_dtheta0 = 2 * dvecR_dtheta_global(theta0) - dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_dtheta0.transpose();;
-    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_dtheta0) - dvecRMR_guess_dtheta0);
+    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix_N(dvecRMR_guess_dtheta0) - dvecRMR_guess_dtheta0);
 
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
     return H;
@@ -235,7 +234,7 @@ Mat3 rotation_inertia_dgradE_domega0(const Vec3& theta, const Vec3& theta0, cons
     const Eigen::Matrix<Scalar,3,9> dvecRguess_domega0 = TimeStep * dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_domega0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_domega0.transpose();;
-    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_domega0) - dvecRMR_guess_domega0);
+    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix_N(dvecRMR_guess_domega0) - dvecRMR_guess_domega0);
 
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
     return H;
@@ -252,7 +251,7 @@ Mat3 rotation_inertia_dgradE_dtheta(const Vec3& theta, const Vec3& theta0, const
     const Eigen::Matrix<Scalar,3,9> dvecR_dtheta = dvecR_dtheta_global(theta);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta = block_matrix<3,3>(Rguess * J_inertia_tensor) * dvecR_dtheta.transpose();;
-    const Eigen::Matrix<Scalar,9,3> dvecAdtheta = 0.5 * (dvecRMR_guess_dtheta - transpose_vectorized_matrix(dvecRMR_guess_dtheta));
+    const Eigen::Matrix<Scalar,9,3> dvecAdtheta = 0.5 * (dvecRMR_guess_dtheta - transpose_vectorized_matrix_N(dvecRMR_guess_dtheta));
 
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta;
     return H;
@@ -360,7 +359,7 @@ int main(void) {
                << std ::endl;
 
     std ::cout << "compute_dRT_guess_dtheta0(theta0, omega0, TimeStep)"
-    << "\n" << transpose_vectorized_matrix(compute_dR_guess_dtheta0(theta0, omega0, TimeStep))
+    << "\n" << transpose_vectorized_matrix_N(compute_dR_guess_dtheta0(theta0, omega0, TimeStep))
                << std ::endl;
     std ::cout << "compute_dR_guessT_dtheta0_finite(theta0, omega0, TimeStep)"
                << "\n"

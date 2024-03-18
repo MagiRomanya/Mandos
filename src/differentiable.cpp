@@ -33,8 +33,8 @@ inline Mat3 rotation_inertia_dgradE_dtheta(const Mat3& J_inertia_tensor, const V
     const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
     const Eigen::Matrix<Scalar,3,9> dvecR_dtheta = dvecR_dtheta_global(theta);
 
-    const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta = block_matrix<3,3>(Rguess * J_inertia_tensor) * dvecR_dtheta.transpose();;
-    const Eigen::Matrix<Scalar,9,3> dvecAdtheta = 0.5 * (dvecRMR_guess_dtheta - transpose_vectorized_matrix(dvecRMR_guess_dtheta));
+    const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta = block_matrix<3,3>(Rguess * J_inertia_tensor) * dvecR_dtheta.transpose();
+    const Eigen::Matrix<Scalar,9,3> dvecAdtheta = 0.5 * (dvecRMR_guess_dtheta - transpose_vectorized_matrix_N(dvecRMR_guess_dtheta));
 
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta;
     return H;
@@ -48,7 +48,7 @@ inline Mat3 rotation_inertia_dgradE_dtheta0(const Mat3& J_inertia_tensor, const 
     const Eigen::Matrix<Scalar,3,9> dvecRguess_dtheta0 = 2 * dvecR_dtheta_global(theta0) - dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_dtheta0.transpose();;
-    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_dtheta0) - dvecRMR_guess_dtheta0);
+    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix_N(dvecRMR_guess_dtheta0) - dvecRMR_guess_dtheta0);
 
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
     return H;
@@ -62,7 +62,7 @@ inline Mat3 rotation_inertia_dgradE_domega0(const Mat3& J_inertia_tensor, const 
     const Eigen::Matrix<Scalar,3,9> dvecRguess_domega0 = TimeStep * dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_domega0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_domega0.transpose();;
-    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix(dvecRMR_guess_domega0) - dvecRMR_guess_domega0);
+    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix_N(dvecRMR_guess_domega0) - dvecRMR_guess_domega0);
 
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
     return H;
