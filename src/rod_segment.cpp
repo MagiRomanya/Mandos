@@ -56,13 +56,13 @@ RodSegmentPrecomputedValues::RodSegmentPrecomputedValues(Scalar L0, Scalar TimeS
     this->v1 = v1;
     this->v2 = v2;
     deltaX = x1 - x2;
-    v_rel = std::pow(one_over_L0, 3) * deltaX * (v2 - v1).dot(deltaX);
     L = deltaX.norm();
     one_over_L = 1.0 / L;
     darboux_vector = compute_darboux_vector(L0, R1, R2);
     darboux_vector_derivative = compute_darboux_vector_local_derivative(L0, R1, R2);
     u = deltaX * one_over_L;
     uut = u * u.transpose();
+    v_rel = u * (v1 - v2).dot(u) * one_over_L0;
     this->R1 = R1;
     this->R2 = R2;
     this->R_dot1 = R_dot1;
@@ -100,7 +100,8 @@ Vec3 RodSegmentParameters::compute_energy_linear_gradient(const RodSegmentPrecom
 
     // Dissipation
     // Translational dissipation
-    const Vec3 gradDt = L0 * translational_damping * values.v_rel * values.one_over_h;
+    // const Vec3 gradDt = L0 * translational_damping * values.v_rel * values.one_over_h;
+    const Vec3 gradDt = translational_damping * values.uut * (values.v1 - values.v2);
 
     // Constraint energy
     const Mat3 dL_dx = (Mat3::Identity() - values.uut) * values.one_over_L;
@@ -154,7 +155,7 @@ Mat6 RodSegmentParameters::compute_energy_hessian_A(const RodSegmentPrecomputedV
 
     // Dissipation
     // Translational dissipation
-    const Mat3 hessDt = L0 * translational_damping * values.one_over_h * values.uut;
+    const Mat3 hessDt = translational_damping * values.one_over_h * values.uut;
 
     // TODO Rotational dissipation
     const Mat3 hessDr = Mat3::Zero();
@@ -188,7 +189,7 @@ Mat6 RodSegmentParameters::compute_energy_hessian_B(const RodSegmentPrecomputedV
 
     // Dissipation
     // Translational dissipation
-    const Mat3 hessDt = - L0 * translational_damping * values.one_over_h * values.uut;
+    const Mat3 hessDt = translational_damping * values.one_over_h * values.uut;
 
     // TODO Rotational dissipation
     const Mat3 hessDr = Mat3::Zero();
@@ -224,7 +225,7 @@ Mat6 RodSegmentParameters::compute_energy_hessian_AB(const RodSegmentPrecomputed
 
     // Dissipation
     // Translational dissipation
-    const Mat3 hessDt = - L0 * translational_damping * values.one_over_h * values.uut;
+    const Mat3 hessDt = - translational_damping * values.one_over_h * values.uut;
 
     // TODO Rotational dissipation
     const Mat3 hessDr = Mat3::Zero();

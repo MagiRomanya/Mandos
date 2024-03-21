@@ -15,14 +15,15 @@ int main(void) {
     const unsigned int nRigidBodies = 30;
     const Scalar L0 = 0.5;
     const Scalar midpoint = L0 * nRigidBodies * 0.5;
-    const Vec3 fixer_pos = Vec3(5, 5, 0);
+    const Vec3 fixer_pos1 = Vec3(0, 1, -midpoint);
+    const Vec3 fixer_pos2 = Vec3(0, 1, midpoint);
     ParticleHandle p_fix1 = ParticleHandle(simulation,1)
         .freeze()
-        .set_initial_position(fixer_pos);
+        .set_initial_position(fixer_pos1);
 
     ParticleHandle p_fix2 = ParticleHandle(simulation,1)
         .freeze()
-        .set_initial_position(-fixer_pos);
+        .set_initial_position(fixer_pos2);
 
     for (unsigned int i = 0; i < nRigidBodies; i++) {
         // Create rigid_body
@@ -44,18 +45,21 @@ int main(void) {
     RigidBody rb = simulation.simulables.rigid_bodies[0];
     RigidBody rb2 = simulation.simulables.rigid_bodies[29];
     SpringParameters spring_param = SpringParameters(50.0,
-                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos).norm(),
+                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos1).norm(),
+                                                     0);
+    SpringParameters spring_param2 = SpringParameters(50.0,
+                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos1).norm(),
                                                      0);
     simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix1.particle, spring_param);
-    simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix1.particle, spring_param);
+    simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix2.particle, spring_param2);
 
     // Create the rod segments
     const RodSegmentParameters parameters = {
-    .Ks = 100.0,
+    .Ks = 200.0,
     .L0 = L0,
-    .translational_damping = 0.0,
+    .translational_damping = 10.0,
     .rotational_damping = 0.0,
-    .constraint_stiffness = 100.0,
+    .constraint_stiffness = 500.0,
     .intrinsic_darboux = Vec3::Zero(),
     .stiffness_tensor = 100.0 * Vec3::Ones(),
     };
