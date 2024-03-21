@@ -1,181 +1,107 @@
 #include <Eigen/Dense>
 #include "mandos.hpp"
 #include "viewmandos.hpp"
+#include "../rod_segment.hpp"
 #include "../mesh.hpp"
 #include "../async_simulation_loop.hpp"
 
-
-inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local_matrix(const Mat3& R) {
-    return vectorized_levi_civita() * block_matrix(R);
-}
-
-inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local_finite(const Mat3& R) {
-    const Scalar dx = 1e-6;
-    Eigen::Matrix<Scalar,3,9> dvecR_dthtea;
-    for (unsigned int i = 0; i < 3; i++) {
-        Vec3 theta = Vec3::Zero();
-        theta(i) = dx;
-        const Mat3 newR = compute_rotation_matrix_rodrigues(theta) * R;
-        dvecR_dthtea.row(i) = (vectorize_matrix(newR) - vectorize_matrix(R)) / dx;
-    }
-    return dvecR_dthtea;
-}
-
-Vec3 compute_darboux_vector(const Scalar L0, const Mat3& R1, const Mat3& R2) {
-    const Mat3 dR_dx = (R2 - R1) / L0;
-    const Mat3 R = (R2 + R1) / 2;
-    const Mat3 skew_u = dR_dx * R.transpose();
-    const Vec3 u = 0.5 * vectorized_levi_civita() * vectorize_matrix<3>(skew_u);
-    // const Vec3 u_2 = Vec3(-skew_u(1,2), skew_u(0,2), -skew_u(0,1));;
-    // DEBUG_LOG(u.transpose());
-    // DEBUG_LOG(u_2.transpose());
-    return u;
-}
-
-Mat3 compute_darboux_vector_theta1_derivative(const Scalar L0, const Mat3& R1, const Mat3& R2) {
-    const Mat3 dR_dx = (R2 - R1) / L0;
-    const Mat3 R = (R2 + R1) / 2;
-
-    Eigen::Matrix<Scalar,3,9> dvecR_dtheta = 0.5 * dvecR_dtheta_local_matrix(R2);
-    const Eigen::Matrix<Scalar,3,9> dvecRx_dtheta = dvecR_dtheta_local_matrix(R2) / L0;
-
-    const Eigen::Matrix<Scalar,9,3> dvec_skewU_dtheta =
-        block_matrix<3,3>(R) * dvecRx_dtheta.transpose()                                           // d(dR_dx)/dtheta RT
-        + transpose_vectorized_matrix_N<9,3>(block_matrix<3,3>(dR_dx) * dvecR_dtheta.transpose())   // dR/dx (dRT/dtheta)
-        ;
-    Mat3 du_dtheta = 0.5 * vectorized_levi_civita() * dvec_skewU_dtheta;
-    return du_dtheta;
-}
-
-Mat3 compute_darboux_vector_theta2_derivative(const Scalar L0, const Mat3& R1, const Mat3& R2) {
-    const Mat3 dR_dx = (R2 - R1) / L0;
-    const Mat3 R = (R2 + R1) / 2;
-
-    Eigen::Matrix<Scalar,3,9> dvecR_dtheta = 0.5 * dvecR_dtheta_local_matrix(R1);
-    const Eigen::Matrix<Scalar,3,9> dvecRx_dtheta = - dvecR_dtheta_local_matrix(R1) / L0;
-
-    const Eigen::Matrix<Scalar,9,3> dvec_skewU_dtheta =
-        block_matrix<3,3>(R) * dvecRx_dtheta.transpose()                                           // d(dR_dx)/dtheta RT
-        + transpose_vectorized_matrix_N<9,3>(block_matrix<3,3>(dR_dx) * dvecR_dtheta.transpose())   // dR/dx (dRT/dtheta)
-        ;
-    Mat3 du_dtheta = 0.5 * vectorized_levi_civita() * dvec_skewU_dtheta;
-    return du_dtheta;
-}
-
-
-Mat3 compute_darboux_vector_local_finite_derivative(const Scalar L0, const Mat3& R1, const Mat3& R2) {
-    const Vec3 u0 = compute_darboux_vector(L0, R1, R2);
-    const Scalar dx = 1e-6;
-    Mat3 du_dtheta;
-    for (unsigned int i = 0; i < 3; i++) {
-        Vec3 theta = Vec3::Zero();
-        theta(i) = dx;
-        // const Mat3 newR2 = compute_rotation_matrix_rodrigues(theta) * R2;
-        // const Vec3 newU = compute_darboux_vector(L0, R1, newR2);
-        const Mat3 newR1 = compute_rotation_matrix_rodrigues(theta) * R1;
-        const Vec3 newU = compute_darboux_vector(L0, newR1, R2);
-
-        du_dtheta.col(i) = (newU - u0) / dx;
-    }
-    return du_dtheta;
-}
-
 int main(void) {
-    const Mat3 R1 = compute_rotation_matrix_rodrigues(Vec3(1,1,1).normalized());
-    const Mat3 R2 = compute_rotation_matrix_rodrigues(Vec3(1,-1,-1).normalized());
-    const Scalar L0 = 1.0;
-    // const Vec3 u = compute_darboux_vector(L0, R1, R2);
+    // Simulation description
+    Simulation simulation;
+    simulation.TimeStep = 0.05;
+    const Scalar mass = 10;
+    const Scalar gravity = -1;
 
-    const Mat3 du_dtheta_finite = compute_darboux_vector_local_finite_derivative(L0, R1, R2);
-    const Mat3 du_dtheta = compute_darboux_vector_theta1_derivative(L0, R1, R2);
-    const Mat3 du_dtheta2 = compute_darboux_vector_theta2_derivative(L0, R1, R2);
-    std ::cout << "du_dtheta_finite"
-               << "\n" << du_dtheta_finite << std ::endl;
-    std ::cout << "du_dtheta"
-               << "\n" << du_dtheta << std ::endl;
-    std ::cout << "du_dtheta2"
-               << "\n" << du_dtheta2 << std ::endl;
+    const unsigned int nRigidBodies = 30;
+    const Scalar L0 = 0.5;
+    const Scalar midpoint = L0 * nRigidBodies * 0.5;
+    const Vec3 fixer_pos = Vec3(5, 5, 0);
+    ParticleHandle p_fix1 = ParticleHandle(simulation,1)
+        .freeze()
+        .set_initial_position(fixer_pos);
 
-    // const Scalar minAngle = 0;
-    // const Scalar maxAngle = M_PI;
-    // const int samples = 1000;
-    // const Scalar magnitude = 1;
-    // const Vec3 axis = Vec3::Random().normalized();
+    ParticleHandle p_fix2 = ParticleHandle(simulation,1)
+        .freeze()
+        .set_initial_position(-fixer_pos);
 
-    // for (int i = 0; i < samples; i++) {
-    //     const Scalar angle = (maxAngle - minAngle) * static_cast<Scalar>(i) / static_cast<Scalar>(samples);
-    //     // Eigen::Matrix<Scalar, 3, 9> dvecR_dphi = dvecR_dtheta_global(angle * axis);
-    //     // Eigen::JacobiSVD<Eigen::Matrix<Scalar,3, 9>> global_svd(dvecR_dphi);
+    for (unsigned int i = 0; i < nRigidBodies; i++) {
+        // Create rigid_body
+        unsigned int index = simulation.initial_state.get_nDoF();
+        simulation.initial_state.add_size(6);
+        RigidBody rb = RigidBody(index, mass, mass * Mat3::Identity());
+        add_rigid_body_to_simulation(simulation, rb);
 
-    //     Eigen::EigenSolver<Mat3> solver(compute_global_to_local_axis_angle_jacobian(axis * angle));
-    //     std::cout << angle << " ";
-    //     std ::cout << solver.eigenvalues().real().transpose() << " ";
-    //     std ::cout << solver.eigenvalues().imag().transpose() << std ::endl;
-    //     // std ::cout << global_svd.singularValues().transpose() << std ::endl;
-    // }
+        // Initial state
+        simulation.initial_state.x.segment<6>(index) = Vec6(0.0, 0.0, L0*i - midpoint, 0.0, 0.0, 0.0);
+        simulation.initial_state.v.segment<6>(index) = Vec6(0.0, 0.0,  0.0, 0.0, 0.0, 0.0); // At rest
 
-    // // Geometry loading
-    // RenderMesh renderMesh = RenderMesh("resources/obj/triceratops3.obj");
-    // SimulationMesh simMesh = SimulationMesh(renderMesh);
-    // TetrahedronMesh tmesh = TetrahedronMesh(simMesh);
+        // Add gravity
+        unsigned int y_index = index + 1;
+        simulation.energies.gravities.emplace_back(y_index, GravityParameters(gravity));
+    }
 
-    // // Simulation description
-    // Simulation simulation;
-    // const Scalar mass = 1000;
-    // const Scalar poisson_ratio = 0.2;
-    // const Scalar young_modulus = 5e3;
+    // Join the first chain element to a fixed particle with a spring
+    RigidBody rb = simulation.simulables.rigid_bodies[0];
+    RigidBody rb2 = simulation.simulables.rigid_bodies[29];
+    SpringParameters spring_param = SpringParameters(50.0,
+                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos).norm(),
+                                                     0);
+    simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix1.particle, spring_param);
+    simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix1.particle, spring_param);
 
-    // FEMHandle fem = FEMHandle(simulation, tmesh.vertices, tmesh.indices,
-    //                           mass, poisson_ratio, young_modulus)
-    //     .add_gravity(-1.0)
-    //     ;
-    // ParticleHandle p1 = ParticleHandle(simulation, mass).freeze();
-    // ParticleHandle p2 = get_particle_handle(simulation, 0);
-    // Vec3 pos = p2.get_position(simulation.initial_state);
-    // p1.set_initial_position(pos + Vec3(0,1,0));
+    // Create the rod segments
+    const RodSegmentParameters parameters = {
+    .Ks = 100.0,
+    .L0 = L0,
+    .translational_damping = 0.0,
+    .rotational_damping = 0.0,
+    .constraint_stiffness = 100.0,
+    .intrinsic_darboux = Vec3::Zero(),
+    .stiffness_tensor = 100.0 * Vec3::Ones(),
+    };
 
-    // join_particles_with_spring(simulation, p1, p2, 1000.0, 0.0);
-    // PhysicsState state = simulation.initial_state;
+    for (unsigned int i = 0; i < nRigidBodies - 1; i++) {
+        const RigidBody rbA = simulation.simulables.rigid_bodies[i];
+        const RigidBody rbB = simulation.simulables.rigid_bodies[i+1];
+        RodSegment segment = RodSegment(rbB, rbA, parameters);
 
-    // // Start the simulation thread
-    // simulation_async_loop(simulation);
+        simulation.energies.rod_segments.push_back(segment);
+    }
 
-    // // Render
-    // MandosViewer viewer;
-    // MeshGPU meshGPU = MeshGPU(renderMesh);
 
-    // // Render loop
-    // bool simulation_paused = false;
-    // while (not viewer.window_should_close()) {
+    PhysicsState state = simulation.initial_state;
+    // Render loop
+    MandosViewer viewer;
+    bool simulation_paused = true;
+    while (not viewer.window_should_close()) {
 
-    //     // Interaction with the simulaiton
-    //     if (viewer.is_key_pressed(Key_H)) {
-    //         simulation_paused = not simulation_paused;
-    //     }
+        // Interaction with the simulaiton
+        if (viewer.is_key_pressed(Key_H)) {
+            simulation_paused = not simulation_paused;
+        }
 
-    //     if (viewer.is_key_pressed(Key_G)) {
-    //         simulation_async_loop_request_iteration();
-    //         state = get_current_physics_state();
-    //     }
+        if (viewer.is_key_pressed(Key_G)) {
+            simulation_step(simulation, state);
+        }
 
-    //     if (viewer.is_key_pressed(Key_R)) {
-    //         state = simulation.initial_state;
-    //         set_current_physics_state(state);
-    //     }
+        if (viewer.is_key_pressed(Key_R)) {
+            state = simulation.initial_state;
+        }
 
-    //     if (not simulation_paused) {
-    //         EnergyAndDerivatives f = EnergyAndDerivatives(0);
-    //         simulation_async_loop_request_iteration();
-    //         state = get_current_physics_state();
-    //     }
+        if (not simulation_paused) {
+            EnergyAndDerivatives f = EnergyAndDerivatives(0);
+            simulation_step(simulation, state, f);
+            DEBUG_LOG(f.energy);
+        }
 
-    //     // Rendering
+        // Rendering
+        viewer.begin_drawing();
+        viewer.draw_simulation_state(simulation, state);
 
-    //     viewer.begin_drawing();
-    //     viewer.draw_simulation_state(simulation, state);
-    //     viewer.draw_FEM(fem, state, meshGPU, renderMesh, simMesh);
-    //     viewer.draw_particle(p1, state);
-    //     viewer.draw_particle(p2, state);
-    //     viewer.end_drawing();
-    // }
+        viewer.draw_particles(simulation, state);
+        viewer.draw_rigid_bodies(simulation, state);
+        viewer.draw_springs(simulation, state);
+
+        viewer.end_drawing();
+    }
 }

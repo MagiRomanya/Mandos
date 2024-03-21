@@ -31,7 +31,7 @@ struct Simulables {
 #define MAT(type, name) X(std::vector<FEM_Element3D<type>>, fem_elements_##name)
 #define POTENTIAL_ENERGY_MEMBERS \
     X(std::vector<ParticleSpring>, particle_springs) \
-    X(std::vector<RodSegment>, rod_elements) \
+    X(std::vector<RodSegment>, rod_segments) \
     FEM_MATERIAL_MEMBERS \
     X(std::vector<Gravity>, gravities)
 

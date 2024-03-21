@@ -1182,7 +1182,8 @@ void MandosViewer::draw_rigid_bodies(const Simulation& simulation, const Physics
     for (unsigned int i = 0; i < simulation.simulables.rigid_bodies.size(); i++) {
         const RigidBody& rb = simulation.simulables.rigid_bodies[i];
         const Mat3 R = rb.compute_rotation_matrix(state.x);
-        const Mat3 I = 30 * rb.J_inertia_tensor0.normalized();
+        // const Mat3 I = 30 * rb.J_inertia_tensor0.normalized();
+        const Mat3 I = 1 * rb.J_inertia_tensor0.normalized();
         const Vec3 com = rb.get_COM_position(state.x);
         Matrix transform = raylib_transform_matrix(R, I, com);
         transforms.push_back(transform);
@@ -1191,7 +1192,8 @@ void MandosViewer::draw_rigid_bodies(const Simulation& simulation, const Physics
     Material matInstances = LoadMaterialDefault();
     matInstances.shader = renderState->instancing_shader;
     matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RB_COLOR;
-    DrawMeshInstanced(renderState->sphere_mesh, matInstances, transforms.data(), transforms.size());
+    // DrawMeshInstanced(renderState->sphere_mesh, matInstances, transforms.data(), transforms.size());
+    DrawMeshInstanced(renderState->axis3D_model.meshes[0], matInstances, transforms.data(), transforms.size());
 }
 
 
