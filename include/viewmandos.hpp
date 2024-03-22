@@ -177,6 +177,8 @@ struct MandosViewer {
 
     void draw_vector(const Vec3& vector, const Vec3& origin);
 
+    void draw_rods(const Simulation& simulation, const PhysicsState& state);
+
 private:
     void initialize_graphical_context();
     void drawGUI();

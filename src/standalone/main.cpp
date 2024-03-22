@@ -15,15 +15,19 @@ int main(void) {
     const unsigned int nRigidBodies = 30;
     const Scalar L0 = 0.5;
     const Scalar midpoint = L0 * nRigidBodies * 0.5;
+    const Vec3 fixer_pos0 = Vec3(0, 4, 0);
     const Vec3 fixer_pos1 = Vec3(0, 1, -midpoint);
     const Vec3 fixer_pos2 = Vec3(0, 1, midpoint);
-    ParticleHandle p_fix1 = ParticleHandle(simulation,1)
+    ParticleHandle p_fix0 = ParticleHandle(simulation,1)
         .freeze()
-        .set_initial_position(fixer_pos1);
+        .set_initial_position(fixer_pos0);
+    // ParticleHandle p_fix1 = ParticleHandle(simulation,1)
+    //     .freeze()
+    //     .set_initial_position(fixer_pos1);
 
-    ParticleHandle p_fix2 = ParticleHandle(simulation,1)
-        .freeze()
-        .set_initial_position(fixer_pos2);
+    // ParticleHandle p_fix2 = ParticleHandle(simulation,1)
+    //     .freeze()
+    //     .set_initial_position(fixer_pos2);
 
     for (unsigned int i = 0; i < nRigidBodies; i++) {
         // Create rigid_body
@@ -41,27 +45,39 @@ int main(void) {
         simulation.energies.gravities.emplace_back(y_index, GravityParameters(gravity));
     }
 
-    // Join the first chain element to a fixed particle with a spring
     RigidBody rb = simulation.simulables.rigid_bodies[0];
     RigidBody rb2 = simulation.simulables.rigid_bodies[29];
-    SpringParameters spring_param = SpringParameters(50.0,
+
+    for (unsigned int i = 0; i < 6; i++) {
+        simulation.frozen_dof.push_back(rb.index+i);
+        simulation.frozen_dof.push_back(rb2.index+i);
+    }
+
+    SpringParameters spring_param0 = SpringParameters(50.0,
+                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos0).norm(),
+                                                     0);
+    SpringParameters spring_param1 = SpringParameters(50.0,
                                                      (rb.get_COM_position(simulation.initial_state.x) - fixer_pos1).norm(),
                                                      0);
     SpringParameters spring_param2 = SpringParameters(50.0,
                                                      (rb.get_COM_position(simulation.initial_state.x) - fixer_pos1).norm(),
                                                      0);
-    simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix1.particle, spring_param);
-    simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix2.particle, spring_param2);
+    simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix0.particle, spring_param0);
+    simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix0.particle, spring_param0);
+
+    // simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix1.particle, spring_param1);
+    // simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix2.particle, spring_param2);
 
     // Create the rod segments
     const RodSegmentParameters parameters = {
-    .Ks = 200.0,
+    .Ks = 500.0,
     .L0 = L0,
-    .translational_damping = 10.0,
+    .translational_damping = 20.0,
     .rotational_damping = 0.0,
-    .constraint_stiffness = 500.0,
+    .constraint_stiffness = 600.0,
     .intrinsic_darboux = Vec3::Zero(),
-    .stiffness_tensor = 100.0 * Vec3::Ones(),
+    // .intrinsic_darboux = Vec3(0.0, 0.5, 0.0),
+    .stiffness_tensor = 500.0 * Vec3::Ones(),
     };
 
     for (unsigned int i = 0; i < nRigidBodies - 1; i++) {
@@ -77,6 +93,7 @@ int main(void) {
     // Render loop
     MandosViewer viewer;
     bool simulation_paused = true;
+    Scalar time = 0.0;
     while (not viewer.window_should_close()) {
 
         // Interaction with the simulaiton
@@ -86,17 +103,23 @@ int main(void) {
 
         if (viewer.is_key_pressed(Key_G)) {
             simulation_step(simulation, state);
+            time += simulation.TimeStep;
         }
 
         if (viewer.is_key_pressed(Key_R)) {
             state = simulation.initial_state;
+            time = 0.0;
         }
 
         if (not simulation_paused) {
             EnergyAndDerivatives f = EnergyAndDerivatives(0);
             simulation_step(simulation, state, f);
+            time += simulation.TimeStep;
             DEBUG_LOG(f.energy);
         }
+
+        Vec3 rotation_vector = Vec3(0,0, std::fmod( 0.1 * time, 2 * M_PI));
+        state.x.segment<3>(rb.index + 3) = rotation_vector;
 
         // Rendering
         viewer.begin_drawing();
@@ -105,6 +128,7 @@ int main(void) {
         viewer.draw_particles(simulation, state);
         viewer.draw_rigid_bodies(simulation, state);
         viewer.draw_springs(simulation, state);
+        // viewer.draw_rods(simulation, state);
 
         viewer.end_drawing();
     }

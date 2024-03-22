@@ -4,6 +4,12 @@
 #include "raylib.h"
 #include <vector>
 
+void InitializeMultisampleFramebuffer();
+
+void BindMultisampleFramebuffer();
+
+void BlitMultisampleFramebuffer(const RenderTexture destination);
+
 void EnableUserDefinedClipping();
 
 void DisableUserDefinedClipping();

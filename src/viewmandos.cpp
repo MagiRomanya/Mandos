@@ -27,6 +27,7 @@
 #include "memory_pool.hpp"
 #include "mesh.hpp"
 #include "rigid_body.hpp"
+#include "rod_segment.hpp"
 #include "spring.hpp"
 #include "viewmandos.hpp"
 #include "utility_functions.hpp"
@@ -38,6 +39,7 @@ Color PARTICLE_COLOR = BLUE;
 Color MASS_SPRING_COLOR  = GREEN;
 Color FROZEN_PARTICLE_COLOR = WHITE;
 Color TETRAHEDRON_VISUALIZATION_COLOR = PURPLE;
+Color RODS_COLOR = DARKGREEN;
 
 inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
     Matrix r = {
@@ -257,6 +259,7 @@ TetrahedronMeshVisualization::~TetrahedronMeshVisualization() {
     SHADER(axis_shader, "resources/shaders/axis.vs", "resources/shaders/axis.fs") \
     SHADER(instancing_shader, "resources/shaders/lighting_instancing.vs", "resources/shaders/lighting.fs") \
     SHADER(solid_shader, "resources/shaders/lighting.vs", "resources/shaders/diffuse_solid_color.fs") \
+    SHADER(raymarching_shader, "resources/shaders/raymarching.vs", "resources/shaders/raymarching.fs") \
     SHADER(texture_coordinates_shader, "resources/shaders/lighting.vs", "resources/shaders/uv.fs")
 
 /**
@@ -282,6 +285,8 @@ struct RenderState {
     SHADER_LIST
 #undef SHADER
 
+    int raymarching_locs[10];
+
     // TEXTURES
     // -------------------------------------------------------------
     Texture2D diffuseTexture;
@@ -296,6 +301,8 @@ struct RenderState {
     Model spring_model;
     Model axis3D_model;
     Model vector_model;
+    Model cylinder_model;
+    Model screen_rectangle_model;
 
     // MeshGPU* axis3D = nullptr;
     LinesGPU* tetLines = nullptr;
@@ -338,6 +345,9 @@ void RenderState::initialize() {
     instancing_shader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(instancing_shader, "instanceTransform");
     solid_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(solid_shader, "slicePlane");
     normals_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(normals_shader, "slicePlane");
+    raymarching_locs[0] = GetShaderLocation(raymarching_shader, "viewPos");
+    raymarching_locs[1] = GetShaderLocation(raymarching_shader, "viewTarget");
+    raymarching_locs[2] = GetShaderLocation(raymarching_shader, "Resolution");
 
     // Set sefault shader
     base_shader = bling_phong_shader;
@@ -352,6 +362,9 @@ void RenderState::initialize() {
     // Meshes
     spring_model = LoadModel("resources/obj/spring.obj");
     vector_model = LoadModel("resources/obj/vector.obj");
+    cylinder_model = LoadModel("resources/obj/cylinder.obj");
+    screen_rectangle_model = LoadModel("resources/obj/screen-rectangle.obj");
+    screen_rectangle_model.materials[0] = createMaterialFromShader(raymarching_shader);
     sphere_mesh = GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS);
     axis3D_model = LoadModel("resources/obj/axis.obj");
     std::vector<float> vertices = {0.0f, 1.0f, 4.0f, 2.0f};
@@ -376,6 +389,8 @@ void RenderState::deinitialize() {
     UnloadMesh(sphere_mesh);
     UnloadModel(spring_model);
     UnloadModel(vector_model);
+    UnloadModel(cylinder_model);
+    UnloadModel(screen_rectangle_model);
     UnloadModel(axis3D_model);
     delete tetLines;
     delete tetVis;
@@ -423,12 +438,12 @@ void raylib_to_imgui_tracelog_callback(int logLevel, const char *text, va_list a
 
 
 void MandosViewer::initialize_graphical_context() {
-    SetConfigFlags(FLAG_MSAA_4X_HINT);
     InitWindow(initialScreenWidth, initialScreenHeight, "Mandos");
     ImGuiInitialize();
     SetTraceLogCallback(raylib_to_imgui_tracelog_callback);
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     rlDisableBackfaceCulling();
+    InitializeMultisampleFramebuffer();
 
     // Set up the render state
     renderState = new RenderState;
@@ -437,7 +452,7 @@ void MandosViewer::initialize_graphical_context() {
     // Initialize native file dialog
     NFD_Init();
 
-    SetTargetFPS(200);
+    SetTargetFPS(60);
 }
 
 MandosViewer::MandosViewer() {
@@ -476,6 +491,8 @@ void MandosViewer::begin_drawing() {
 
     // 3D scene framebuffer
     BeginTextureMode(renderState->screenFBO);
+    BindMultisampleFramebuffer();
+    // Update shader uniforms
     // Update slice plane uniform
     float slice_plane_data[4] = {(float)slicePlane.x(), (float)slicePlane.y(), (float)slicePlane.z(), (float)slicePlane.w()};
     SetShaderValue(renderState->base_shader, renderState->base_shader.locs[SHADER_LOC_SLICE_PLANE], slice_plane_data, SHADER_UNIFORM_VEC4);
@@ -484,6 +501,11 @@ void MandosViewer::begin_drawing() {
     float cameraPos[3] = { renderState->camera.position.x, renderState->camera.position.y, renderState->camera.position.z };
     SetShaderValue(renderState->base_shader, renderState->base_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
     SetShaderValue(renderState->instancing_shader, renderState->instancing_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
+    SetShaderValue(renderState->raymarching_shader, renderState->raymarching_locs[0], cameraPos, SHADER_UNIFORM_VEC3);
+    float cameraTarget[3] = { renderState->camera.target.x, renderState->camera.target.y, renderState->camera.target.z };
+    SetShaderValue(renderState->raymarching_shader, renderState->raymarching_locs[1], cameraTarget, SHADER_UNIFORM_VEC3);
+    float resolution[2] = {static_cast<float>(renderState->screenFBO.texture.width), static_cast<float>(renderState->screenFBO.texture.height)};
+    SetShaderValue(renderState->raymarching_shader, renderState->raymarching_locs[2], resolution, SHADER_UNIFORM_VEC2);
 
     // ClearBackground(RAYWHITE);
     rlSetBlendMode(RL_BLEND_SRC_ALPHA);
@@ -628,7 +650,7 @@ void MandosViewer::drawSimulationVisualizationWindow() {
     ImGui::SetNextWindowSizeConstraints(ImVec2(300,300), ImVec2(3000,3000));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
 
-    ImGui::Begin("Simulation view", nullptr, flags);
+    ImGui::Begin("Simulation viewport", nullptr, flags);
     ImGui::PopStyleVar();
     const bool isTitleBarHovered = ImGui::IsItemHovered();
     flags = ImGui::IsWindowHovered() && (not isTitleBarHovered) ? ImGuiWindowFlags_NoMove : 0;
@@ -754,6 +776,11 @@ void MandosViewer::drawGUI() {
             }
             ImGui::EndMenu();
         }
+        const float menuBarWidth = ImGui::GetWindowSize().x;
+        const float framerateTextWidth = ImGui::CalcTextSize("FPS = 0000").x;
+        ImGui::SameLine(menuBarWidth - framerateTextWidth);
+        ImGui::PushItemWidth(framerateTextWidth);
+        ImGui::Text("FPS = %.0f", ImGui::GetIO().Framerate);
         ImGui::EndMainMenuBar();
     }
     if (renderState->renderFrameOpen) {
@@ -901,6 +928,7 @@ void MandosViewer::end_drawing() {
         draw_particle_indices(*SavedSim, *SavedState);
     }
 
+    BlitMultisampleFramebuffer(renderState->screenFBO);
     EndTextureMode();
 
     drawGUI();
@@ -966,6 +994,22 @@ inline Mat3 rotation_from_vector(const Vec3& vec, const Vec3& up) {
     return rotation;
 }
 
+inline Matrix compute_transform_from_two_points(const Vec3& x1, const Vec3& x2) {
+    const Vec3 center = (x1 + x2) * 0.5f;
+    const Scalar length = (x1 - x2).norm();
+    const Vec3 align_axis = (x1 - x2) / length;
+    const Vec3 up = Vec3(0.0, 0.0, 1.0);
+    Mat3 Rotation = rotation_from_vector(align_axis, up);
+    Matrix transform = MatrixTranslate(center.x(), center.y(), center.z());
+    const Matrix rotation4 = matrix_eigen_to_raylib(Rotation);
+    const Matrix rotateX = MatrixRotateX(PI / 2);
+    transform = MatrixMultiply(rotation4, transform);
+    transform = MatrixMultiply(rotateX, transform);
+    const Matrix scale = MatrixScale(1, length, 1);
+    transform = MatrixMultiply(scale, transform);
+    return transform;
+}
+
 void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState& state) {
     std::vector<Matrix> transforms;
     transforms.reserve(simulation.energies.particle_springs.size());
@@ -974,18 +1018,7 @@ void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState
         ParticleSpring s = simulation.energies.particle_springs[i];
         const Vec3 x1 = s.p1.get_position(state);
         const Vec3 x2 = s.p2.get_position(state);
-        const Vec3 center = (x1 + x2) * 0.5f;
-        const Scalar length = (x1 - x2).norm();
-        const Vec3 align_axis = (x1 - x2) / length;
-        const Vec3 up = Vec3(0.0, 0.0, 1.0);
-        Mat3 Rotation = rotation_from_vector(align_axis, up);
-        Matrix transform = MatrixTranslate(center.x(), center.y(), center.z());
-        const Matrix rotation4 = matrix_eigen_to_raylib(Rotation);
-        const Matrix rotateX = MatrixRotateX(PI / 2);
-        transform = MatrixMultiply(rotation4, transform);
-        transform = MatrixMultiply(rotateX, transform);
-        const Matrix scale = MatrixScale(1, length, 1);
-        transform = MatrixMultiply(scale, transform);
+        const Matrix transform = compute_transform_from_two_points(x1, x2);
         transforms.push_back(transform);
     }
 
@@ -1203,4 +1236,23 @@ void MandosViewer::draw_vector(const Vec3& vector, const Vec3& origin) {
     const Mat3 scale = Mat3::Identity() * vector.norm() / 10.0;
     const Matrix transform = raylib_transform_matrix(rotation, scale, origin);
     DrawMesh(renderState->vector_model.meshes[0], renderState->base_material, transform);
+}
+
+void MandosViewer::draw_rods(const Simulation& simulation, const PhysicsState& state) {
+    // DrawModel(renderState->screen_rectangle_model, Vector3(0,0,0), 1, WHITE);
+    std::vector<Matrix> transforms;
+    transforms.reserve(simulation.energies.rod_segments.size());
+
+    for (size_t i = 0; i < simulation.energies.rod_segments.size(); i++) {
+        RodSegment s = simulation.energies.rod_segments[i];
+        const Vec3 x1 = s.rbA.get_COM_position(state.x);
+        const Vec3 x2 = s.rbB.get_COM_position(state.x);
+        const Matrix transform = compute_transform_from_two_points(x1, x2);
+        transforms.push_back(transform);
+    }
+
+    Material matInstances = LoadMaterialDefault();
+    matInstances.shader = renderState->instancing_shader;
+    matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RODS_COLOR;
+    DrawMeshInstanced(renderState->cylinder_model.meshes[0], matInstances, transforms.data(), transforms.size());
 }

@@ -4,6 +4,7 @@
 
 #include "external/glad.h"
 #include "gl_extensions.hpp"
+#include "raylib.h"
 #include "raymath.h"
 #include "utility_functions.hpp"
 #include <rlgl.h>
@@ -39,8 +40,52 @@ void DisableUserDefinedClipping() {
     GL_CALL(glDisable(GL_CLIP_DISTANCE0));
 }
 
+unsigned int msFBO, msRBO, msTexture;
+
+void InitializeMultisampleFramebuffer() {
+    GL_CALL(glEnable(GL_MULTISAMPLE));
+
+    // Create the multisapled framebuffer
+    GL_CALL(glGenFramebuffers(1, &msFBO));
+    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, msFBO));
+
+    // Create the multisampled color texture
+    GL_CALL(glGenTextures(1, &msTexture));
+    GL_CALL(glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msTexture));
+    GL_CALL(glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGBA, GetScreenWidth(), GetScreenHeight(), 1));
+    GL_CALL(glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0));
+    GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, msTexture, 0));
+
+    // Create the multisampled depthbuffer
+    GL_CALL(glGenRenderbuffers(1, &msRBO));
+    GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, msRBO));
+    GL_CALL(glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, GetScreenWidth(), GetScreenHeight()));
+    GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, 0));
+    GL_CALL(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, msRBO));
+
+    // Check weather the framebuffer has the correct attachments
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "ERROR:FRAMEBUFFER:: Multisampled frame buffer is not complete!" << std::endl;
+    }
+
+    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+}
+
+void BindMultisampleFramebuffer() {
+    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, msFBO));
+}
+
+void BlitMultisampleFramebuffer(const RenderTexture destination) {
+    const int width = destination.texture.width;
+    const int height = destination.texture.height;
+    GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, msFBO));
+    GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, destination.id));
+    GL_CALL(glBlitFramebuffer(0,0, width, height, 0,0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST));
+}
+
 void UpdateRenderTexture2D(RenderTexture2D& fbo, int width, int height) {
     if (width <= 0 or height <= 0) return;
+
     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fbo.id));
 
     GL_CALL(glBindTexture(GL_TEXTURE_2D, fbo.texture.id));
@@ -54,6 +99,23 @@ void UpdateRenderTexture2D(RenderTexture2D& fbo, int width, int height) {
     GL_CALL(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height));
     GL_CALL(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fbo.depth.id));
 
+    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+
+    // Multisampling for anti aliasing
+    const int samples = 2;
+    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, msFBO));
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+        // Color attachment
+        GL_CALL(glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msTexture));
+        GL_CALL(glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGBA, width, height, GL_TRUE));
+        GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, msTexture, 0));
+
+        // Depth attachment
+        GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, msRBO));
+        GL_CALL(glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, width, height));
+        GL_CALL(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, msRBO));
+
+    }
     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
     rlSetFramebufferWidth(width);
@@ -138,3 +200,28 @@ LinesGPU::~LinesGPU() {
     GL_CALL(glDeleteBuffers(1, &VBO));
     GL_CALL(glDeleteVertexArrays(1, &VAO));
 }
+
+// void UpdateRenderTexture2D(RenderTexture2D& fbo, int width, int height) {
+//     if (width <= 0 or height <= 0) return;
+//     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fbo.id));
+
+//     GL_CALL(glBindTexture(GL_TEXTURE_2D, fbo.texture.id));
+//     GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
+//     GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+//     GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+//     GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo.texture.id, 0));
+
+//     // Framebuffer depth texture attachment (it is a renderbuffer)
+//     GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, fbo.depth.id));
+//     GL_CALL(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height));
+//     GL_CALL(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fbo.depth.id));
+
+//     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+
+//     rlSetFramebufferWidth(width);
+//     rlSetFramebufferHeight(height);
+//     fbo.texture.width = width;
+//     fbo.texture.height = height;
+//     fbo.depth.width = width;
+//     fbo.depth.height = height;
+// }
