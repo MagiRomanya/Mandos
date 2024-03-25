@@ -4,16 +4,29 @@
 #include "raylib.h"
 #include <vector>
 
+/**
+ * Creates a FBO with multisampled color and depth textures.
+ */
 void InitializeMultisampleFramebuffer();
 
 void BindMultisampleFramebuffer();
 
+/**
+ * After all has been rendered onto the Multisampled FBO, all the samples must be combined
+ * into a single one to a separate RenderTexture.
+ *
+ * https://learnopengl.com/Advanced-OpenGL/Anti-Aliasing
+ */
 void BlitMultisampleFramebuffer(const RenderTexture destination);
 
 void EnableUserDefinedClipping();
 
 void DisableUserDefinedClipping();
 
+/**
+ * Updates the color and depth attachments resolutions of the FBO.
+ * This function also updates the MultiSampled FBO resolution if it is in use.
+ */
 void UpdateRenderTexture2D(RenderTexture2D& fbo, int width, int height);
 
 struct LinesGPU {

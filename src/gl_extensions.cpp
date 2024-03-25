@@ -40,9 +40,19 @@ void DisableUserDefinedClipping() {
     GL_CALL(glDisable(GL_CLIP_DISTANCE0));
 }
 
+// Multisampled framebuffer, color and depth attachements
 unsigned int msFBO, msRBO, msTexture;
 
+int ANTIALIASING_SAMPLES = 4;
+
 void InitializeMultisampleFramebuffer() {
+    int max_samples;
+    glGetIntegerv(GL_MAX_COLOR_TEXTURE_SAMPLES, &max_samples);
+    if (max_samples < ANTIALIASING_SAMPLES) {
+        std::cerr << "ERROR:FRAMEBUFFER:: The number of color texture samples is too big and not supported. Using the maximum amount of samples."  << std::endl;
+        ANTIALIASING_SAMPLES = max_samples;
+    }
+
     GL_CALL(glEnable(GL_MULTISAMPLE));
 
     // Create the multisapled framebuffer
@@ -52,14 +62,14 @@ void InitializeMultisampleFramebuffer() {
     // Create the multisampled color texture
     GL_CALL(glGenTextures(1, &msTexture));
     GL_CALL(glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msTexture));
-    GL_CALL(glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGBA, GetScreenWidth(), GetScreenHeight(), 1));
+    GL_CALL(glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, ANTIALIASING_SAMPLES, GL_RGBA, GetScreenWidth(), GetScreenHeight(), 1));
     GL_CALL(glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0));
     GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, msTexture, 0));
 
     // Create the multisampled depthbuffer
     GL_CALL(glGenRenderbuffers(1, &msRBO));
     GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, msRBO));
-    GL_CALL(glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, GetScreenWidth(), GetScreenHeight()));
+    GL_CALL(glRenderbufferStorageMultisample(GL_RENDERBUFFER, ANTIALIASING_SAMPLES, GL_DEPTH24_STENCIL8, GetScreenWidth(), GetScreenHeight()));
     GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, 0));
     GL_CALL(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, msRBO));
 
@@ -84,8 +94,11 @@ void BlitMultisampleFramebuffer(const RenderTexture destination) {
 }
 
 void UpdateRenderTexture2D(RenderTexture2D& fbo, int width, int height) {
+    // Only execute the function if the width and height of the FBO are different from the new ones.
     if (width <= 0 or height <= 0) return;
+    if (fbo.texture.width == width && fbo.texture.height == height) return;
 
+    // Resize FBO
     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fbo.id));
 
     GL_CALL(glBindTexture(GL_TEXTURE_2D, fbo.texture.id));
@@ -101,23 +114,23 @@ void UpdateRenderTexture2D(RenderTexture2D& fbo, int width, int height) {
 
     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
-    // Multisampling for anti aliasing
-    const int samples = 2;
+    // Resize Multisample FBO for anti aliasing if it exists!
     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, msFBO));
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
         // Color attachment
         GL_CALL(glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, msTexture));
-        GL_CALL(glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGBA, width, height, GL_TRUE));
+        GL_CALL(glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, ANTIALIASING_SAMPLES, GL_RGBA, width, height, GL_TRUE));
         GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, msTexture, 0));
 
         // Depth attachment
         GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, msRBO));
-        GL_CALL(glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, width, height));
+        GL_CALL(glRenderbufferStorageMultisample(GL_RENDERBUFFER, ANTIALIASING_SAMPLES, GL_DEPTH24_STENCIL8, width, height));
         GL_CALL(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, msRBO));
 
     }
     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
+    // Update raylib FBO width and height
     rlSetFramebufferWidth(width);
     rlSetFramebufferHeight(height);
     fbo.texture.width = width;
