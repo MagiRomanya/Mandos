@@ -23,6 +23,18 @@ void EnableUserDefinedClipping();
 
 void DisableUserDefinedClipping();
 
+struct Texture1D {
+    unsigned int id;
+    void* data = nullptr;
+    int size = 0;
+};
+
+Texture1D CreateTexture1D();
+
+void UpdateTexture1D(Texture1D texture, const std::vector<float>& data);
+
+void UseTexture1D(Texture1D& texture);
+
 /**
  * Updates the color and depth attachments resolutions of the FBO.
  * This function also updates the MultiSampled FBO resolution if it is in use.

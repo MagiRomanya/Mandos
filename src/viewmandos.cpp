@@ -286,6 +286,7 @@ struct RenderState {
 #undef SHADER
 
     int raymarching_locs[10];
+    Texture1D RodVector;
 
     // TEXTURES
     // -------------------------------------------------------------
@@ -348,6 +349,10 @@ void RenderState::initialize() {
     raymarching_locs[0] = GetShaderLocation(raymarching_shader, "viewPos");
     raymarching_locs[1] = GetShaderLocation(raymarching_shader, "viewTarget");
     raymarching_locs[2] = GetShaderLocation(raymarching_shader, "Resolution");
+    raymarching_locs[3] = GetShaderLocation(raymarching_shader, "RodVectorSize");
+
+
+    RodVector = CreateTexture1D();
 
     // Set sefault shader
     base_shader = bling_phong_shader;
@@ -404,6 +409,7 @@ void RenderState::deinitialize() {
     UnloadTexture(diffuseTexture);
     UnloadTexture(normalMapTexture);
     UnloadRenderTexture(screenFBO);
+    rlUnloadTexture(RodVector.id);
 
     // SkyBox
     UnloadTexture(sky_box_model.materials[0].maps[MATERIAL_MAP_CUBEMAP].texture);
@@ -1239,20 +1245,73 @@ void MandosViewer::draw_vector(const Vec3& vector, const Vec3& origin) {
 }
 
 void MandosViewer::draw_rods(const Simulation& simulation, const PhysicsState& state) {
-    // DrawModel(renderState->screen_rectangle_model, Vector3(0,0,0), 1, WHITE);
-    std::vector<Matrix> transforms;
-    transforms.reserve(simulation.energies.rod_segments.size());
+    std::vector<float> rod_vector;
+    int i = 0;
+    for (i = 0; i < simulation.energies.rod_segments.size(); i++) {
+        const RodSegment s = simulation.energies.rod_segments[i];
+        const Vec3 x1 = s.rbB.get_COM_position(state.x);
+        const Vec3 x2 = s.rbA.get_COM_position(state.x);
 
-    for (size_t i = 0; i < simulation.energies.rod_segments.size(); i++) {
-        RodSegment s = simulation.energies.rod_segments[i];
-        const Vec3 x1 = s.rbA.get_COM_position(state.x);
-        const Vec3 x2 = s.rbB.get_COM_position(state.x);
-        const Matrix transform = compute_transform_from_two_points(x1, x2);
-        transforms.push_back(transform);
+        rod_vector.push_back(x1.x());
+        rod_vector.push_back(x1.y());
+        rod_vector.push_back(x1.z());
+
+        rod_vector.push_back(x2.x());
+        rod_vector.push_back(x2.y());
+        rod_vector.push_back(x2.z());
     }
 
-    Material matInstances = LoadMaterialDefault();
-    matInstances.shader = renderState->instancing_shader;
-    matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RODS_COLOR;
-    DrawMeshInstanced(renderState->cylinder_model.meshes[0], matInstances, transforms.data(), transforms.size());
+    int rod_vector_size = rod_vector.size();
+
+    // Update Rod endpoints positions
+    Mesh mesh = renderState->screen_rectangle_model.meshes[0];
+    Shader shader = renderState->raymarching_shader;
+
+    UpdateTexture1D(renderState->RodVector, rod_vector);
+    SetShaderValue(shader, renderState->raymarching_locs[3], &rod_vector_size, SHADER_UNIFORM_INT);
+    rlEnableShader(shader.id);
+    UseTexture1D(renderState->RodVector);
+
+    // const int textureSlot = 0;
+    // rlSetUniform(rlGetLocationUniform(shader.id, "RodVector"), &textureSlot, SHADER_UNIFORM_INT, 1);
+    if (!rlEnableVertexArray(mesh.vaoId)) {
+        // Bind mesh VBO data: vertex position (shader-location = 0)
+        rlEnableVertexBuffer(mesh.vboId[0]);
+        rlSetVertexAttribute(shader.locs[SHADER_LOC_VERTEX_POSITION], 3, RL_FLOAT, 0, 0, 0);
+        rlEnableVertexAttribute(shader.locs[SHADER_LOC_VERTEX_POSITION]);
+        if (mesh.indices != NULL) rlEnableVertexBufferElement(mesh.vboId[6]);
+    }
+    // WARNING: Disable vertex attribute color input if mesh can not provide that data (despite location being enabled in shader)
+    if (mesh.vboId[3] == 0) rlDisableVertexAttribute(shader.locs[SHADER_LOC_VERTEX_COLOR]);
+
+    // Draw mesh
+    if (mesh.indices != NULL) rlDrawVertexArrayElements(0, mesh.triangleCount*3, 0);
+    else rlDrawVertexArray(0, mesh.vertexCount);
+
+    // Disable all possible vertex array objects (or VBOs)
+    rlDisableVertexArray();
+    rlDisableVertexBuffer();
+    rlDisableVertexBufferElement();
+
+    // Disable shader program
+    rlDisableShader();
+
+    rlEnableShader(0);
+
+
+    // std::vector<Matrix> transforms;
+    // transforms.reserve(simulation.energies.rod_segments.size());
+
+    // for (size_t i = 0; i < simulation.energies.rod_segments.size(); i++) {
+    //     RodSegment s = simulation.energies.rod_segments[i];
+    //     const Vec3 x1 = s.rbA.get_COM_position(state.x);
+    //     const Vec3 x2 = s.rbB.get_COM_position(state.x);
+    //     const Matrix transform = compute_transform_from_two_points(x1, x2);
+    //     transforms.push_back(transform);
+    // }
+
+    // Material matInstances = LoadMaterialDefault();
+    // matInstances.shader = renderState->instancing_shader;
+    // matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RODS_COLOR;
+    // DrawMeshInstanced(renderState->cylinder_model.meshes[0], matInstances, transforms.data(), transforms.size());
 }

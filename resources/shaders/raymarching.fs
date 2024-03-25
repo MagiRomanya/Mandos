@@ -1,14 +1,11 @@
 // -*- glsl -*-
 #version 330
 
-// Input vertex attributes (from vertex shader)
-in vec3 fragPosition;
-in vec2 fragTexCoord;
-
 uniform vec2 Resolution;
 uniform vec3 viewPos;
 uniform vec3 viewTarget;
-uniform mat4 matView;
+uniform int RodVectorSize;
+uniform sampler1D RodVector;
 
 // Output fragment color
 out vec4 finalColor;
@@ -25,10 +22,28 @@ float sdBox( vec3 p, vec3 b )
   return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
 }
 
+float opU( float d1, float d2 )
+{
+    return min(d1, d2);
+}
+
 // Scene distance
 float map(vec3 p) {
-    // return sdBox(p, vec3(1.0,1.0,1.0));
-    return length(p) - 1.0; // distance to a sphere of radius 1
+    float d = 10000000;
+
+    // d = opU(d, length(p - vec3(0,0,1)) - 1.0);
+    // d = opU(d, length(p - vec3(0,0,-1)) - 1.0);
+
+    for (int i = 0; i < RodVectorSize; i+=2) {
+        float epsilon = 0.0001;
+        float indexA = float(i) / float(RodVectorSize) + epsilon;
+        float indexB = float(i+1) / float(RodVectorSize) + epsilon;
+        vec3 positionA = texture(RodVector, indexA).xyz;
+        vec3 positionB = texture(RodVector, indexB).xyz;
+        d = opU(d, sdCapsule(p, positionA, positionB, 0.1));
+    }
+    return d;
+    // return length(p) - 1.0; // distance to a sphere of radius 1
     // float result = sdCapsule(p, vec3(-1,0,0), vec3(-0.8,0.50,0.2), 0.2);
 
     // return result;

@@ -139,6 +139,38 @@ void UpdateRenderTexture2D(RenderTexture2D& fbo, int width, int height) {
     fbo.depth.height = height;
 }
 
+Texture1D CreateTexture1D() {
+    Texture1D texture;
+    GL_CALL(glGenTextures(1, &texture.id));
+    return texture;
+}
+
+void UseTexture1D(Texture1D& texture) {
+    GL_CALL(glActiveTexture(GL_TEXTURE0));
+    GL_CALL(glBindTexture(GL_TEXTURE_1D, texture.id));
+}
+
+void UpdateTexture1D(Texture1D texture, const std::vector<float>& data) {
+    GL_CALL(glBindTexture(GL_TEXTURE_1D, texture.id));
+
+    // GL_CALL(glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB32F, data.size() / 3, 0, GL_RGB32F, GL_FLOAT, static_cast<const void*>(data.data()) ));
+    GL_CALL(glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB32F, data.size() / 3, 0, GL_RGB, GL_FLOAT, data.data()));
+
+    // if (data.size() != texture.size) {
+    //     GL_CALL(glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB32F, data.size(), 0, GL_RGB32F, GL_FLOAT, data.data()));
+    // }
+    // else {
+    //     GL_CALL(glTexSubImage1D(GL_TEXTURE_1D, 0, 0, data.size(), GL_RGB32F, GL_FLOAT, data.data()));
+    // }
+
+    // No interpolation in the array
+    GL_CALL(glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+    GL_CALL(glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+
+    GL_CALL(glBindTexture(GL_TEXTURE_1D, 0));
+    texture.size = data.size();
+}
+
 LinesGPU::LinesGPU(const std::vector<float>& vertices) {
     // Create VAO and VBO and allocate memory in GPU
     GL_CALL(glGenVertexArrays(1, &VAO));
@@ -213,28 +245,3 @@ LinesGPU::~LinesGPU() {
     GL_CALL(glDeleteBuffers(1, &VBO));
     GL_CALL(glDeleteVertexArrays(1, &VAO));
 }
-
-// void UpdateRenderTexture2D(RenderTexture2D& fbo, int width, int height) {
-//     if (width <= 0 or height <= 0) return;
-//     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fbo.id));
-
-//     GL_CALL(glBindTexture(GL_TEXTURE_2D, fbo.texture.id));
-//     GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
-//     GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-//     GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-//     GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo.texture.id, 0));
-
-//     // Framebuffer depth texture attachment (it is a renderbuffer)
-//     GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, fbo.depth.id));
-//     GL_CALL(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height));
-//     GL_CALL(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fbo.depth.id));
-
-//     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-
-//     rlSetFramebufferWidth(width);
-//     rlSetFramebufferHeight(height);
-//     fbo.texture.width = width;
-//     fbo.texture.height = height;
-//     fbo.depth.width = width;
-//     fbo.depth.height = height;
-// }

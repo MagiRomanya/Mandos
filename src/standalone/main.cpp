@@ -10,7 +10,7 @@ int main(void) {
     Simulation simulation;
     simulation.TimeStep = 0.05;
     const Scalar mass = 10;
-    const Scalar gravity = -1;
+    const Scalar gravity = -9.8;
 
     const unsigned int nRigidBodies = 30;
     const Scalar L0 = 0.5;
@@ -46,11 +46,11 @@ int main(void) {
     }
 
     RigidBody rb = simulation.simulables.rigid_bodies[0];
-    RigidBody rb2 = simulation.simulables.rigid_bodies[29];
+    RigidBody rb2 = simulation.simulables.rigid_bodies[nRigidBodies-1];
 
     for (unsigned int i = 0; i < 6; i++) {
         simulation.frozen_dof.push_back(rb.index+i);
-        simulation.frozen_dof.push_back(rb2.index+i);
+        // simulation.frozen_dof.push_back(rb2.index+i);
     }
 
     SpringParameters spring_param0 = SpringParameters(50.0,
@@ -63,7 +63,7 @@ int main(void) {
                                                      (rb.get_COM_position(simulation.initial_state.x) - fixer_pos1).norm(),
                                                      0);
     simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix0.particle, spring_param0);
-    simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix0.particle, spring_param0);
+    // simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix0.particle, spring_param0);
 
     // simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix1.particle, spring_param1);
     // simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix2.particle, spring_param2);
@@ -72,12 +72,12 @@ int main(void) {
     const RodSegmentParameters parameters = {
     .Ks = 500.0,
     .L0 = L0,
-    .translational_damping = 20.0,
+    .translational_damping = 200.0,
     .rotational_damping = 0.0,
-    .constraint_stiffness = 600.0,
+    .constraint_stiffness = 6000.0,
     .intrinsic_darboux = Vec3::Zero(),
     // .intrinsic_darboux = Vec3(0.0, 0.5, 0.0),
-    .stiffness_tensor = 500.0 * Vec3::Ones(),
+    .stiffness_tensor = 50000.0 * Vec3::Ones(),
     };
 
     for (unsigned int i = 0; i < nRigidBodies - 1; i++) {
