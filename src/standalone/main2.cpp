@@ -1,376 +1,381 @@
-#define _USE_MATH_DEFINES
-#include <cmath>
-#include <cstring>
-#include <ctime>
-#include <iostream>
-#include <vector>
-#include <Eigen/Dense> // for inverse
-
+#include <Eigen/Dense>
 #include "mandos.hpp"
 #include "viewmandos.hpp"
-#include "clock.hpp"
-#include "../linear_algebra.hpp"
 #include "../mesh.hpp"
-#include "../rigid_body.hpp"
-#include "../simulation.hpp"
-#include "../utility_functions.hpp"
+#include "../async_simulation_loop.hpp"
 
-Vec3 rotation_inertia_energy_gradient(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    const Mat3 J_inertia_tensor = Mat3::Identity();
-    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
-    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
-    const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - omega0 * TimeStep);
-    const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
 
-    const Mat3 rot_inertia = R * J_inertia_tensor * R_guess.transpose();
-    const Mat3 A = (rot_inertia - rot_inertia.transpose()) / 2;
-    const Scalar h2 = TimeStep * TimeStep;
+// inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local_matrix(const Mat3& R) {
+//     return vectorized_levi_civita() * block_matrix(R);
+// }
 
-    const Vec3 gradient = 2.0 * Vec3(-A(1,2), A(0,2), -A(0,1)) / h2;
-    return gradient;
-}
+// inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local_finite(const Mat3& R) {
+//     const Scalar dx = 1e-6;
+//     Eigen::Matrix<Scalar,3,9> dvecR_dthtea;
+//     for (unsigned int i = 0; i < 3; i++) {
+//         Vec3 theta = Vec3::Zero();
+//         theta(i) = dx;
+//         const Mat3 newR = compute_rotation_matrix_rodrigues(theta) * R;
+//         dvecR_dthtea.row(i) = (vectorize_matrix(newR) - vectorize_matrix(R)) / dx;
+//     }
+//     return dvecR_dthtea;
+// }
 
-Mat3 rotation_inertia_energy_hessian(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    const Mat3 J_inertia_tensor = Mat3::Identity();
-    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
-    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
-    const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - omega0 * TimeStep);
-    const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
-    const Mat3 rot_inertia = R * J_inertia_tensor * R_guess.transpose();
-    const Mat3 S = (rot_inertia + rot_inertia.transpose()) / 2; // Exact hessian
-    // const Mat3 S = R * J_inertia_tensor * R.transpose(); // Linear approximation
-    const Scalar h2 = TimeStep * TimeStep;
+// Vec3 compute_darboux_vector(const Scalar L0, const Mat3& R1, const Mat3& R2) {
+//     const Mat3 dR_dx = (R2 - R1) / L0;
+//     const Mat3 R = (R2 + R1) / 2;
+//     const Mat3 skew_u = dR_dx * R.transpose();
+//     const Vec3 u = 0.5 * vectorized_levi_civita() * vectorize_matrix<3>(skew_u);
+//     // const Vec3 u_2 = Vec3(-skew_u(1,2), skew_u(0,2), -skew_u(0,1));;
+//     // DEBUG_LOG(u.transpose());
+//     // DEBUG_LOG(u_2.transpose());
+//     return u;
+// }
 
-    const Mat3 hessian = 1.0 / h2 * (S.trace() * Mat3::Identity() - S);
-    return hessian;
-}
+// Mat3 compute_darboux_vector_local_derivative(const Scalar L0, const Mat3& R1, const Mat3& R2) {
+//     const Mat3 dR_dx = (R2 - R1) / L0;
+//     const Mat3 R = (R2 + R1) / 2;
 
-Vec3 rotation_inertia_energy_gradient2(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    const Mat3 J_inertia_tensor = Mat3::Identity();
-    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
-    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
-    const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - omega0 * TimeStep);
-    const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
+//     Eigen::Matrix<Scalar,3,9> dvecR_dtheta = 0.5 * dvecR_dtheta_local_matrix(R2);
+//     const Eigen::Matrix<Scalar,3,9> dvecRx_dtheta = dvecR_dtheta_local_matrix(R2) / L0;
 
-    const Mat3 rot_inertia = R * J_inertia_tensor * R_guess.transpose();
-    const Mat3 A = (rot_inertia - rot_inertia.transpose()) / 2;
-    const Scalar h2 = TimeStep * TimeStep;
+//     const Eigen::Matrix<Scalar,9,3> dvec_skewU_dtheta =
+//         block_matrix<3,3>(R) * dvecRx_dtheta.transpose()                                           // d(dR_dx)/dtheta RT
+//         + transpose_vectorized_matrix_N<9,3>(block_matrix<3,3>(dR_dx) * dvecR_dtheta.transpose())   // dR/dx (dRT/dtheta)
+//         ;
+//     Mat3 du_dtheta = 0.5 * vectorized_levi_civita() * dvec_skewU_dtheta;
+//     return du_dtheta;
+// }
 
-    const Vec3 gradient = 1.0 / h2 * vectorized_levi_civita() * vectorize_matrix<3>(A);
-    return gradient;
-}
+// Mat3 compute_darboux_vector_theta2_derivative(const Scalar L0, const Mat3& R1, const Mat3& R2) {
+//     const Mat3 dR_dx = (R2 - R1) / L0;
+//     const Mat3 R = (R2 + R1) / 2;
 
-Mat3 rotation_inertia_finite_dgradE_dtheta(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    Mat3 H;
-    const Scalar dx = 0.0001;
-    const Vec3 grad0 = rotation_inertia_energy_gradient2(theta, theta0, omega0, TimeStep);
-    for (unsigned i = 0; i < 3; i++) {
-        Vec3 dtheta = theta;
-        dtheta[i] += dx;
-        const Vec3 grad = rotation_inertia_energy_gradient2(dtheta, theta0, omega0, TimeStep);
-        H.col(i) = (grad - grad0) / dx;
+//     Eigen::Matrix<Scalar,3,9> dvecR_dtheta = 0.5 * dvecR_dtheta_local_matrix(R1);
+//     const Eigen::Matrix<Scalar,3,9> dvecRx_dtheta = - dvecR_dtheta_local_matrix(R1) / L0;
+
+//     const Eigen::Matrix<Scalar,9,3> dvec_skewU_dtheta =
+//         block_matrix<3,3>(R) * dvecRx_dtheta.transpose()                                           // d(dR_dx)/dtheta RT
+//         + transpose_vectorized_matrix_N<9,3>(block_matrix<3,3>(dR_dx) * dvecR_dtheta.transpose())   // dR/dx (dRT/dtheta)
+//         ;
+//     Mat3 du_dtheta = 0.5 * vectorized_levi_civita() * dvec_skewU_dtheta;
+//     return du_dtheta;
+// }
+
+
+// Mat3 compute_darboux_vector_local_finite_derivative(const Scalar L0, const Mat3& R1, const Mat3& R2) {
+//     const Vec3 u0 = compute_darboux_vector(L0, R1, R2);
+//     const Scalar dx = 1e-6;
+//     Mat3 du_dtheta;
+//     for (unsigned int i = 0; i < 3; i++) {
+//         Vec3 theta = Vec3::Zero();
+//         theta(i) = dx;
+//         // const Mat3 newR2 = compute_rotation_matrix_rodrigues(theta) * R2;
+//         // const Vec3 newU = compute_darboux_vector(L0, R1, newR2);
+//         const Mat3 newR1 = compute_rotation_matrix_rodrigues(theta) * R1;
+//         const Vec3 newU = compute_darboux_vector(L0, newR1, R2);
+
+//         du_dtheta.col(i) = (newU - u0) / dx;
+//     }
+//     return du_dtheta;
+// }
+
+struct RodSegmentStateDEBUG {
+    Vec3 x1, x2, v1, v2;
+    Mat3 R1, R2, R_dot1, R_dot2;
+};
+
+const Vec6 compute_finite_diff_gradientA(const Scalar dx, const RodSegmentParameters& parameters, const RodSegmentStateDEBUG& state) {
+    Vec6 grad = Vec6::Zero();
+    RodSegmentPrecomputedValues values = RodSegmentPrecomputedValues(parameters.L0, 0.1, state.x1, state.x2, state.v1, state.v2, state.R1, state.R2, state.R_dot1, state.R_dot2);
+    const Scalar E0 = parameters.compute_energy(values);
+    for (unsigned int i = 0; i < 3; ++i) {
+        // Linear grad
+        Vec3 dx_vec = Vec3::Zero();
+        dx_vec(i) = dx;
+
+        RodSegmentPrecomputedValues valuesX = RodSegmentPrecomputedValues(parameters.L0, 0.1, state.x1 + dx_vec,
+                                                                          state.x2, state.v1, state.v2, state.R1, state.R2, state.R_dot1, state.R_dot2);
+        const Scalar Ex = parameters.compute_energy(valuesX);
+        grad(i) = (Ex - E0) / dx;
+
+        // Rot grad
+        const Mat3 newR1 = compute_rotation_matrix_rodrigues(dx_vec) * state.R1;
+        RodSegmentPrecomputedValues valuesT = RodSegmentPrecomputedValues(parameters.L0, 0.1, state.x1, state.x2, state.v1, state.v2,
+                                                                          newR1,
+                                                                          state.R2, state.R_dot1, state.R_dot2);
+        const Scalar Etheta = parameters.compute_energy(valuesT);
+        grad(i + 3) = (Etheta - E0) / dx;
     }
-    return H;
+    return grad;
 }
 
+const Vec6 compute_finite_diff_gradientB(const Scalar dx, const RodSegmentParameters& parameters, const RodSegmentStateDEBUG& state) {
+    Vec6 grad = Vec6::Zero();
+    RodSegmentPrecomputedValues values = RodSegmentPrecomputedValues(parameters.L0, 0.1, state.x1, state.x2, state.v1, state.v2, state.R1, state.R2, state.R_dot1, state.R_dot2);
+    const Scalar E0 = parameters.compute_energy(values);
+    for (unsigned int i = 0; i < 3; ++i) {
+        // Linear grad
+        Vec3 dx_vec = Vec3::Zero();
+        dx_vec(i) = dx;
 
-Mat3 rotation_inertia_finite_dgradE_dtheta0(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    Mat3 H;
-    const Scalar dx = 0.0001;
-    const Vec3 grad0 = rotation_inertia_energy_gradient2(theta, theta0, omega0, TimeStep);
-    for (unsigned i = 0; i < 3; i++) {
-        Vec3 dtheta0 = theta0;
-        dtheta0[i] += dx;
-        const Vec3 grad = rotation_inertia_energy_gradient2(theta, dtheta0, omega0, TimeStep);
-        H.col(i) = (grad - grad0) / dx;
+        RodSegmentPrecomputedValues valuesX = RodSegmentPrecomputedValues(parameters.L0, 0.1, state.x1,
+                                                                          state.x2 + dx_vec,
+                                                                          state.v1, state.v2, state.R1, state.R2, state.R_dot1, state.R_dot2);
+        const Scalar Ex = parameters.compute_energy(valuesX);
+        grad(i) = (Ex - E0) / dx;
+
+        // Rot grad
+        const Mat3 newR2 = compute_rotation_matrix_rodrigues(dx_vec) * state.R2;
+        RodSegmentPrecomputedValues valuesT = RodSegmentPrecomputedValues(parameters.L0, 0.1, state.x1, state.x2, state.v1, state.v2, state.R1,
+                                                                          newR2,
+                                                                          state.R_dot1, state.R_dot2);
+        const Scalar Etheta = parameters.compute_energy(valuesT);
+        grad(i + 3) = (Etheta - E0) / dx;
     }
-    return H;
+    return grad;
 }
 
-Mat3 rotation_inertia_finite_dgradE_domega0(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    Mat3 H;
-    const Scalar dx = 0.0001;
-    const Vec3 grad0 = rotation_inertia_energy_gradient2(theta, theta0, omega0, TimeStep);
-    for (unsigned i = 0; i < 3; i++) {
-        Vec3 domega0 = omega0;
-        domega0[i] += dx;
-        const Vec3 grad = rotation_inertia_energy_gradient2(theta, theta0, domega0, TimeStep);
-        H.col(i) = (grad - grad0) / dx;
+const Mat6 compute_finite_diff_hessianA(const Scalar dx, const RodSegmentParameters& parameters, const RodSegmentStateDEBUG& state) {
+    Mat6 hess = Mat6::Zero();
+    const Vec6 grad0 = compute_finite_diff_gradientA(dx, parameters, state);
+
+    for (unsigned int i = 0; i < 3; ++i) {
+        // Linear grad
+        Vec3 dx_vec = Vec3::Zero();
+        dx_vec(i) = dx;
+        RodSegmentStateDEBUG dstate_x = state;
+        dstate_x.x1 += dx_vec;
+        const Vec6 grad_x = compute_finite_diff_gradientA(dx, parameters, dstate_x);
+        hess.col(i) = (grad_x - grad0) / dx;
+
+        // Rot grad
+        const Mat3 newR1 = compute_rotation_matrix_rodrigues(dx_vec) * state.R1;
+        RodSegmentStateDEBUG dstate_theta = state;
+        dstate_theta.R1 = newR1;
+        const Vec6 grad_theta = compute_finite_diff_gradientA(dx, parameters, dstate_theta);
+        hess.col(i + 3) = (grad_theta - grad0) / dx;
     }
-    return H;
+    return hess;
 }
 
-Eigen::Matrix<Scalar,3,9> dvecR_dtheta_finite_local(const Vec3& theta) {
-    Eigen::Matrix<Scalar,3,9> dvecR_dtheta;
-    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta);
-    const Eigen::Vector<Scalar,9> vecR0 = vectorize_matrix(R0);
-    const Scalar dx = 0.0001;
-    for (unsigned int i = 0; i < 3; i++) {
-        Vec3 dtheta = Vec3::Zero();
-        dtheta[i] += dx;
-        const Eigen::Vector<Scalar,9> vecR = vectorize_matrix<3>(compute_rotation_matrix_rodrigues(dtheta) * R0);
-        dvecR_dtheta.row(i) = (vecR - vecR0) / dx;
+// Using analytic gradient
+const Mat6 compute_finite_diff_hessianA2(const Scalar dx, const RodSegmentParameters& parameters, const RodSegmentStateDEBUG& state) {
+    Mat6 hess = Mat6::Zero();
+    RodSegmentPrecomputedValues values0(parameters.L0, 0.1, state.x1, state.x2, state.v1, state.v2, state.R1, state.R2, state.R_dot1, state.R_dot2);
+    Vec6 grad0;
+    Vec3 gradX0 = parameters.compute_energy_linear_gradient(values0);
+    Vec3 gradR0 = parameters.compute_energy_rotational_gradient_A(values0);
+    grad0 << gradX0, gradR0;
+
+    for (unsigned int i = 0; i < 3; ++i) {
+        // Linear grad
+        Vec3 dx_vec = Vec3::Zero();
+        dx_vec(i) = dx;
+        RodSegmentStateDEBUG dstate_x = state;
+        dstate_x.x1 += dx_vec;
+
+        RodSegmentPrecomputedValues valuesX(parameters.L0, 0.1, dstate_x.x1, dstate_x.x2, dstate_x.v1, dstate_x.v2, dstate_x.R1, dstate_x.R2, dstate_x.R_dot1, dstate_x.R_dot2);
+        Vec6 grad_x;
+        Vec3 gradX0 = parameters.compute_energy_linear_gradient(valuesX);
+        Vec3 gradR0 = parameters.compute_energy_rotational_gradient_A(valuesX);
+        grad_x << gradX0, gradR0;
+        hess.col(i) = (grad_x - grad0) / dx;
+
+        // Rot grad
+        const Mat3 newR1 = compute_rotation_matrix_rodrigues(dx_vec) * state.R1;
+        RodSegmentStateDEBUG dstate_theta = state;
+        dstate_theta.R1 = newR1;
+
+        RodSegmentPrecomputedValues valuesR(parameters.L0, 0.1, dstate_theta.x1, dstate_theta.x2, dstate_theta.v1, dstate_theta.v2, dstate_theta.R1, dstate_theta.R2, dstate_theta.R_dot1, dstate_theta.R_dot2);
+        Vec6 grad_theta;
+        Vec3 gradX1 = parameters.compute_energy_linear_gradient(valuesR);
+        Vec3 gradR1 = parameters.compute_energy_rotational_gradient_A(valuesR);
+        grad_theta << gradX1, gradR1;
+        hess.col(i + 3) = (grad_theta - grad0) / dx;
     }
-    return dvecR_dtheta;
+    return hess;
 }
 
-Eigen::Matrix<Scalar,3,9> dvecR_dtheta_finite_global(const Vec3& theta) {
-    Eigen::Matrix<Scalar,3,9> dvecR_dtheta;
-    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta);
-    const Eigen::Vector<Scalar,9> vecR0 = vectorize_matrix(R0);
-    const Scalar dx = 0.0001;
-    for (unsigned int i = 0; i < 3; i++) {
-        Vec3 dtheta = theta;
-        dtheta[i] += dx;
-        const Eigen::Vector<Scalar,9> vecR = vectorize_matrix<3>(compute_rotation_matrix_rodrigues(dtheta));
-        dvecR_dtheta.row(i) = (vecR - vecR0) / dx;
+const Mat6 compute_finite_diff_hessianB(const Scalar dx, const RodSegmentParameters& parameters, const RodSegmentStateDEBUG& state) {
+    Mat6 hess = Mat6::Zero();
+    const Vec6 grad0 = compute_finite_diff_gradientB(dx, parameters, state);
+
+    for (unsigned int i = 0; i < 3; ++i) {
+        // Linear grad
+        Vec3 dx_vec = Vec3::Zero();
+        dx_vec(i) = dx;
+        RodSegmentStateDEBUG dstate_x = state;
+        dstate_x.x2 += dx_vec;
+        const Vec6 grad_x = compute_finite_diff_gradientB(dx, parameters, dstate_x);
+        hess.col(i) = (grad_x - grad0) / dx;
+
+        // Rot grad
+        const Mat3 newR2 = compute_rotation_matrix_rodrigues(dx_vec) * state.R2;
+        RodSegmentStateDEBUG dstate_theta = state;
+        dstate_theta.R2 = newR2;
+        const Vec6 grad_theta = compute_finite_diff_gradientB(dx, parameters, dstate_theta);
+        hess.col(i + 3) = (grad_theta - grad0) / dx;
     }
-    return dvecR_dtheta;
+    return hess;
 }
 
-Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local(const Vec3& theta) {
-    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
-    return vectorized_levi_civita() * block_matrix(R);
-}
+const Mat6 compute_finite_diff_hessianAB(const Scalar dx, const RodSegmentParameters& parameters, const RodSegmentStateDEBUG& state) {
+    Mat6 hess = Mat6::Zero();
+    const Vec6 grad0 = compute_finite_diff_gradientA(dx, parameters, state);
 
-/*
- * Result = Ra * Rb
-*/
-inline Vec3 compose_axis_angle(const Vec3& a, const Vec3& b) {
-    const Scalar a_angle = a.norm();
-    if (a_angle < 1e-8) return b;
-    const Vec3 a_axis = a / a_angle;
+    for (unsigned int i = 0; i < 3; ++i) {
+        // Linear grad
+        Vec3 dx_vec = Vec3::Zero();
+        dx_vec(i) = dx;
+        RodSegmentStateDEBUG dstate_x = state;
+        dstate_x.x2 += dx_vec;
+        const Vec6 grad_x = compute_finite_diff_gradientA(dx, parameters, dstate_x);
+        hess.col(i) = (grad_x - grad0) / dx;
 
-    const Scalar b_angle = b.norm();
-    if (b_angle < 1e-4) return b + a;
-    const Vec3 b_axis = b / b_angle;
-
-    // https://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
-    const Scalar sin_a_angle2 = std::sin(a_angle / 2);
-    const Scalar cos_a_angle2 = std::cos(a_angle / 2);
-    const Scalar sin_b_angle2 = std::sin(b_angle / 2);
-    const Scalar cos_b_angle2 = std::cos(b_angle / 2);
-
-    Scalar new_angle = 2.0 * std::acos(cos_a_angle2 * cos_b_angle2
-                                      - sin_a_angle2 * sin_b_angle2 * b_axis.dot(a_axis));
-
-    if (fabs(new_angle) < 1e-7) { return Vec3::Zero(); }
-
-    const Vec3 new_axis = 1.0 / std::sin(new_angle/2.0) * (
-        sin_a_angle2 * cos_b_angle2 * a_axis
-        + cos_a_angle2 * sin_b_angle2 * b_axis
-        + sin_a_angle2 * sin_b_angle2 * cross(a_axis, b_axis));
-
-    new_angle = std::fmod(new_angle, 2.0 * M_PI);
-    if (new_angle > M_PI) {
-        new_angle -= 2*M_PI;
+        // Rot grad
+        const Mat3 newR2 = compute_rotation_matrix_rodrigues(dx_vec) * state.R2;
+        RodSegmentStateDEBUG dstate_theta = state;
+        dstate_theta.R2 = newR2;
+        const Vec6 grad_theta = compute_finite_diff_gradientA(dx, parameters, dstate_theta);
+        hess.col(i + 3) = (grad_theta - grad0) / dx;
     }
-    return new_angle * new_axis;
+    return hess;
 }
 
-static const Scalar threshold2 = 1e-3;
 
-inline void compute_axis_angle_jacobian_parts(const Vec3& phi, Mat3& A, Mat3& B) {
-    const Mat3 phi_phiT = phi * phi.transpose();
-    A = compute_rotation_matrix_rodrigues(phi) - Mat3::Identity() + phi_phiT;
-    B = skew(phi) + phi_phiT;
-}
 
-inline Mat3 compute_global_to_local_axis_angle_jacobian(const Vec3& phi) {
-    if (phi.squaredNorm() < threshold2) return Mat3::Identity();
+void dd3_dtheta(const Mat3& R) {
+    const Vec3 d3 = R.col(2);
+    const Mat3 dd3_dtheta = - skew(d3);
+    const Scalar dx = 1e-6;
+    Mat3 dd3_dtheta_finite = Mat3::Zero();
 
-    Mat3 A, B;
-    compute_axis_angle_jacobian_parts(phi, A, B);
-    return A.inverse() * B;
-}
-
-inline Mat3 compute_local_to_global_axis_angle_jacobian(const Vec3& phi) {
-    if (phi.squaredNorm() < threshold2) return Mat3::Identity();
-
-    Mat3 A, B;
-    compute_axis_angle_jacobian_parts(phi, A, B);
-    return B.inverse() * A;
-}
-
-inline Mat3 axis_angle_local_to_global_jacobian_finite(const Vec3& phi0) {
-    Mat3 dtheta_dphi;
-    const Scalar dx = 0.0001;
+    Vec3 grad_finite = Vec3::Zero();
+    const Scalar E0 = (Vec3::Ones() - d3).transpose() * (Vec3::Ones() - d3);
     for (int i = 0; i < 3; i++) {
-        Vec3 delta = Vec3::Zero();
-        delta[i] = dx;
-        const Vec3 dphi = compose_axis_angle(delta, phi0);
-        dtheta_dphi.col(i) = (dphi - phi0) / dx;
+        Vec3 dx_vec = Vec3::Zero();
+        dx_vec(i) = dx;
+        const Mat3 newR = compute_rotation_matrix_rodrigues(dx_vec) * R;
+        dd3_dtheta_finite.col(i) = ( (newR - R) / dx ).col(2);
+
+        const Vec3 dd3 = newR.col(2);
+        const Scalar E = (Vec3::Ones() - dd3).transpose() * (Vec3::Ones() - dd3);
+        grad_finite(i) = (E - E0) / dx;
     }
-    return dtheta_dphi;
+    std ::cout << "dd3_dtheta" << "\n" << dd3_dtheta << std ::endl;
+    std ::cout << "dd3_dtheta_finite" << "\n" << dd3_dtheta_finite << std ::endl;
+
+    Vec3 grad = - (Vec3::Ones() - d3).transpose() * dd3_dtheta;
+    std ::cout << "grad" << "\n" << grad.transpose() << std ::endl;
+    std ::cout << "grad_finite" << "\n" << 0.5 * grad_finite.transpose() << std ::endl;
 }
 
-Eigen::Matrix<Scalar,3,9> __dvecR_dtheta_global(const Vec3& theta) {
-    const Mat3 jac = compute_local_to_global_axis_angle_jacobian(theta);
-    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
-    return jac.transpose() * vectorized_levi_civita() * block_matrix(R);
-}
+void vb_hessian() {
+    const Mat3 R1 = compute_rotation_matrix_rodrigues(Vec3(2,6,9).normalized());
+    const Mat3 R2 = compute_rotation_matrix_rodrigues(Vec3(2,6,10).normalized());
+    // const Mat3 R2 = compute_rotation_matrix_rodrigues(Vec3(-7,-3,4).normalized());
 
-Mat3 rotation_inertia_dgradE_dtheta0(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    const Mat3 J_inertia_tensor = Mat3::Identity();
-    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
+    const Scalar L0 = 1;
 
-    const Scalar h2 = TimeStep * TimeStep;
-    const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
-    const Eigen::Matrix<Scalar,3,9> dvecRguess_dtheta0 = 2 * dvecR_dtheta_global(theta0) - dvecR_dtheta_global(theta0 - omega0 * TimeStep);
+    const Vec3 u = compute_darboux_vector(L0, R1, R2);
+    const Mat3 du_dtheta = compute_darboux_vector_local_derivative(L0, R1, R2);
+    const Vec3 grad0 = u.transpose() * du_dtheta;
+    const Scalar dx = 1e-8;
 
-    const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_dtheta0.transpose();;
-    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix_N(dvecRMR_guess_dtheta0) - dvecRMR_guess_dtheta0);
+    const Mat3 hess = du_dtheta.transpose() * du_dtheta;
+    Mat3 hess_finite = Mat3::Zero();
+    Mat3 hess_finite2 = Mat3::Zero();
+    Mat3 hess_finite3 = Mat3::Zero();
 
-    Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
-    return H;
-}
-
-Mat3 rotation_inertia_dgradE_domega0(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    const Mat3 J_inertia_tensor = Mat3::Identity();
-    const Mat3 R = compute_rotation_matrix_rodrigues(theta);
-
-    const Scalar h2 = TimeStep * TimeStep;
-    const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
-    const Eigen::Matrix<Scalar,3,9> dvecRguess_domega0 = TimeStep * dvecR_dtheta_global(theta0 - omega0 * TimeStep);
-
-    const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_domega0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_domega0.transpose();;
-    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix_N(dvecRMR_guess_domega0) - dvecRMR_guess_domega0);
-
-    Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
-    return H;
-}
-
-Mat3 rotation_inertia_dgradE_dtheta(const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    const Mat3 J_inertia_tensor = Mat3::Identity();
-    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
-    const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - TimeStep * omega0);
-    const Mat3 Rguess = (R0 + (R0 - R0old)); // x0 + h* v0
-
-    const Scalar h2 = TimeStep * TimeStep;
-    const Eigen::Matrix<Scalar,3,9> vLeviCivita = vectorized_levi_civita();
-    const Eigen::Matrix<Scalar,3,9> dvecR_dtheta = dvecR_dtheta_global(theta);
-
-    const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta = block_matrix<3,3>(Rguess * J_inertia_tensor) * dvecR_dtheta.transpose();;
-    const Eigen::Matrix<Scalar,9,3> dvecAdtheta = 0.5 * (dvecRMR_guess_dtheta - transpose_vectorized_matrix_N(dvecRMR_guess_dtheta));
-
-    Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta;
-    return H;
-}
-
-
-
-inline Mat3 compute_R_guess(const Mat3& R0, const Mat3 R0old) {
-    return (R0 + (R0 - R0old)); // x0 + h* v0
-}
-
-Eigen::Matrix<Scalar,3,9> compute_dR_guess_dtheta0_finite(const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    const Scalar dx = 0.000000001;
-    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
-    const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - omega0 * TimeStep);
-    const Mat3 R_guess = compute_R_guess(R0, R0old);
-    const Vec9 vR_guess0 = vectorize_matrix(R_guess);
-    Eigen::Matrix<Scalar,3,9> dR_dtheta0;
     for (int i = 0; i < 3; i++) {
-        Vec3 dtheta0 = theta0;
-        dtheta0(i) += dx;
-        const Mat3 R0 = compute_rotation_matrix_rodrigues(dtheta0);
-        const Mat3 R0old = compute_rotation_matrix_rodrigues(dtheta0 - omega0 * TimeStep);
-        const Mat3 R_guess = compute_R_guess(R0, R0old);
-        const Vec9 vR_guess = vectorize_matrix(R_guess);
-        dR_dtheta0.row(i) = (vR_guess - vR_guess0) / dx;
+        Vec3 dx_vec = Vec3::Zero();
+        dx_vec(i) = dx;
+        const Mat3 newR1 = compute_rotation_matrix_rodrigues(dx_vec) * R1;
+        const Vec3 grad = compute_darboux_vector(L0, newR1, R2).transpose() * du_dtheta;
+        hess_finite.col(i) = (grad - grad0) / dx;
+
+        const Vec3 grad2 = u.transpose() * compute_darboux_vector_local_derivative(L0, newR1, R2);
+        hess_finite2.col(i) = (grad2 - grad0) / dx;
+
+        const Vec3 grad3 = compute_darboux_vector(L0, newR1, R2).transpose() * compute_darboux_vector_local_derivative(L0, newR1, R2);
+        hess_finite3.col(i) = (grad3 - grad0) / dx;
+
     }
-    return dR_dtheta0;
+    std ::cout << "hess"
+               << "\n" << hess << std ::endl;
+    std ::cout << "hess_finite"
+               << "\n" << hess_finite << std ::endl;
+    std ::cout << "hess_finite2"
+               << "\n" << hess_finite2 << std ::endl;
+    std ::cout << "hess_finite3"
+               << "\n" << hess_finite3 << std ::endl;
 }
-
-Eigen::Matrix<Scalar,3,9> compute_dR_guessT_dtheta0_finite(const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    const Scalar dx = 0.000000001;
-    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
-    const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - omega0 * TimeStep);
-    const Mat3 R_guess = compute_R_guess(R0, R0old).transpose();
-    const Vec9 vR_guess0 = vectorize_matrix(R_guess);
-    Eigen::Matrix<Scalar,3,9> dR_dtheta0;
-    for (int i = 0; i < 3; i++) {
-        Vec3 dtheta0 = theta0;
-        dtheta0(i) += dx;
-        const Mat3 R0 = compute_rotation_matrix_rodrigues(dtheta0);
-        const Mat3 R0old = compute_rotation_matrix_rodrigues(dtheta0 - omega0 * TimeStep);
-        const Mat3 R_guess = compute_R_guess(R0, R0old).transpose();
-        const Vec9 vR_guess = vectorize_matrix(R_guess);
-        dR_dtheta0.row(i) = (vR_guess - vR_guess0) / dx;
-    }
-    return dR_dtheta0;
-}
-
-Eigen::Matrix<Scalar,3,9> compute_dR_guess_dtheta0(const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
-    return 2 * dvecR_dtheta_global(theta0) - dvecR_dtheta_global(theta0 - omega0 * TimeStep);
-}
-
 
 int main(void) {
-    const Vec3 theta = M_PI_2 * Vec3(0,1,0).normalized();
-    const Vec3 theta0 = M_PI_2 * Vec3(0,0,0).normalized();
-    const Vec3 omega0 = M_PI_2 * Vec3(0,1,0).normalized();
-    const Scalar TimeStep = 0.1;
+    RodSegmentStateDEBUG rod_state = {
+    .x1 = Vec3::Zero(),
+    .x2 = Vec3(0.0, 0.0, -1.0),
+    .v1 = Vec3::Zero(),
+    .v2 = Vec3::Zero(),
+    .R1 = Mat3::Identity(),
+    .R2 = Mat3::Identity(),
+    // .R2 = compute_rotation_matrix_rodrigues(Vec3(0.00,0.2,0)),
+    // .R1 = compute_rotation_matrix_rodrigues(Vec3(2,6,9).normalized()),
+    // .R2 = compute_rotation_matrix_rodrigues(Vec3(2,6,11).normalized()),
+    // .R2 = compute_rotation_matrix_rodrigues(Vec3(-7,-3,4).normalized()),
+    .R_dot1 = Mat3::Zero(),
+    .R_dot2 = Mat3::Zero(),
+    };
 
-    const Mat3 dgradE_dtheta = rotation_inertia_dgradE_dtheta(theta, theta0, omega0, TimeStep);
-    const Mat3 dgradE_dtheta_finite = rotation_inertia_finite_dgradE_dtheta(theta, theta0, omega0, TimeStep);
-    const Mat3 dgradE_dtheta0 = rotation_inertia_dgradE_dtheta0(theta, theta0, omega0, TimeStep);
-    const Mat3 dgradE_domega0 = rotation_inertia_dgradE_domega0(theta, theta0, omega0, TimeStep);
-    const Mat3 dgradE_dtheta0_finite = rotation_inertia_finite_dgradE_dtheta0(theta, theta0, omega0, TimeStep);
-    const Mat3 dgradE_domega0_finite = rotation_inertia_finite_dgradE_domega0(theta, theta0, omega0, TimeStep);
-    const Mat3 jac0 = compute_global_to_local_axis_angle_jacobian(theta0).inverse();
-    const Mat3 jac = compute_local_to_global_axis_angle_jacobian(theta);
+    RodSegmentParameters parameters = {
+    .Ks = 0.0,
+    .L0 = 1.0,
+    .translational_damping = 0.0,
+    .rotational_damping = 0.0,
+    .constraint_stiffness = 100.0,
+    .intrinsic_darboux = Vec3::Zero(),
+    .stiffness_tensor = 0.0 * Vec3::Ones(),
+    };
 
-    std ::cout << "Hess"
-               << "\n" << rotation_inertia_energy_hessian(theta, theta0, omega0, TimeStep) << std ::endl;
-    std ::cout << "Rot Hess"
-               << "\n" << jac.transpose() * rotation_inertia_energy_hessian(theta, theta0, omega0, TimeStep) << std ::endl;
-    std ::cout << "dgradE_dtheta_finite"
-               << "\n" << dgradE_dtheta_finite << std ::endl;
-    std ::cout << "dgradE_dtheta"
-               << "\n" << dgradE_dtheta << std ::endl;
-    std ::cout << "dgradE_dtheta0_finite"
-               << "\n" << dgradE_dtheta0_finite << std ::endl;
-    std ::cout << "dgradE_dtheta0"
-               << "\n" << dgradE_dtheta0 << std ::endl;
-    std ::cout << "dgradE_domega0"
-               << "\n" << dgradE_domega0 << std ::endl;
-    std ::cout << "dgradE_domega0_finite"
-               << "\n" << dgradE_domega0_finite << std ::endl;
+    // dd3_dtheta(compute_rotation_matrix_rodrigues(Vec3(4, -1, 0.1)));
+    // vb_hessian();
 
-    DEBUG_LOG(rotation_inertia_energy_gradient(theta, theta0, theta0, TimeStep).transpose());
-    DEBUG_LOG(rotation_inertia_energy_gradient2(theta, theta0, theta0, TimeStep).transpose());
+    const Scalar dx = 1e-5;
+    RodSegmentPrecomputedValues values = RodSegmentPrecomputedValues(parameters.L0, 0.1, rod_state.x1, rod_state.x2, rod_state.v1, rod_state.v2, rod_state.R1, rod_state.R2, rod_state.R_dot1, rod_state.R_dot2);
+    const Vec6 grad_finiteA = compute_finite_diff_gradientA(dx, parameters, rod_state);
+    const Vec3 gradA_t = parameters.compute_energy_linear_gradient(values);
+    const Vec3 gradA_r = parameters.compute_energy_rotational_gradient_A(values);
+    Vec6 gradA;
+    gradA << gradA_t, gradA_r;
+    const Mat6 hess_finiteA = compute_finite_diff_hessianA(dx, parameters, rod_state);
+    const Mat6 hessA = parameters.compute_energy_hessian_A(values);
+    const Mat6 hess_finiteA2 = compute_finite_diff_hessianA2(dx, parameters, rod_state);
 
-    std ::cout << "dvecR_dtheta_finite_local(theta)"
-               << "\n" << dvecR_dtheta_finite_local(theta) << std ::endl;
-    std ::cout << "dvecR_dtheta_analytic(theta)"
-               << "\n" << dvecR_dtheta_local(theta) << std ::endl;
-    std ::cout << "dvecR_dtheta_analytic_global(theta)"
-               << "\n" << dvecR_dtheta_global(theta) << std ::endl;
-    std ::cout << "dvecR_dtheta_finite_global(theta)"
-               << "\n" << dvecR_dtheta_finite_global(theta) << std ::endl;
+    const Vec6 grad_finiteB = compute_finite_diff_gradientB(dx, parameters, rod_state);
+    const Vec3 gradB_t = - parameters.compute_energy_linear_gradient(values);
+    const Vec3 gradB_r = parameters.compute_energy_rotational_gradient_B(values);
+    Vec6 gradB;
+    gradB << gradB_t, gradB_r;
+    const Mat6 hess_finiteB = compute_finite_diff_hessianB(dx, parameters, rod_state);
+    const Mat6 hessB = parameters.compute_energy_hessian_B(values);
 
-    std ::cout << "compute_dR_guess_dtheta0_finite(theta0, omega0, TimeStep)"
-               << "\n"
-               << compute_dR_guess_dtheta0_finite(theta0, omega0, TimeStep)
-               << std ::endl;
-    std ::cout << "compute_dR_guess_dtheta0(theta0, omega0, TimeStep)"
-               << "\n" << compute_dR_guess_dtheta0(theta0, omega0, TimeStep)
-               << std ::endl;
+    const Mat6 hess_finiteAB = compute_finite_diff_hessianAB(dx, parameters, rod_state);
+    const Mat6 hessAB = parameters.compute_energy_hessian_AB(values);
 
-    std ::cout << "compute_dRT_guess_dtheta0(theta0, omega0, TimeStep)"
-    << "\n" << transpose_vectorized_matrix_N(compute_dR_guess_dtheta0(theta0, omega0, TimeStep))
-               << std ::endl;
-    std ::cout << "compute_dR_guessT_dtheta0_finite(theta0, omega0, TimeStep)"
-               << "\n"
-               << compute_dR_guessT_dtheta0_finite(theta0, omega0, TimeStep)
-               << std ::endl;
+    std ::cout << "grad_finiteA.transpose()" << "\n" << grad_finiteA.transpose() << std ::endl;
+    std ::cout << "gradA.transpose()" << "\n" << gradA.transpose() << std ::endl;
 
-    MandosViewer viewer;
-    while (!viewer.window_should_close()) {
-        viewer.begin_drawing();
-        viewer.end_drawing();
-    }
+    std ::cout << "hess_finiteA" << "\n" << hess_finiteA << std ::endl;
+    std ::cout << "hess_finiteA2" << "\n" << hess_finiteA2 << std ::endl;
+    std ::cout << "hessA" << "\n" << hessA << std ::endl;
 
-    return 0;
+    std ::cout << "grad_finiteB.transpose()" << "\n" << grad_finiteB.transpose() << std ::endl;
+    std ::cout << "gradB.transpose()" << "\n" << gradB.transpose() << std ::endl;
+
+    std ::cout << "hess_finiteB" << "\n" << hess_finiteB << std ::endl;
+    std ::cout << "hessB" << "\n" << hessB << std ::endl;
+
+    std ::cout << "hess_finiteAB" << "\n" << hess_finiteAB << std ::endl;
+    std ::cout << "hessAB" << "\n" << hessAB << std ::endl;
 }

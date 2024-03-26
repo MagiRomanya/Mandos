@@ -316,7 +316,7 @@ void RodSegment::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsSt
             out.hessian_triplets.emplace_back(rbA.index + i, rbA.index + j, hessian_A(i,j));
             out.hessian_triplets.emplace_back(rbA.index + i, rbB.index + j, hessian_AB(i,j));
             out.hessian_triplets.emplace_back(rbB.index + i, rbA.index + j, hessian_AB(j,i));
-            out.hessian_triplets.emplace_back(rbA.index + i, rbA.index + j, hessian_B(i,j));
+            out.hessian_triplets.emplace_back(rbB.index + i, rbB.index + j, hessian_B(i,j));
         }
     }
 }

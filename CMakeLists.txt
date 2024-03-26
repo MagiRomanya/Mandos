@@ -54,6 +54,7 @@ endif()
 
 
 add_executable(${PROJECT_NAME} src/standalone/main.cpp)
+add_executable(mandos2 src/standalone/main2.cpp)
 
 target_include_directories(libmandos PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/
@@ -76,6 +77,7 @@ target_link_libraries(libmandos
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC libmandos)
+target_link_libraries(mandos2 PUBLIC libmandos)
 
 # Creating the pyhon library
 find_package(Python 3.6 COMPONENTS Interpreter Development REQUIRED)

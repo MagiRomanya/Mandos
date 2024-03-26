@@ -6,6 +6,7 @@
 #include "integrators.hpp"
 #include "linear_algebra.hpp"
 #include "physics_state.hpp"
+#include "utility_functions.hpp"
 
 void compute_energy_and_derivatives_finite(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out);
 
@@ -62,7 +63,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     // Initial guess for our energy minimization
     // state =  PhysicsState(state0.x + simulation.TimeStep * state0.v, state0.v);
 
-    const unsigned int maxIter = 3;
+    const unsigned int maxIter = 1;
     for (unsigned int i = 0; i < maxIter; i++) {
 
         // Compute energy and derivatives
@@ -70,7 +71,6 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         f = EnergyAndDerivatives(nDoF);
         compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
         const Scalar energy0 = f.energy;
-        // DEBUG_LOG(f.gradient.norm());
 
         // Integration step
         // -----------------------------------------------------------------------------------------

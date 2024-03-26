@@ -746,6 +746,7 @@ void MandosViewer::drawGUI() {
     ImGuiBeginDrawing();
     drawSimulationVisualizationWindow();
 
+    static bool showImGuiDemo = false;
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Menu")) {
             if (ImGui::MenuItem("Render")) {
@@ -780,13 +781,34 @@ void MandosViewer::drawGUI() {
                     renderState->ImGuiLogsOpen = true;
                 ImGui::EndMenu();
             }
+
+            ImGui::MenuItem("Toggle ImGui demo window", NULL, &showImGuiDemo);
             ImGui::EndMenu();
         }
+
+        if (showImGuiDemo) ImGui::ShowDemoWindow(&showImGuiDemo);
+
         const float menuBarWidth = ImGui::GetWindowSize().x;
-        const float framerateTextWidth = ImGui::CalcTextSize("FPS = 0000").x;
+        char fpsText[512] = {0};
+        std::sprintf(fpsText, "FPS = %.0f###fpsButtonID", ImGui::GetIO().Framerate);
+        const float framerateTextWidth = ImGui::CalcTextSize(fpsText).x;
         ImGui::SameLine(menuBarWidth - framerateTextWidth);
         ImGui::PushItemWidth(framerateTextWidth);
-        ImGui::Text("FPS = %.0f", ImGui::GetIO().Framerate);
+        if (ImGui::Button(fpsText)) ImGui::OpenPopup("Select FPS popup");
+
+        const int limit_FPS_list[] = {30, 60, 90, 120, 160, 200, 260};
+        const unsigned int n_FPS_list = sizeof(limit_FPS_list) / sizeof(float);
+        if (ImGui::BeginPopup("Select FPS popup")) {
+            ImGui::SeparatorText("Select FPS limit");
+            for (int i = 0; i < n_FPS_list; i++) {
+                char fpsOption[256];
+                std::sprintf(fpsOption, "%i FPS", limit_FPS_list[i]);
+                if (ImGui::Selectable(fpsOption)) SetTargetFPS(limit_FPS_list[i]);
+            }
+            if (ImGui::Selectable("Unlimited")) SetTargetFPS(1000);
+            ImGui::EndPopup();
+        }
+
         ImGui::EndMainMenuBar();
     }
     if (renderState->renderFrameOpen) {
