@@ -790,8 +790,9 @@ void MandosViewer::drawGUI() {
 
         const float menuBarWidth = ImGui::GetWindowSize().x;
         char fpsText[512] = {0};
-        std::sprintf(fpsText, "FPS = %.0f###fpsButtonID", ImGui::GetIO().Framerate);
-        const float framerateTextWidth = ImGui::CalcTextSize(fpsText).x;
+        std::sprintf(fpsText, "FPS = %.0f###fpsButton", ImGui::GetIO().Framerate);
+        static const float extraWidth = ImGui::CalcTextSize("###fpsButton").x/2;
+        const float framerateTextWidth = ImGui::CalcTextSize(fpsText).x - extraWidth;
         ImGui::SameLine(menuBarWidth - framerateTextWidth);
         ImGui::PushItemWidth(framerateTextWidth);
         if (ImGui::Button(fpsText)) ImGui::OpenPopup("Select FPS popup");

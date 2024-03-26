@@ -37,7 +37,16 @@ SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_m
                                                                         ds_dx,
                                                                         FEM_material);
   add_FEM_element(simulation.energies, fem_element);
-  return SimulableBounds{index, nDoF, particle_index, nDoF / 3, 0, 0};
+
+  SimulableBounds bounds = {
+  .dof_index = index,
+  .nDoF = nDoF,
+  .particle_index = particle_index,
+  .n_particles = nDoF / 3,
+  .rb_index = static_cast<unsigned int>(simulation.simulables.rigid_bodies.size()),
+  .n_rb = 0,
+  };
+  return bounds;
 }
 
 
@@ -89,6 +98,13 @@ SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Sca
   // Displace original position
   // simulation.initial_state.x[index] -= 10;
   // simulation.initial_state.x_old[index] -= 10;
-
-  return SimulableBounds{index, nDoF, particle_index, nDoF/3, 0, 0};
+  SimulableBounds bounds = {
+  .dof_index = index,
+  .nDoF = nDoF,
+  .particle_index = particle_index,
+  .n_particles = nDoF / 3,
+  .rb_index = static_cast<unsigned int>(simulation.simulables.rigid_bodies.size()),
+  .n_rb = 0,
+  };
+  return bounds;
 }

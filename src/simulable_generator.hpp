@@ -64,4 +64,21 @@ template <typename MaterialType>
 SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,
                                                      const std::vector<unsigned int>& tet_indices, const std::vector<Scalar>& tet_vertices);
 
+
+/**
+ * Initializes a soft Rod from an origin and a given direction.
+ *
+ * @param simulation The simulation instance where we want to create the simulable.
+ * @param segments The discretization of the rod. How many subdivisions should it have.
+ * @param mass The total mass of the rod.
+ * @param length The total length of the rod.
+ * @param origin The starting point where the rod will be created.
+ * @param direction Direction that the rod will grow from starting at the origin.
+ * @param rod_parameters Physical parameters of the rod. (Note that L0 will be overwritten)
+ */
+SimulableBounds generate_rod(Simulation& simulation,
+                             unsigned int segments, Scalar mass,
+                             Scalar length, const Vec3 origin, const Vec3 direction,
+                             const RodSegmentParameters& rod_parameters);
+
 #endif // SIMULABLE_GENERATOR_H_

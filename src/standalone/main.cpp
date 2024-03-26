@@ -29,47 +29,6 @@ int main(void) {
         .freeze()
         .set_initial_position(fixer_pos2);
 
-    for (unsigned int i = 0; i < nRigidBodies; i++) {
-        // Create rigid_body
-        unsigned int index = simulation.initial_state.get_nDoF();
-        simulation.initial_state.add_size(6);
-        RigidBody rb = RigidBody(index, mass, mass * Mat3::Identity());
-        add_rigid_body_to_simulation(simulation, rb);
-
-        // Initial state
-        simulation.initial_state.x.segment<6>(index) = Vec6(0.0, 0.0, L0*i - midpoint, 0.0, 0.0, 0.0);
-        simulation.initial_state.v.segment<6>(index) = Vec6(0.0, 0.0,  0.0, 0.0, 0.0, 0.0); // At rest
-
-        // Add gravity
-        unsigned int y_index = index + 1;
-        simulation.energies.gravities.emplace_back(y_index, GravityParameters(gravity));
-    }
-    DEBUG_LOG(simulation.energies.gravities.size());
-
-    RigidBody rb = simulation.simulables.rigid_bodies[0];
-    RigidBody rb2 = simulation.simulables.rigid_bodies[nRigidBodies-1];
-
-    for (unsigned int i = 0; i < 6; i++) {
-        simulation.frozen_dof.push_back(rb.index+i);
-        // simulation.frozen_dof.push_back(rb2.index+i);
-    }
-
-    SpringParameters spring_param0 = SpringParameters(50.0,
-                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos0).norm(),
-                                                     0);
-    SpringParameters spring_param1 = SpringParameters(50.0,
-                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos1).norm(),
-                                                     0);
-    SpringParameters spring_param2 = SpringParameters(50.0,
-                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos1).norm(),
-                                                     0);
-    // simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix0.particle, spring_param0);
-    // simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix0.particle, spring_param0);
-
-    // simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix1.particle, spring_param1);
-    // simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix2.particle, spring_param2);
-
-    // Create the rod segments
     const RodSegmentParameters parameters = {
     .Ks = 5000.0,
     .L0 = L0,
@@ -81,13 +40,31 @@ int main(void) {
     .stiffness_tensor = 50000.0 * Vec3::Ones(),
     };
 
-    for (unsigned int i = 0; i < nRigidBodies - 1; i++) {
-        const RigidBody rbA = simulation.simulables.rigid_bodies[i];
-        const RigidBody rbB = simulation.simulables.rigid_bodies[i+1];
-        RodSegment segment = RodSegment(rbB, rbA, parameters);
+    generate_rod(simulation, nRigidBodies, 10*30, 15.0, Vec3(0,0,-7.5), Vec3(0,1,1), parameters);
 
-        simulation.energies.rod_segments.push_back(segment);
-    }
+
+    RigidBody rb = simulation.simulables.rigid_bodies[0];
+    RigidBody rb2 = simulation.simulables.rigid_bodies[nRigidBodies-1];
+
+    // for (unsigned int i = 0; i < 6; i++) {
+    //     simulation.frozen_dof.push_back(rb.index+i);
+    //     // simulation.frozen_dof.push_back(rb2.index+i);
+    // }
+
+    SpringParameters spring_param0 = SpringParameters(50.0,
+                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos0).norm(),
+                                                     0);
+    SpringParameters spring_param1 = SpringParameters(50.0,
+                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos1).norm(),
+                                                     0);
+    SpringParameters spring_param2 = SpringParameters(50.0,
+                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos1).norm(),
+                                                     0);
+    simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix0.particle, spring_param0);
+    simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix0.particle, spring_param0);
+
+    // simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix1.particle, spring_param1);
+    // simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix2.particle, spring_param2);
 
 
     PhysicsState state = simulation.initial_state;

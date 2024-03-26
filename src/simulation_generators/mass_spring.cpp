@@ -37,7 +37,7 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
     // Initial conditions ( v = 0)
     for (size_t i=0; i < n_dof; i++) {
         simulation.initial_state.x[index + i] = vertices[i];
-        simulation.initial_state.v[index + i] = 0.0f;
+        simulation.initial_state.v[index + i] = 0.0;
     }
 
     // Set up the springs
@@ -69,5 +69,10 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
         simulation.energies.particle_springs.push_back(ParticleSpring(particles[particle_index + e1.opposite], particles[particle_index + e2.opposite], param));
     }
 
-    return SimulableBounds{.dof_index = index, .nDoF = n_dof, .particle_index = particle_index, .n_particles = n_dof / 3, .rb_index = 0, .n_rb = 0};
+    return SimulableBounds{.dof_index = index,
+    .nDoF = n_dof,
+    .particle_index = particle_index,
+    .n_particles = n_dof / 3,
+    .rb_index = static_cast<unsigned int>(simulation.simulables.rigid_bodies.size()),
+    .n_rb = 0};
 };
