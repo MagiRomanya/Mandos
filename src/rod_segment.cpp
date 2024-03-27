@@ -1,4 +1,5 @@
 #include "rod_segment.hpp"
+#include "linear_algebra.hpp"
 #include "utility_functions.hpp"
 #include <cassert>
 
@@ -8,30 +9,17 @@ inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local_matrix(const Mat3& R) {
 
 Vec3 compute_darboux_vector(const Scalar L0, const Mat3& R1, const Mat3& R2) {
     const Mat3 dR_dx = (R2 - R1) / L0;
-    const Mat3 R = (R2 + R1) / 2;
+    const Mat3 R = (R2 + R1) / 2.0;
     const Mat3 skew_u = dR_dx * R.transpose();
     const Vec3 u = 0.5 * vectorized_levi_civita() * vectorize_matrix<3>(skew_u);
-    return u;
-}
-
-Mat3 compute_darboux_vector_local_derivative(const Scalar L0, const Mat3& R1, const Mat3& R2) {
-    const Mat3 dR_dx = (R2 - R1) / L0;
-    const Mat3 R = (R2 + R1) / 2;
-
-    Eigen::Matrix<Scalar,3,9> dvecR_dtheta = 0.5 * dvecR_dtheta_local_matrix(R1);
-    const Eigen::Matrix<Scalar,3,9> dvecRx_dtheta = -dvecR_dtheta_local_matrix(R1) / L0;
-
-    const Eigen::Matrix<Scalar,9,3> dvec_skewU_dtheta =
-        block_matrix<3,3>(R) * dvecRx_dtheta.transpose()                                            // d(dR_dx)/dtheta RT
-        + transpose_vectorized_matrix_N<9,3>(block_matrix<3,3>(dR_dx) * dvecR_dtheta.transpose())   // dR/dx (dRT/dtheta)
-        ;
-    Mat3 du_dtheta = 0.5 * vectorized_levi_civita() * dvec_skewU_dtheta;
-    return du_dtheta;
+    // return u;
+    return R.transpose() * u;
+    // return u;
 }
 
 Mat3 compute_darboux_vector_local_finite_derivative(const Scalar L0, const Mat3& R1, const Mat3& R2) {
     const Vec3 u0 = compute_darboux_vector(L0, R1, R2);
-    const Scalar dx = 1e-6;
+    const Scalar dx = 1e-8;
     Mat3 du_dtheta;
     for (unsigned int i = 0; i < 3; i++) {
         Vec3 theta = Vec3::Zero();
@@ -42,6 +30,30 @@ Mat3 compute_darboux_vector_local_finite_derivative(const Scalar L0, const Mat3&
         du_dtheta.col(i) = (newU - u0) / dx;
     }
     return du_dtheta;
+}
+
+Mat3 compute_darboux_vector_local_derivative(const Scalar L0, const Mat3& R1, const Mat3& R2) {
+    const Mat3 dR_dx = (R2 - R1) / L0;
+    const Mat3 R = (R2 + R1) / 2;
+
+    Eigen::Matrix<Scalar,3,9> dvecR_dtheta = 0.5 * dvecR_dtheta_local_matrix(R1);
+    const Eigen::Matrix<Scalar,3,9> dvecRx_dtheta = -dvecR_dtheta_local_matrix(R1) / L0;
+
+    // Compute the derivative of non rotated darboux vector
+    const Eigen::Matrix<Scalar,9,3> dvec_skewU_dtheta =
+        block_matrix<3,3>(R) * dvecRx_dtheta.transpose()                                            // d(dR_dx)/dtheta RT
+        + transpose_vectorized_matrix_N<9,3>(block_matrix<3,3>(dR_dx) * dvecR_dtheta.transpose())   // dR/dx (dRT/dtheta)
+        ;
+    const Mat3 du_dtheta = 0.5 * vectorized_levi_civita() * dvec_skewU_dtheta;
+
+    // Compute the effect of rotating the darboux with R^T
+    const Mat3 skew_u = dR_dx * R.transpose();
+    const Vec3 u = 0.5 * vectorized_levi_civita() * vectorize_matrix<3>(skew_u); // Non rotated Darboux
+    Mat3 dRTu_dtheta = 0.5 * R1.transpose() * skew(u); // Derivative of R^T u wrt theta with u constant
+
+    // Final derivative
+    Mat3 result = dRTu_dtheta + R.transpose() * du_dtheta;
+    return result;
 }
 
 RodSegmentPrecomputedValues::RodSegmentPrecomputedValues(Scalar L0, Scalar TimeStep,
@@ -59,7 +71,8 @@ RodSegmentPrecomputedValues::RodSegmentPrecomputedValues(Scalar L0, Scalar TimeS
     L = deltaX.norm();
     one_over_L = 1.0 / L;
     darboux_vector = compute_darboux_vector(L0, R1, R2);
-    darboux_vector_derivative = compute_darboux_vector_local_derivative(L0, R1, R2);
+    darboux_vector_derivativeA = compute_darboux_vector_local_derivative(L0, R1, R2);
+    darboux_vector_derivativeB = - compute_darboux_vector_local_derivative(L0, R2, R1);
     u = deltaX * one_over_L;
     uut = u * u.transpose();
     v_rel = u * (v1 - v2).dot(u) * one_over_L0;
@@ -113,7 +126,7 @@ Vec3 RodSegmentParameters::compute_energy_linear_gradient(const RodSegmentPrecom
 Vec3 RodSegmentParameters::compute_energy_rotational_gradient_A(const RodSegmentPrecomputedValues& values) const {
     // REVIEW Bending
     const Vec3 deltaU = values.darboux_vector - intrinsic_darboux;
-    const Vec3 gradVb = deltaU.transpose() * stiffness_tensor.asDiagonal() * values.darboux_vector_derivative;
+    const Vec3 gradVb = deltaU.transpose() * stiffness_tensor.asDiagonal() * values.darboux_vector_derivativeA;
 
     // Dissipation
     // TODO Rotational dissipation
@@ -129,7 +142,7 @@ Vec3 RodSegmentParameters::compute_energy_rotational_gradient_A(const RodSegment
 Vec3 RodSegmentParameters::compute_energy_rotational_gradient_B(const RodSegmentPrecomputedValues& values) const {
     // REVIEW Bending
     const Vec3 deltaU = values.darboux_vector - intrinsic_darboux;
-    const Mat3 du_dtheta = - values.darboux_vector_derivative.transpose();
+    const Mat3 du_dtheta = values.darboux_vector_derivativeB;
     const Vec3 gradVb = deltaU.transpose() * stiffness_tensor.asDiagonal() * du_dtheta;
 
     // Dissipation
@@ -149,7 +162,7 @@ Mat6 RodSegmentParameters::compute_energy_hessian_A(const RodSegmentPrecomputedV
     const Mat3 hessVs = Ks * values.one_over_L * ( (values.L - L0) * Mat3::Identity() + L0 * values.uut );
 
     // REVIEW Bending
-    const Mat3 du_dtheta = values.darboux_vector_derivative;
+    const Mat3 du_dtheta = values.darboux_vector_derivativeA;
     // Here we are aproximating the hessian!
     const Mat3 hessVb = du_dtheta.transpose() * stiffness_tensor.asDiagonal() * du_dtheta;
 
@@ -184,7 +197,7 @@ Mat6 RodSegmentParameters::compute_energy_hessian_B(const RodSegmentPrecomputedV
     const Mat3 hessVs = Ks * values.one_over_L * ( (values.L - L0) * Mat3::Identity() + L0 * values.uut );
 
     // REVIEW Bending
-    const Mat3 du_dtheta = - values.darboux_vector_derivative.transpose();
+    const Mat3 du_dtheta = values.darboux_vector_derivativeB;
     const Mat3 hessVb = du_dtheta.transpose() * stiffness_tensor.asDiagonal() * du_dtheta;
 
     // Dissipation
@@ -218,8 +231,8 @@ Mat6 RodSegmentParameters::compute_energy_hessian_AB(const RodSegmentPrecomputed
     const Mat3 hessVs = - Ks / values.L * ( (values.L - L0) * Mat3::Identity() + L0 * values.uut );
 
     // REVIEW Bending
-    const Mat3 du_dthetaA = values.darboux_vector_derivative;
-    const Mat3 du_dthetaB = - values.darboux_vector_derivative.transpose();
+    const Mat3& du_dthetaA = values.darboux_vector_derivativeA;
+    const Mat3& du_dthetaB = values.darboux_vector_derivativeB;
     // Here we are aproximating the hessian!
     const Mat3 hessVb = du_dthetaA.transpose() * stiffness_tensor.asDiagonal() * du_dthetaB;
 

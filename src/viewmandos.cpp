@@ -1268,70 +1268,72 @@ void MandosViewer::draw_vector(const Vec3& vector, const Vec3& origin) {
 }
 
 void MandosViewer::draw_rods(const Simulation& simulation, const PhysicsState& state) {
-    std::vector<float> rod_vector;
-    int i = 0;
-    for (i = 0; i < simulation.energies.rod_segments.size(); i++) {
-        const RodSegment s = simulation.energies.rod_segments[i];
-        const Vec3 x1 = s.rbB.get_COM_position(state.x);
-        const Vec3 x2 = s.rbA.get_COM_position(state.x);
+    // std::vector<float> rod_vector;
+    // int i = 0;
+    // for (i = 0; i < simulation.energies.rod_segments.size(); i++) {
+    //     const RodSegment s = simulation.energies.rod_segments[i];
+    //     const Vec3 x1 = s.rbB.get_COM_position(state.x);
+    //     const Vec3 x2 = s.rbA.get_COM_position(state.x);
 
-        rod_vector.push_back(x1.x());
-        rod_vector.push_back(x1.y());
-        rod_vector.push_back(x1.z());
+    //     rod_vector.push_back(x1.x());
+    //     rod_vector.push_back(x1.y());
+    //     rod_vector.push_back(x1.z());
 
-        rod_vector.push_back(x2.x());
-        rod_vector.push_back(x2.y());
-        rod_vector.push_back(x2.z());
-    }
+    //     rod_vector.push_back(x2.x());
+    //     rod_vector.push_back(x2.y());
+    //     rod_vector.push_back(x2.z());
+    // }
 
-    int rod_vector_size = rod_vector.size();
+    // int rod_vector_size = rod_vector.size();
 
-    // Update Rod endpoints positions
-    Mesh mesh = renderState->screen_rectangle_model.meshes[0];
-    Shader shader = renderState->raymarching_shader;
+    // // Update Rod endpoints positions
+    // Mesh mesh = renderState->screen_rectangle_model.meshes[0];
+    // Shader shader = renderState->raymarching_shader;
 
-    UpdateTexture1D(renderState->RodVector, rod_vector);
-    SetShaderValue(shader, renderState->raymarching_locs[3], &rod_vector_size, SHADER_UNIFORM_INT);
-    rlEnableShader(shader.id);
-    UseTexture1D(renderState->RodVector);
+    // UpdateTexture1D(renderState->RodVector, rod_vector);
+    // SetShaderValue(shader, renderState->raymarching_locs[3], &rod_vector_size, SHADER_UNIFORM_INT);
+    // rlEnableShader(shader.id);
+    // UseTexture1D(renderState->RodVector);
 
-    // const int textureSlot = 0;
-    // rlSetUniform(rlGetLocationUniform(shader.id, "RodVector"), &textureSlot, SHADER_UNIFORM_INT, 1);
-    if (!rlEnableVertexArray(mesh.vaoId)) {
-        // Bind mesh VBO data: vertex position (shader-location = 0)
-        rlEnableVertexBuffer(mesh.vboId[0]);
-        rlSetVertexAttribute(shader.locs[SHADER_LOC_VERTEX_POSITION], 3, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(shader.locs[SHADER_LOC_VERTEX_POSITION]);
-        if (mesh.indices != NULL) rlEnableVertexBufferElement(mesh.vboId[6]);
-    }
-    // WARNING: Disable vertex attribute color input if mesh can not provide that data (despite location being enabled in shader)
-    if (mesh.vboId[3] == 0) rlDisableVertexAttribute(shader.locs[SHADER_LOC_VERTEX_COLOR]);
+    // // const int textureSlot = 0;
+    // // rlSetUniform(rlGetLocationUniform(shader.id, "RodVector"), &textureSlot, SHADER_UNIFORM_INT, 1);
+    // if (!rlEnableVertexArray(mesh.vaoId)) {
+    //     // Bind mesh VBO data: vertex position (shader-location = 0)
+    //     rlEnableVertexBuffer(mesh.vboId[0]);
+    //     rlSetVertexAttribute(shader.locs[SHADER_LOC_VERTEX_POSITION], 3, RL_FLOAT, 0, 0, 0);
+    //     rlEnableVertexAttribute(shader.locs[SHADER_LOC_VERTEX_POSITION]);
+    //     if (mesh.indices != NULL) rlEnableVertexBufferElement(mesh.vboId[6]);
+    // }
+    // // WARNING: Disable vertex attribute color input if mesh can not provide that data (despite location being enabled in shader)
+    // if (mesh.vboId[3] == 0) rlDisableVertexAttribute(shader.locs[SHADER_LOC_VERTEX_COLOR]);
 
-    // Draw mesh
-    if (mesh.indices != NULL) rlDrawVertexArrayElements(0, mesh.triangleCount*3, 0);
-    else rlDrawVertexArray(0, mesh.vertexCount);
+    // // Draw mesh
+    // if (mesh.indices != NULL) rlDrawVertexArrayElements(0, mesh.triangleCount*3, 0);
+    // else rlDrawVertexArray(0, mesh.vertexCount);
 
-    // Disable all possible vertex array objects (or VBOs)
-    rlDisableVertexArray();
-    rlDisableVertexBuffer();
-    rlDisableVertexBufferElement();
+    // // Disable all possible vertex array objects (or VBOs)
+    // rlDisableVertexArray();
+    // rlDisableVertexBuffer();
+    // rlDisableVertexBufferElement();
 
-    // Disable shader program
-    rlDisableShader();
+    // // Disable shader program
+    // rlDisableShader();
 
-    rlEnableShader(0);
+    // rlEnableShader(0);
 
 
     // std::vector<Matrix> transforms;
     // transforms.reserve(simulation.energies.rod_segments.size());
 
-    // for (size_t i = 0; i < simulation.energies.rod_segments.size(); i++) {
-    //     RodSegment s = simulation.energies.rod_segments[i];
-    //     const Vec3 x1 = s.rbA.get_COM_position(state.x);
-    //     const Vec3 x2 = s.rbB.get_COM_position(state.x);
-    //     const Matrix transform = compute_transform_from_two_points(x1, x2);
-    //     transforms.push_back(transform);
-    // }
+    for (size_t i = 0; i < simulation.energies.rod_segments.size(); i++) {
+        RodSegment s = simulation.energies.rod_segments[i];
+        const Vec3 x1 = s.rbA.get_COM_position(state.x);
+        const Vec3 x2 = s.rbB.get_COM_position(state.x);
+        // const Matrix transform = compute_transform_from_two_points(x1, x2);
+        const Vec3 darboux = compute_darboux_vector(s.parameters.L0, s.rbA.compute_rotation_matrix(state.x), s.rbB.compute_rotation_matrix(state.x));
+        draw_vector(10*darboux, (x1+x2)*0.5);
+        // transforms.push_back(transform);
+    }
 
     // Material matInstances = LoadMaterialDefault();
     // matInstances.shader = renderState->instancing_shader;

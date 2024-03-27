@@ -32,24 +32,24 @@ int main(void) {
     const RodSegmentParameters parameters = {
     .Ks = 5000.0,
     .L0 = L0,
-    .translational_damping = 500.0,
+    .translational_damping = 5000.0,
     .rotational_damping = 0.0,
     .constraint_stiffness = 60000.0,
-    .intrinsic_darboux = Vec3::Zero(),
-    // .intrinsic_darboux = Vec3(0.0, 0.5, 0.0),
+    // .intrinsic_darboux = Vec3::Zero(),
+    .intrinsic_darboux = Vec3(0.0, 0.0, 0.1),
     .stiffness_tensor = 50000.0 * Vec3::Ones(),
     };
 
-    generate_rod(simulation, nRigidBodies, 10*30, 15.0, Vec3(0,0,-7.5), Vec3(0,1,1), parameters);
+    generate_rod(simulation, nRigidBodies, 10*30, 15.0, Vec3(0,0,0), Vec3(0,0,1), parameters);
 
 
     RigidBody rb = simulation.simulables.rigid_bodies[0];
     RigidBody rb2 = simulation.simulables.rigid_bodies[nRigidBodies-1];
 
-    // for (unsigned int i = 0; i < 6; i++) {
-    //     simulation.frozen_dof.push_back(rb.index+i);
-    //     // simulation.frozen_dof.push_back(rb2.index+i);
-    // }
+    for (unsigned int i = 0; i < 6; i++) {
+        simulation.frozen_dof.push_back(rb.index+i);
+        // simulation.frozen_dof.push_back(rb2.index+i);
+    }
 
     SpringParameters spring_param0 = SpringParameters(50.0,
                                                      (rb.get_COM_position(simulation.initial_state.x) - fixer_pos0).norm(),
@@ -60,8 +60,8 @@ int main(void) {
     SpringParameters spring_param2 = SpringParameters(50.0,
                                                      (rb.get_COM_position(simulation.initial_state.x) - fixer_pos1).norm(),
                                                      0);
-    simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix0.particle, spring_param0);
-    simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix0.particle, spring_param0);
+    // simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix0.particle, spring_param0);
+    // simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix0.particle, spring_param0);
 
     // simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix1.particle, spring_param1);
     // simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix2.particle, spring_param2);
@@ -96,8 +96,8 @@ int main(void) {
             DEBUG_LOG(f.energy);
         }
 
-        // Vec3 rotation_vector = Vec3(0,0, std::fmod( 0.1 * time, 2 * M_PI));
-        // state.x.segment<3>(rb.index + 3) = rotation_vector;
+        Vec3 rotation_vector = Vec3(1,0, 0) * std::fmod( 0.1 * time, 2 * M_PI);
+        state.x.segment<3>(rb.index + 3) = rotation_vector;
 
         // Vec3 position = simulation.initial_state.x.segment<3>(rb.index) + Vec3(std::sin(time),std::cos(time) - 1.0, 0);
         // state.x.segment<3>(rb.index) =  position;
@@ -106,7 +106,7 @@ int main(void) {
         viewer.begin_drawing();
         viewer.draw_simulation_state(simulation, state);
 
-        viewer.draw_particles(simulation, state);
+        // viewer.draw_particles(simulation, state);
         viewer.draw_rigid_bodies(simulation, state);
         viewer.draw_springs(simulation, state);
         // viewer.draw_rods(simulation, state);

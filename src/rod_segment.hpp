@@ -19,17 +19,18 @@ struct RodSegmentPrecomputedValues {
                                 const Vec3& v1, const Vec3& v2,
                                 const Mat3& R1, const Mat3& R2,
                                 const Mat3& R_dot1, const Mat3& R_dot2);
-    Scalar one_over_L0, one_over_h; // One over the rest length and the Time Step
-    Vec3 x1, x2, v1, v2;            // Positions and velocities of the Rigid Bodies
-    Vec3 v_rel;                     // Relative velocity of the two Rigid Bodies
-    Vec3 deltaX;                    // Separation vector between the two Rigid Bodies
-    Scalar L, one_over_L;           // Separation length between the two Rigid Bodies
-    Vec3 darboux_vector;            // Darboux Vector
-    Mat3 darboux_vector_derivative; // Derivative of the Darboux Vector wrt local axis angle
-    Vec3 u;                         // Unitay version of deltaX
-    Mat3 uut;                       // Projection matrix onto direction u
-    Mat3 R1, R2, R_dot1, R_dot2, R; // Rotation and rotation velocities of the two Rigid Bodies
-    Vec3 C;                         // Constraint to align the third director d3 with u direction
+    Scalar one_over_L0, one_over_h;        // One over the rest length and the Time Step
+    Vec3 x1, x2, v1, v2;                   // Positions and velocities of the Rigid Bodies
+    Vec3 v_rel;                            // Relative velocity of the two Rigid Bodies
+    Vec3 deltaX;                           // Separation vector between the two Rigid Bodies
+    Scalar L, one_over_L;                  // Separation length between the two Rigid Bodies
+    Vec3 darboux_vector;                   // Darboux Vector
+    Mat3 darboux_vector_derivativeA;       // Derivative of the Darboux Vector wrt local axis angle (rbA)
+    Mat3 darboux_vector_derivativeB;       // Derivative of the Darboux Vector wrt local axis angle (rbB)
+    Vec3 u;                                // Unitay version of deltaX
+    Mat3 uut;                              // Projection matrix onto direction u
+    Mat3 R1, R2, R_dot1, R_dot2, R;        // Rotation and rotation velocities of the two Rigid Bodies
+    Vec3 C;                                // Constraint to align the third director d3 with u direction
 };
 
 struct RodSegmentParameters {
