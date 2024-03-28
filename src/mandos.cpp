@@ -6,7 +6,10 @@
 #include "rigid_body.hpp"
 #include "gravity.hpp"
 #include "particle_rigid_body_copuling.hpp"
+#include "rod_segment.hpp"
+#include "simulable_generator.hpp"
 #include "spring.hpp"
+#include "utility_functions.hpp"
 
 RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const std::vector<Scalar> vertices, bool global)
     : rb(simulation.initial_state.get_nDoF(), mass, compute_initial_inertia_tensor_PARTICLES(mass, vertices)),
@@ -226,4 +229,76 @@ ParticleHandle get_particle_handle(Simulation& sim, unsigned int particle_index)
 void join_rigid_body_with_particle(Simulation& sim, RigidBodyHandle rb, ParticleHandle p) {
     ParticleRigidBodyCopuling copuling = ParticleRigidBodyCopuling(rb.rb, p.particle, p.particle.get_position(sim.initial_state));
     sim.copulings.add_copuling(copuling);
+}
+
+RodHandle::RodHandle(Simulation& simulation, unsigned int segments, Scalar length, Scalar TotalMass, const RodSegmentParameters& parameters)
+    : simulation(simulation), TotalMass(TotalMass),
+      bounds(generate_rod(simulation, segments, TotalMass, length, Vec3::Zero(), Vec3(0.0, 0.0, 1.0), parameters)),
+      L0(length / segments)
+{}
+
+Vec3 RodHandle::compute_center_of_mass(const PhysicsState& state) const {
+    Vec3 com = Vec3::Zero();
+    for (unsigned int i = 0; i < bounds.n_rb; i++) {
+        com += simulation.simulables.rigid_bodies[bounds.rb_index + i].get_COM_position(state.x);
+    }
+    com /= bounds.n_rb;
+    return com;
+}
+
+RodHandle RodHandle::add_gravity(Scalar gravity) const {
+    for (unsigned int i = 0; i < bounds.n_rb; i++) {
+        const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + i];
+        simulation.energies.gravities.emplace_back(rb.index + 1, GravityParameters(gravity));
+    }
+
+    return *this;
+}
+
+RodHandle RodHandle::set_initial_origin_position(const Vec3& origin) const {
+    for (unsigned int i = 0; i < bounds.n_rb; i++) {
+        const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + i];
+        simulation.initial_state.x.segment<3>(rb.index) += origin;
+    }
+    return *this;
+}
+
+RodHandle RodHandle::set_initial_rod_direction(const Vec3& direction) const {
+    // Changing direction means to change the postions of the rigid bodies
+    // and also their orientation
+
+    // Compute the orientation:
+    Vec3 normalized_direction = direction;
+    Vec3 axis_angle = Vec3::Zero();
+    if (not normalized_direction.isApprox(Vec3(0.0, 0.0, 1.0), 1e-6)) {
+        const Vec3 tangent = cross(normalized_direction, Vec3(0.0, 1.0, 0.0)).normalized();
+        const Vec3 bitangent = cross(normalized_direction, tangent).normalized();
+        Mat3 rotation;
+        rotation << tangent, bitangent, normalized_direction;
+        Eigen::AngleAxis<Scalar> angle_axis = Eigen::AngleAxis<Scalar>(rotation);
+        axis_angle = angle_axis.axis() * angle_axis.angle();
+    }
+
+    const RigidBody& rbOrigin = simulation.simulables.rigid_bodies[bounds.rb_index];
+    const Vec3 origin = rbOrigin.get_COM_position(simulation.initial_state.x);
+
+    for (unsigned int i = 0; i < bounds.n_rb; i++) {
+        const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + i];
+        simulation.initial_state.x.segment<3>(rb.index) = origin + L0 * normalized_direction * i;
+        simulation.initial_state.x.segment<3>(rb.index+3) = axis_angle;
+    }
+
+    return *this;
+}
+
+RodHandle RodHandle::freeze_rigid_body(unsigned int index) const {
+    if (index >= bounds.n_rb) {
+        std::cerr << "ERROR::ROD_HANDLE::FREEZE_RIGID_BODY: The rigid body index is out of bounds!" << std::endl;
+        return *this;
+    }
+    const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + index];
+    for (unsigned int i = 0; i < 6; i++)
+        simulation.frozen_dof.push_back(rb.index + index + i);
+
+    return *this;
 }

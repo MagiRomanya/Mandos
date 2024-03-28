@@ -48,8 +48,7 @@ Mat3 compute_darboux_vector_local_derivative(const Scalar L0, const Mat3& R1, co
 
     // Compute the effect of rotating the darboux with R^T
     const Mat3 skew_u = dR_dx * R.transpose();
-    const Vec3 u = 0.5 * vectorized_levi_civita() * vectorize_matrix<3>(skew_u); // Non rotated Darboux
-    Mat3 dRTu_dtheta = 0.5 * R1.transpose() * skew(u); // Derivative of R^T u wrt theta with u constant
+    Mat3 dRTu_dtheta = 0.5 * R1.transpose() * skew_u; // Derivative of R^T u wrt theta with u constant
 
     // Final derivative
     Mat3 result = dRTu_dtheta + R.transpose() * du_dtheta;

@@ -48,9 +48,9 @@ SimulableBounds generate_rod(Simulation& simulation,
         simulation.initial_state.x.segment<3>(index + i + 3) = axis_angle;
         simulation.initial_state.v.segment<6>(index + i) = Vec6::Zero();
 
-        // Add gravity
-        unsigned int y_index = index + i + 1;
-        simulation.energies.gravities.emplace_back(y_index, GravityParameters(-rb_mass));
+        // // Add gravity
+        // unsigned int y_index = index + i + 1;
+        // simulation.energies.gravities.emplace_back(y_index, GravityParameters(-rb_mass));
     }
 
     // Set up the Rod Segment energies

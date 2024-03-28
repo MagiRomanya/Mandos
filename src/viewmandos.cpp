@@ -21,6 +21,7 @@
 #include <rlgl.h>
 #include <rcamera.h>
 
+#include "colliders.hpp"
 #include "fem_element.hpp"
 #include "linear_algebra.hpp"
 #include "mandos.hpp"
@@ -1340,3 +1341,19 @@ void MandosViewer::draw_rods(const Simulation& simulation, const PhysicsState& s
     // matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RODS_COLOR;
     // DrawMeshInstanced(renderState->cylinder_model.meshes[0], matInstances, transforms.data(), transforms.size());
 }
+
+void MandosViewer::draw_colliders(const Simulation& simulation) {
+    for (unsigned int i = 0; i < simulation.colliders.sphere_colliders.size(); i++) {
+        const SphereCollider& sphere = simulation.colliders.sphere_colliders[i];
+        Matrix transform = raylib_transform_matrix(Mat3::Identity(), sphere.radius * Mat3::Identity(), sphere.center);
+        DrawMesh(renderState->sphere_mesh, LoadMaterialDefault(), transform);
+    }
+
+    for (unsigned int i = 0; i < simulation.colliders.plane_colliders.size(); i++) {
+        const PlaneCollider& plane = simulation.colliders.plane_colliders[i];
+        const Vec3 up = Vec3(0.0, 0.0, 1.0);
+        const Mat3 rotation = rotation_from_vector(plane.normal, up);
+        const Matrix transform = raylib_transform_matrix(rotation, 1000 * Mat3::Identity(), plane.center);
+        DrawMesh(renderState->screen_rectangle_model.meshes[0], LoadMaterialDefault(), transform);
+    }
+};

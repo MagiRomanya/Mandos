@@ -140,6 +140,24 @@ PYBIND11_MODULE(pymandos, m) {
         .def("add_gravity", &FEMHandle::add_gravity)
         ;
 
+    py::class_<RodSegmentParameters>(m, "RodParameters")
+        .def(py::init())
+        .def_readwrite("Ks", &RodSegmentParameters::Ks)
+        .def_readwrite("translational_damping", &RodSegmentParameters::translational_damping)
+        .def_readwrite("constraint_stiffness", &RodSegmentParameters::constraint_stiffness)
+        .def_readwrite("intrinsic_darboux", &RodSegmentParameters::intrinsic_darboux)
+        .def_readwrite("stiffness_tensor", &RodSegmentParameters::stiffness_tensor)
+        ;
+
+    py::class_<RodHandle>(m, "Rod")
+        .def(py::init<Simulation&, unsigned int, Scalar, Scalar, RodSegmentParameters>())
+        .def("compute_center_of_mass", &RodHandle::compute_center_of_mass)
+        .def("add_gravity", &RodHandle::add_gravity)
+        .def("set_initial_origin_position", &RodHandle::set_initial_origin_position)
+        .def("set_initial_rod_direction", &RodHandle::set_initial_rod_direction)
+        .def("freeze_rigid_body", &RodHandle::freeze_rigid_body)
+        ;
+
     // DIFFERENTIABLE SIMULATION
     // -----------------------------------------------------------------------------
     py::class_<LossFunctionAndDerivatives>(m, "LossFunctionAndDerivatives")
@@ -178,6 +196,7 @@ PYBIND11_MODULE(pymandos, m) {
         .def("draw_mesh", &MandosViewer::draw_mesh)
         .def("draw_springs", &MandosViewer::draw_springs)
         .def("draw_particles", &MandosViewer::draw_particles)
+        .def("draw_rigid_bodies", &MandosViewer::draw_rigid_bodies)
         .def("draw_FEM_tetrahedrons", &MandosViewer::draw_FEM_tetrahedrons_lines)
         // .def("draw_particle_indices", &MandosViewer::draw_particle_indices)
         .def("draw_simulation_state", &MandosViewer::draw_simulation_state)

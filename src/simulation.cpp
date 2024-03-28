@@ -1,6 +1,7 @@
 #include <cmath>
 #include <vector>
 
+#include "colliders.hpp"
 #include "fem_element.hpp"
 #include "simulation.hpp"
 #include "integrators.hpp"
@@ -70,6 +71,9 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         // -----------------------------------------------------------------------------------------
         f = EnergyAndDerivatives(nDoF);
         compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
+        std::vector<ContactEvent> events;
+        find_point_particle_contact_events(simulation.colliders, simulation.simulables, state, events);
+        compute_contact_events_energy_and_derivatives(events, f);
         const Scalar energy0 = f.energy;
 
         // Integration step

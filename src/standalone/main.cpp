@@ -2,12 +2,17 @@
 #include "mandos.hpp"
 #include "viewmandos.hpp"
 #include "../rod_segment.hpp"
-#include "../mesh.hpp"
-#include "../async_simulation_loop.hpp"
 
 int main(void) {
     // Simulation description
     Simulation simulation;
+
+    PlaneCollider plane = {
+    .center = Vec3(0.0, -1.0, 0.0),
+    .normal = Vec3(0.0, 1.0, 0.0),
+    };
+    simulation.colliders.plane_colliders.push_back(plane);
+
     simulation.TimeStep = 0.05;
     const Scalar mass = 10;
     const Scalar gravity = -9.8;
@@ -35,21 +40,26 @@ int main(void) {
     .translational_damping = 5000.0,
     .rotational_damping = 0.0,
     .constraint_stiffness = 60000.0,
-    // .intrinsic_darboux = Vec3::Zero(),
-    .intrinsic_darboux = Vec3(0.0, 0.0, 0.1),
+    .intrinsic_darboux = Vec3::Zero(),
+    // .intrinsic_darboux = Vec3(0.0, 0.0, 0.1),
     .stiffness_tensor = 50000.0 * Vec3::Ones(),
+    // .stiffness_tensor = Vec3(500000.0, 500000.0, 500000.0),
     };
 
-    generate_rod(simulation, nRigidBodies, 10*30, 15.0, Vec3(0,0,0), Vec3(0,0,1), parameters);
+    // generate_rod(simulation, nRigidBodies-1, 10*nRigidBodies, 15.0, Vec3(0,0,0), Vec3(0,0,1), parameters);
+    RodHandle rod = RodHandle(simulation, nRigidBodies, 15.0, 10*nRigidBodies, parameters)
+        .set_initial_rod_direction(Vec3(0.1, 1.0, 0.0))
+        .add_gravity(gravity)
+        ;
 
 
     RigidBody rb = simulation.simulables.rigid_bodies[0];
     RigidBody rb2 = simulation.simulables.rigid_bodies[nRigidBodies-1];
 
-    for (unsigned int i = 0; i < 6; i++) {
-        simulation.frozen_dof.push_back(rb.index+i);
-        // simulation.frozen_dof.push_back(rb2.index+i);
-    }
+    // for (unsigned int i = 0; i < 6; i++) {
+    //     simulation.frozen_dof.push_back(rb.index+i);
+    //     // simulation.frozen_dof.push_back(rb2.index+i);
+    // }
 
     SpringParameters spring_param0 = SpringParameters(50.0,
                                                      (rb.get_COM_position(simulation.initial_state.x) - fixer_pos0).norm(),
@@ -96,10 +106,11 @@ int main(void) {
             DEBUG_LOG(f.energy);
         }
 
-        Vec3 rotation_vector = Vec3(1,0, 0) * std::fmod( 0.1 * time, 2 * M_PI);
-        state.x.segment<3>(rb.index + 3) = rotation_vector;
+        // Vec3 rotation_vector = Vec3(0, 0, 1) * std::fmod( 0.1 * time, 2 * M_PI);
+        // state.x.segment<3>(rb.index + 3) = rotation_vector;
 
-        // Vec3 position = simulation.initial_state.x.segment<3>(rb.index) + Vec3(std::sin(time),std::cos(time) - 1.0, 0);
+        // Vec3 position = simulation.initial_state.x.segment<3>(rb.index) + Vec3(std::sin(2*time),std::cos(2*time) - 1.0, 0);
+        // // Vec3 position = simulation.initial_state.x.segment<3>(rb.index) + Vec3(0, 0, 0.1*std::sin(2 * time));
         // state.x.segment<3>(rb.index) =  position;
 
         // Rendering
@@ -110,6 +121,7 @@ int main(void) {
         viewer.draw_rigid_bodies(simulation, state);
         viewer.draw_springs(simulation, state);
         // viewer.draw_rods(simulation, state);
+        // viewer.draw_colliders(simulation);
 
         viewer.end_drawing();
     }

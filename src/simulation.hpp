@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "colliders.hpp"
 #include "gravity.hpp"
 #include "inertia_energies.hpp"
 #include "linear_algebra.hpp"
@@ -51,6 +52,7 @@ void add_FEM_element(Energies& energies, FEM_Element3D<MaterialType> element);
 struct Simulation {
     Simulables simulables;
     Energies energies;
+    Colliders colliders;
 
     // Integration settings
     Scalar TimeStep = 0.1;

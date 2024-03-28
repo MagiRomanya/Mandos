@@ -179,6 +179,8 @@ struct MandosViewer {
 
     void draw_rods(const Simulation& simulation, const PhysicsState& state);
 
+    void draw_colliders(const Simulation& simulation);
+
 private:
     void initialize_graphical_context();
     void drawGUI();
