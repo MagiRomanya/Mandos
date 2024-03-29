@@ -268,7 +268,7 @@ RodHandle RodHandle::set_initial_rod_direction(const Vec3& direction) const {
     // and also their orientation
 
     // Compute the orientation:
-    Vec3 normalized_direction = direction;
+    Vec3 normalized_direction = direction.normalized();
     Vec3 axis_angle = Vec3::Zero();
     if (not normalized_direction.isApprox(Vec3(0.0, 0.0, 1.0), 1e-6)) {
         const Vec3 tangent = cross(normalized_direction, Vec3(0.0, 1.0, 0.0)).normalized();

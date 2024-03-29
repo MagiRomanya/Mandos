@@ -112,7 +112,6 @@ Vec3 RodSegmentParameters::compute_energy_linear_gradient(const RodSegmentPrecom
 
     // Dissipation
     // Translational dissipation
-    // const Vec3 gradDt = L0 * translational_damping * values.v_rel * values.one_over_h;
     const Vec3 gradDt = translational_damping * values.uut * (values.v1 - values.v2);
 
     // Constraint energy

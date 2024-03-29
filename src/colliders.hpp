@@ -47,6 +47,6 @@ struct Colliders {
 struct Simulables;
 void find_point_particle_contact_events(const Colliders& colliders, const Simulables& simulables, const PhysicsState& state, std::vector<ContactEvent>& events);
 
-void compute_contact_events_energy_and_derivatives(const std::vector<ContactEvent>& events, EnergyAndDerivatives& out);
+void compute_contact_events_energy_and_derivatives(const Scalar TimeStep, const std::vector<ContactEvent>& events, const PhysicsState state, EnergyAndDerivatives& out);
 
 #endif // COLLIDEEnergyAndDerivativesEner

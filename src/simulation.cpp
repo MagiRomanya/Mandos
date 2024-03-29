@@ -73,7 +73,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
         std::vector<ContactEvent> events;
         find_point_particle_contact_events(simulation.colliders, simulation.simulables, state, events);
-        compute_contact_events_energy_and_derivatives(events, f);
+        compute_contact_events_energy_and_derivatives(simulation.TimeStep, events, state, f);
         const Scalar energy0 = f.energy;
 
         // Integration step

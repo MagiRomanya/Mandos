@@ -39,22 +39,32 @@ void find_point_particle_contact_events(const Colliders& colliders, const Simula
 #undef COL
 }
 
-void compute_contact_events_energy_and_derivatives(const std::vector<ContactEvent>& events, EnergyAndDerivatives& out) {
+void compute_contact_events_energy_and_derivatives(const Scalar TimeStep, const std::vector<ContactEvent>& events, const PhysicsState state, EnergyAndDerivatives& out) {
     const Scalar contact_stiffness = 10000.0;
+    const Scalar friction_coefficient = 100.0;
     for (unsigned int i = 0; i < events.size(); i++) {
         // Compute the energy and derivatives
         const ContactEvent& event = events[i];
-        const Scalar energy = contact_stiffness * event.s_distance * event.s_distance;
-        const Vec3 gradient = contact_stiffness * event.normal * event.s_distance;
-        const Mat3 hessian = contact_stiffness * event.normal * event.normal.transpose();
+        // Collision penalty force
+        const Scalar c_energy = contact_stiffness * event.s_distance * event.s_distance;
+        const Vec3 c_gradient = contact_stiffness * event.normal * event.s_distance;
+        const Mat3 c_hessian = contact_stiffness * event.normal * event.normal.transpose();
+
+        // Friction
+        const Vec3 velocity = state.v.segment<3>(event.index);
+        const Mat3 proj_mat = (Mat3::Identity() - event.normal * event.normal.transpose());
+        const Vec3 tan_vel = proj_mat * velocity;
+        const Scalar f_energy = 0.5 * friction_coefficient * tan_vel.squaredNorm();
+        const Vec3 f_gradient = friction_coefficient * tan_vel;
+        const Mat3 f_hessian = 1.0 / TimeStep * friction_coefficient * proj_mat;
 
         // Fill the global structure
-        out.energy += energy;
+        out.energy += c_energy + f_energy;
 
-        out.gradient.segment<3>(event.index) += gradient;
+        out.gradient.segment<3>(event.index) += c_gradient + f_gradient;
 
         for (unsigned int a = 0; a < 3; a++)
             for (unsigned int b = 0; b < 3; b++)
-                out.hessian_triplets.emplace_back(event.index + a, event.index + b, hessian(a,b));
+                out.hessian_triplets.emplace_back(event.index + a, event.index + b, c_hessian(a,b) + f_hessian(a,b));
     }
 }
