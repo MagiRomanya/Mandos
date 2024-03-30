@@ -150,11 +150,11 @@ PYBIND11_MODULE(pymandos, m) {
         ;
 
     py::class_<RodHandle>(m, "Rod")
-        .def(py::init<Simulation&, unsigned int, Scalar, Scalar, RodSegmentParameters>())
+        .def(py::init<Simulation&, unsigned int, const Vec3&, Scalar, RodSegmentParameters>())
+        .def(py::init<Simulation&, const std::vector<Scalar>&, Scalar, RodSegmentParameters>())
         .def("compute_center_of_mass", &RodHandle::compute_center_of_mass)
         .def("add_gravity", &RodHandle::add_gravity)
         .def("set_initial_origin_position", &RodHandle::set_initial_origin_position)
-        .def("set_initial_rod_direction", &RodHandle::set_initial_rod_direction)
         .def("freeze_rigid_body", &RodHandle::freeze_rigid_body)
         ;
 

@@ -224,7 +224,7 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<Scalar>& o
 
     out_vertices.resize(attrib.vertices.size());
     for (size_t i = 0; i < attrib.vertices.size(); i++) {
-        out_vertices[i] = static_cast<double>(attrib.vertices[i]);
+        out_vertices[i] = static_cast<Scalar>(attrib.vertices[i]);
     }
 
     for (size_t s = 0; s < shapes.size(); s++) {
@@ -368,5 +368,26 @@ void RenderMesh::smoothNormals() {
             normals[9*i + j + 3*1] = new_normals[3*indices[3*i + 1] + j];
             normals[9*i + j + 3*2] = new_normals[3*indices[3*i + 2] + j];
         }
+    }
+}
+
+void LoadCurveTinyObj(std::string inputfile, std::vector<Scalar>& out_vertices) {
+    tinyobj::ObjReaderConfig reader_config;
+    tinyobj::ObjReader reader;
+    if (!reader.ParseFromFile(inputfile, reader_config)) {
+        if (!reader.Error().empty()) {
+            std::cerr << "TinyObjReader: " << reader.Error();
+        }
+        else {
+            std::cerr << "TinyObjReader: unknown cause"<< std::endl;
+        }
+        exit(1);
+    }
+
+    auto& attrib = reader.GetAttrib();
+
+    out_vertices.resize(attrib.vertices.size());
+    for (size_t i = 0; i < attrib.vertices.size(); i++) {
+        out_vertices[i] = static_cast<Scalar>(attrib.vertices[i]);
     }
 }

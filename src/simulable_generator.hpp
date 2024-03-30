@@ -81,4 +81,9 @@ SimulableBounds generate_rod(Simulation& simulation,
                              Scalar length, const Vec3 origin, const Vec3 direction,
                              const RodSegmentParameters& rod_parameters);
 
+SimulableBounds generate_rod(Simulation& simulation,
+                             std::vector<Scalar> vertices,
+                             Scalar TotalMass,
+                             const RodSegmentParameters& rod_parameters);
+
 #endif // SIMULABLE_GENERATOR_H_

@@ -172,20 +172,20 @@ class FEMHandle {
 
 class RodHandle {
     public:
-        RodHandle(Simulation& simulation, unsigned int segments, Scalar length, Scalar TotalMass, const RodSegmentParameters& parameters);
+        RodHandle(Simulation& simulation, unsigned int segments, const Vec3& rod_vector, Scalar TotalMass, const RodSegmentParameters& parameters);
+
+        RodHandle(Simulation& simulation, const std::vector<Scalar>& vertices, Scalar TotalMass, const RodSegmentParameters& parameters);
 
         Vec3 compute_center_of_mass(const PhysicsState& state) const;
 
         RodHandle add_gravity(Scalar gravity) const;
         RodHandle set_initial_origin_position(const Vec3& origin) const;
-        RodHandle set_initial_rod_direction(const Vec3& direction) const;
         RodHandle freeze_rigid_body(unsigned int index) const;
 
         inline unsigned int get_n_rigid_bodies() const { return bounds.n_rb; }
 
         const Scalar TotalMass;
         const SimulableBounds bounds;
-        const Scalar L0;
     private:
         Simulation& simulation;
 };

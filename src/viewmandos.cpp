@@ -1246,7 +1246,8 @@ void MandosViewer::draw_rigid_bodies(const Simulation& simulation, const Physics
         const RigidBody& rb = simulation.simulables.rigid_bodies[i];
         const Mat3 R = rb.compute_rotation_matrix(state.x);
         // const Mat3 I = 30 * rb.J_inertia_tensor0.normalized();
-        const Mat3 I = 1 * rb.J_inertia_tensor0.normalized();
+        // const Mat3 I = 1 * rb.J_inertia_tensor0.normalized();
+        const Mat3 I = 0.7 * Mat3::Identity();
         const Vec3 com = rb.get_COM_position(state.x);
         Matrix transform = raylib_transform_matrix(R, I, com);
         transforms.push_back(transform);
@@ -1323,23 +1324,21 @@ void MandosViewer::draw_rods(const Simulation& simulation, const PhysicsState& s
     // rlEnableShader(0);
 
 
-    // std::vector<Matrix> transforms;
-    // transforms.reserve(simulation.energies.rod_segments.size());
+    std::vector<Matrix> transforms;
+    transforms.reserve(simulation.energies.rod_segments.size());
 
     for (size_t i = 0; i < simulation.energies.rod_segments.size(); i++) {
         RodSegment s = simulation.energies.rod_segments[i];
         const Vec3 x1 = s.rbA.get_COM_position(state.x);
         const Vec3 x2 = s.rbB.get_COM_position(state.x);
-        // const Matrix transform = compute_transform_from_two_points(x1, x2);
-        const Vec3 darboux = compute_darboux_vector(s.parameters.L0, s.rbA.compute_rotation_matrix(state.x), s.rbB.compute_rotation_matrix(state.x));
-        draw_vector(10*darboux, (x1+x2)*0.5);
-        // transforms.push_back(transform);
+        const Matrix transform = compute_transform_from_two_points(x1, x2);
+        transforms.push_back(transform);
     }
 
-    // Material matInstances = LoadMaterialDefault();
-    // matInstances.shader = renderState->instancing_shader;
-    // matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RODS_COLOR;
-    // DrawMeshInstanced(renderState->cylinder_model.meshes[0], matInstances, transforms.data(), transforms.size());
+    Material matInstances = LoadMaterialDefault();
+    matInstances.shader = renderState->instancing_shader;
+    matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RODS_COLOR;
+    DrawMeshInstanced(renderState->cylinder_model.meshes[0], matInstances, transforms.data(), transforms.size());
 }
 
 void MandosViewer::draw_colliders(const Simulation& simulation) {
