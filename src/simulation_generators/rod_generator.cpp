@@ -35,7 +35,7 @@ SimulableBounds generate_rod(Simulation& simulation,
 
     // Generate the rigid bodies
     // ---------------------------------------------------------------------------------
-    const unsigned int rigid_body_index = simulation.simulables.rigid_bodies.size();
+    const unsigned int rigid_body_index = static_cast<unsigned int>(simulation.simulables.rigid_bodies.size());
     const Mat3& rod_inertia_tensor = rb_mass * 10.0 * Vec3(1.0, 1.0, 2.0).asDiagonal();
     for (unsigned int i = 0; i < nDoF; i+=6) {
         RigidBody rb = RigidBody(index + i, rb_mass, rod_inertia_tensor);
@@ -70,7 +70,7 @@ SimulableBounds generate_rod(Simulation& simulation,
     // Compute bounds
     // ---------------------------------------------------------------------------------
     SimulableBounds bounds;
-    bounds.particle_index = simulation.simulables.particles.size();
+    bounds.particle_index = static_cast<unsigned int>(simulation.simulables.particles.size());
     bounds.n_particles = 0;
     bounds.nDoF = nDoF;
     bounds.n_rb = segments + 1;
@@ -90,7 +90,7 @@ SimulableBounds generate_rod(Simulation& simulation,
     if (std::fmod(vertices.size(), 3) != 0) std::cerr << "ERROR::GENERATE_ROD:: Vertices not formated correctly!" << std::endl;
 
     const unsigned int index = simulation.initial_state.get_nDoF();
-    const unsigned int nRB = vertices.size() / 3;
+    const unsigned int nRB = static_cast<unsigned int>(vertices.size()) / 3;
     const unsigned int nSegments = nRB - 1;
     const unsigned int nDoF =  nRB * 6;
     const Scalar rb_mass = TotalMass / nRB;
@@ -100,7 +100,7 @@ SimulableBounds generate_rod(Simulation& simulation,
 
     // Generate the rigid bodies
     // ---------------------------------------------------------------------------------
-    const unsigned int rigid_body_index = simulation.simulables.rigid_bodies.size();
+    const unsigned int rigid_body_index = static_cast<unsigned int>(simulation.simulables.rigid_bodies.size());
     const Mat3& rod_inertia_tensor = rb_mass * 10.0 * Vec3(1.0, 1.0, 2.0).asDiagonal();
     for (unsigned int i = 0; i < nDoF; i+=6) {
         RigidBody rb = RigidBody(index + i, rb_mass, rod_inertia_tensor);
@@ -120,7 +120,7 @@ SimulableBounds generate_rod(Simulation& simulation,
     simulation.initial_state.v.segment<3>(index) = Vec3::Zero();
     simulation.initial_state.v.segment<3>(index+3) = Vec3::Zero();
 
-    const unsigned int last_idx = vertices.size() - 6;
+    const unsigned int last_idx = static_cast<unsigned int>(vertices.size()) - 6;
     const Vec3 vLL = Vec3(vertices[last_idx], vertices[last_idx + 1], vertices[last_idx + 2]);
     const Vec3 vL = Vec3(vertices[last_idx + 3], vertices[last_idx + 4], vertices[last_idx + 5]);
     const Vec3 directionL = vL - vLL;
@@ -161,7 +161,7 @@ SimulableBounds generate_rod(Simulation& simulation,
     // Compute bounds
     // ---------------------------------------------------------------------------------
     SimulableBounds bounds;
-    bounds.particle_index = simulation.simulables.particles.size();
+    bounds.particle_index = static_cast<unsigned int>(simulation.simulables.particles.size());
     bounds.n_particles = 0;
     bounds.nDoF = nDoF;
     bounds.n_rb = nRB;

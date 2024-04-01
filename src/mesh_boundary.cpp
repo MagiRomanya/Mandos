@@ -35,7 +35,7 @@ void mesh_boundary(const std::vector<Scalar>& vertices,
             internalSize+=2;
         }
         else{
-            in_map[e] = edges.size();
+            in_map[e] = static_cast<int>(edges.size());
             edges.push_back(e);
             edges.push_back(Edge(-1,-1,-1)); // Add a dummy edge to the list for later removal if it's not overwritten
         }
@@ -48,7 +48,7 @@ void mesh_boundary(const std::vector<Scalar>& vertices,
             internalSize+=2;
         }
         else{
-            in_map[e] = edges.size();
+            in_map[e] = static_cast<int>(edges.size());
             edges.push_back(e);
             edges.push_back(Edge(-1,-1,-1));
         }
@@ -61,13 +61,13 @@ void mesh_boundary(const std::vector<Scalar>& vertices,
             internalSize+=2;
         }
         else{
-            in_map[e] = edges.size();
+            in_map[e] = static_cast<int>(edges.size());
             edges.push_back(e);
             edges.push_back(Edge(-1,-1,-1)); // dummy edge
         }
     }
 
-    externalSize = indices.size() - internalSize;
+    externalSize = static_cast<unsigned int>(indices.size()) - internalSize;
 
     externalEdges.reserve(externalSize);
     internalEdges.reserve(internalSize);
@@ -88,8 +88,8 @@ std::array<unsigned int, 2> count_springs(const std::vector<Scalar>& vertices, c
     std::vector<Edge> internalEdges, externalEdges;
     mesh_boundary(vertices, indices, internalEdges, externalEdges);
 
-    unsigned int n_flex = internalEdges.size() / 2.0 + externalEdges.size();
-    unsigned int n_bend = internalEdges.size() / 2.0;
+    unsigned int n_flex = static_cast<unsigned int>(internalEdges.size()) / 2 + static_cast<unsigned int>(externalEdges.size());
+    unsigned int n_bend = static_cast<unsigned int>(internalEdges.size()) / 2;
 
     return {n_flex, n_bend};
 }
@@ -109,7 +109,7 @@ namespace std {
     template<>
     struct hash<Triangle>{
         unsigned int operator()(const Triangle& key) const {
-            size_t hashValue = 17; // Choose a prime number as a seed
+            unsigned int hashValue = 17; // Choose a prime number as a seed
             hashValue = hashValue * 31 + key.a;
             hashValue = hashValue * 31 + key.b;
             hashValue = hashValue * 31 + key.c;

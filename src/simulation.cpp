@@ -56,7 +56,7 @@ Scalar compute_energy(Scalar TimeStep, const Energies& energies, const PhysicsSt
 
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out) {
     // Energy and derivatives computation
-    const unsigned int nDoF = simulation.initial_state.x.size();
+    const unsigned int nDoF = static_cast<unsigned int>(simulation.initial_state.x.size());
     EnergyAndDerivatives f(0);
 
     // The state at the beginning of the step (x0, v0)
@@ -92,7 +92,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         if (not enableLineSearch) continue;
         Scalar lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
         Scalar alpha = 1.0f;
-        const float alpha_min_threshold = 1e-7;
+        const Scalar alpha_min_threshold = 1e-7;
         // DEBUG_LOG(energy);
         // DEBUG_LOG(lineSearchEnergy);
         while (lineSearchEnergy > energy0) {

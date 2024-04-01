@@ -99,7 +99,7 @@ Mat3 compute_local_to_global_axis_angle_jacobian(const Vec3& phi);
  */
 inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local(const Vec3& theta) {
     const Mat3 R = compute_rotation_matrix_rodrigues(theta);
-    return vectorized_levi_civita() * block_matrix(R);
+    return vectorized_levi_civita() * block_matrix<3,3>(R);
 }
 
 /**
@@ -108,7 +108,7 @@ inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local(const Vec3& theta) {
 inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_global(const Vec3& theta) {
     const Mat3 jac = compute_local_to_global_axis_angle_jacobian(theta);
     const Mat3 R = compute_rotation_matrix_rodrigues(theta);
-    return jac.transpose() * vectorized_levi_civita() * block_matrix(R);
+    return jac.transpose() * vectorized_levi_civita() * block_matrix<3,3>(R);
 }
 
 

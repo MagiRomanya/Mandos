@@ -13,7 +13,8 @@
 
 RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const std::vector<Scalar> vertices, bool global)
     : rb(simulation.initial_state.get_nDoF(), mass, compute_initial_inertia_tensor_PARTICLES(mass, vertices)),
-      rb_index(simulation.simulables.rigid_bodies.size()), simulation(simulation)
+      rb_index(static_cast<unsigned int>(simulation.simulables.rigid_bodies.size())),
+      simulation(simulation)
 {
     simulation.initial_state.add_size(6);
     add_rigid_body_to_simulation(simulation, rb, global);
@@ -23,7 +24,8 @@ RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const std:
 
 RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const Mat3& inertia_tensor, bool global)
     : rb(simulation.initial_state.get_nDoF(), mass, inertia_tensor),
-      rb_index(simulation.simulables.rigid_bodies.size()), simulation(simulation)
+      rb_index(static_cast<unsigned int>(simulation.simulables.rigid_bodies.size())),
+      simulation(simulation)
 {
     simulation.initial_state.add_size(6);
     add_rigid_body_to_simulation(simulation, rb, global);
@@ -141,7 +143,7 @@ void MassSpringHandle::get_dof_vector(const PhysicsState& state, std::vector<flo
 
 ParticleHandle::ParticleHandle(Simulation& simulation, Scalar mass)
     : particle(mass, simulation.initial_state.get_nDoF()),
-      particle_index(simulation.simulables.particles.size()),
+      particle_index(static_cast<unsigned int>(simulation.simulables.particles.size())),
       simulation(simulation)
 {
     simulation.initial_state.add_size(3);

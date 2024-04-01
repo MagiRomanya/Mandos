@@ -133,7 +133,7 @@ struct MeshGPU {
 struct MandosViewer {
     const int initialScreenWidth = 1600;
     const int initialScreenHeight = 900;
-    MemoryPool mem_pool = MemoryPool(1e6*sizeof(float));
+    MemoryPool mem_pool = MemoryPool(static_cast<size_t>(1e6) * sizeof(float));
 
     MandosViewer();
     MandosViewer(const Simulation* simulation);
@@ -200,8 +200,8 @@ private:
     Vec4 slicePlane = Vec4(0.0f, 1.0f, 0.0f, 0.0f);
     bool slicePlaneGuizmoToggle = false;
 
-    float simulationViewerWidth = initialScreenWidth;
-    float simulationViewerHeight = initialScreenHeight;
+    float simulationViewerWidth = static_cast<float>(initialScreenWidth);
+    float simulationViewerHeight = static_cast<float>(initialScreenHeight);
 
     const Simulation* SavedSim = nullptr;
     const PhysicsState* SavedState = nullptr;

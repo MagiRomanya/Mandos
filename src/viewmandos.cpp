@@ -111,7 +111,7 @@ MeshGPU::MeshGPU(const RenderMesh& mesh) {
     tangents = (float*) calloc(sizeof(float), 4 * mesh.tangents.size() / 3);
 
     // Copy the data
-    nVertices = mesh.vertices.size() / 3;
+    nVertices = static_cast<unsigned int>(mesh.vertices.size()) / 3;
     for (int i = 0; i < nVertices; i++) {
         vertices[3*i+0] = static_cast<float>(mesh.vertices[3*i+0]);
         vertices[3*i+1] = static_cast<float>(mesh.vertices[3*i+1]);
@@ -131,7 +131,7 @@ MeshGPU::MeshGPU(const RenderMesh& mesh) {
 
     // Upload the mesh to GPU
     Mesh raymesh = {};
-    raymesh.vertexCount = mesh.vertices.size() / 3; // 3 coordinates per vertex
+    raymesh.vertexCount = static_cast<int>(mesh.vertices.size()) / 3; // 3 coordinates per vertex
     raymesh.triangleCount = raymesh.vertexCount / 3; // 3 vertices per triangle
     raymesh.vertices = vertices;
     raymesh.texcoords = texcoords;

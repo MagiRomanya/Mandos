@@ -7,7 +7,7 @@
 #include "ImGuizmo.h"
 
 void ImGuiInitialize() {
-    GLFWwindow *glfwWindow = (GLFWwindow *)GetWindowHandle();
+    GLFWwindow* glfwWindow = glfwGetCurrentContext();
     if (glfwWindow == nullptr)
         std::cerr << "ERROR::IMGUI_INITIALIZE: no GLFW window!" << std::endl;
     glfwMakeContextCurrent(glfwWindow);

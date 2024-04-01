@@ -15,7 +15,7 @@ struct PhysicsState {
         v.conservativeResize(v.size() + increment_dof);
     }
 
-    inline unsigned int get_nDoF() const {return x.size(); }
+    inline unsigned int get_nDoF() const {return static_cast<unsigned int>( x.size() ); }
 };
 
 struct EnergyAndDerivatives {

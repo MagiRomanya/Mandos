@@ -34,7 +34,7 @@ inline Mat3 rotation_inertia_dgradE_dtheta(const Mat3& J_inertia_tensor, const V
     const Eigen::Matrix<Scalar,3,9> dvecR_dtheta = dvecR_dtheta_global(theta);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta = block_matrix<3,3>(Rguess * J_inertia_tensor) * dvecR_dtheta.transpose();
-    const Eigen::Matrix<Scalar,9,3> dvecAdtheta = 0.5 * (dvecRMR_guess_dtheta - transpose_vectorized_matrix_N(dvecRMR_guess_dtheta));
+    const Eigen::Matrix<Scalar,9,3> dvecAdtheta = 0.5 * (dvecRMR_guess_dtheta - transpose_vectorized_matrix_N<9,3>(dvecRMR_guess_dtheta));
 
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta;
     return H;
@@ -48,7 +48,7 @@ inline Mat3 rotation_inertia_dgradE_dtheta0(const Mat3& J_inertia_tensor, const 
     const Eigen::Matrix<Scalar,3,9> dvecRguess_dtheta0 = 2 * dvecR_dtheta_global(theta0) - dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_dtheta0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_dtheta0.transpose();;
-    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix_N(dvecRMR_guess_dtheta0) - dvecRMR_guess_dtheta0);
+    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix_N<9,3>(dvecRMR_guess_dtheta0) - dvecRMR_guess_dtheta0);
 
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
     return H;
@@ -62,7 +62,7 @@ inline Mat3 rotation_inertia_dgradE_domega0(const Mat3& J_inertia_tensor, const 
     const Eigen::Matrix<Scalar,3,9> dvecRguess_domega0 = TimeStep * dvecR_dtheta_global(theta0 - omega0 * TimeStep);
 
     const Eigen::Matrix<Scalar,9,3> dvecRMR_guess_domega0 = block_matrix<3,3>(R * J_inertia_tensor) * dvecRguess_domega0.transpose();;
-    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix_N(dvecRMR_guess_domega0) - dvecRMR_guess_domega0);
+    const Eigen::Matrix<Scalar,9,3> dvecAdtheta0 = 0.5 * (transpose_vectorized_matrix_N<9,3>(dvecRMR_guess_domega0) - dvecRMR_guess_domega0);
 
     Mat3 H = 1.0 / h2 * vLeviCivita * dvecAdtheta0;
     return H;
@@ -167,9 +167,9 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
                                                    const LossFunctionAndDerivatives& loss,
                                                    const Mat& dx0_dp, const Mat& dv0_dp)
 {
-    const unsigned int nParameters = loss.loss_parameter_partial_derivative.size();
-    const unsigned int nDoF = trajectory.at(0).x.size();
-    const unsigned int nStates = trajectory.size();
+    const unsigned int nParameters = static_cast<unsigned int>(loss.loss_parameter_partial_derivative.size());
+    const unsigned int nDoF = static_cast<unsigned int>(trajectory.at(0).x.size());
+    const unsigned int nStates = static_cast<unsigned int>(trajectory.size());
     const unsigned int nSteps = nStates - 1;
 
     // Initialize the loss function gradients dg_dp, dg_dx and dg_dv
@@ -229,7 +229,7 @@ Vec compute_loss_function_gradient_backpropagation_1_step_velocity(const Simulat
                                                                    const Vec dg_dphi,
                                                                    const Vec dg_dphi_dot)
 {
-    const unsigned int nDoF = state0.x.size();
+    const unsigned int nDoF = static_cast<unsigned int>(state0.x.size());
 
     SparseMat hessian(nDoF,nDoF), dgradE_dx0(nDoF,nDoF), dgradE_dv0(nDoF,nDoF);
     compute_gradient_partial_derivatives(simulation.TimeStep, simulation.energies, state1, state0, hessian, dgradE_dx0, dgradE_dv0);
@@ -258,7 +258,7 @@ Vec compute_loss_function_gradient_backpropagation_1_step_position(const Simulat
                                                                    const Vec dg_dphi,
                                                                    const Vec dg_dphi_dot)
 {
-    const unsigned int nDoF = state0.x.size();
+    const unsigned int nDoF = static_cast<unsigned int>(state0.x.size());
 
     SparseMat hessian(nDoF,nDoF), dgradE_dx0(nDoF,nDoF), dgradE_dv0(nDoF,nDoF);
     compute_gradient_partial_derivatives(simulation.TimeStep, simulation.energies, state1, state0, hessian, dgradE_dx0, dgradE_dv0);

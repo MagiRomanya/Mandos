@@ -21,14 +21,14 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
                                      Scalar k_bending, Scalar damping)
 {
     assert(vertices.size() % 3 == 0);
-    const unsigned int index = simulation.initial_state.x.size();
-    const unsigned int n_dof = vertices.size();
+    const unsigned int index = static_cast<unsigned int>(simulation.initial_state.x.size());
+    const unsigned int n_dof = static_cast<unsigned int>(vertices.size());
 
     // Resize degrees of freedom
     simulation.initial_state.add_size(n_dof);
 
     // Generate the particle simulables
-    const unsigned int particle_index = simulation.simulables.particles.size();
+    const unsigned int particle_index = static_cast<unsigned int>(simulation.simulables.particles.size());
     const std::vector<Particle>& particles = simulation.simulables.particles;
     for (unsigned int i = 0; i < n_dof; i+=3) {
         add_particle_to_simulation(simulation, Particle(node_mass, index+i));
@@ -44,8 +44,8 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
     std::vector<Edge> internalEdges, externalEdges;
     mesh_boundary(vertices, indices, internalEdges, externalEdges);
 
-    const unsigned int n_flex = internalEdges.size() / 2.0 + externalEdges.size();
-    const unsigned int n_bend = internalEdges.size() / 2.0;
+    unsigned int n_flex = static_cast<unsigned int>(internalEdges.size()) / 2 + static_cast<unsigned int>(externalEdges.size());
+    unsigned int n_bend = static_cast<unsigned int>(internalEdges.size()) / 2;
     simulation.energies.particle_springs.reserve(simulation.energies.particle_springs.size() + n_flex + n_bend);
 
     for (size_t i = 0; i < externalEdges.size(); i++) {

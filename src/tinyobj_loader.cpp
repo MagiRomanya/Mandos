@@ -32,7 +32,7 @@ SimulationMesh::SimulationMesh(std::string filename) {
 SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
     indices = render_mesh.indices;
     const unsigned int nVertices = 1 + *std::max_element(indices.begin(), indices.end());
-    const unsigned int nTriangles = indices.size() / 3;
+    const unsigned int nTriangles = static_cast<unsigned int>(indices.size()) / 3;
     vertices.resize(3*nVertices, 0.0);
     for (unsigned int i = 0; i < nTriangles; i++) {
         for (unsigned int j = 0; j < 3; j++) { // Iterate the 3 vertices of the triangle i
@@ -76,7 +76,7 @@ void LoadRenderMeshTinyOBJ(std::string inputfile,
         // Loop over faces(polygon)
         size_t index_offset = 0;
         for (size_t i = 0; i < shapes[s].mesh.indices.size(); i++){
-            size_t index = shapes[s].mesh.indices[i].vertex_index;
+            unsigned int index = shapes[s].mesh.indices[i].vertex_index;
             out_indices.push_back(index);
         }
 
@@ -140,7 +140,7 @@ inline Vec3 compute_tangent_vector(const Vec3& edge1, const Vec3& edge2, const V
 
 inline void computeRenderMeshTangentVectors(RenderMesh& mesh) {
     mesh.tangents.resize(mesh.vertices.size());
-    const unsigned int nTriangles = mesh.vertices.size() / 9;
+    const unsigned int nTriangles = static_cast<unsigned int>(mesh.vertices.size()) / 9;
     for (unsigned int i = 0; i < nTriangles; ++i) {
         // Triangle edges
         const Vec3 x1 = Vec3(mesh.vertices[9*i + 3*0 + 0], mesh.vertices[9*i + 3*0 + 1], mesh.vertices[9*i + 3*0 + 2]);
@@ -237,7 +237,7 @@ void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<Scalar>& o
             }
         }
         for (size_t i = 0; i < shape.mesh.indices.size(); i++){
-            size_t index = shape.mesh.indices[i].vertex_index;
+            unsigned int index = shape.mesh.indices[i].vertex_index;
             out_indices.push_back(index);
         }
     }
@@ -266,7 +266,7 @@ void RenderMesh::updateFromSimulationMesh(const SimulationMesh& sim_mesh) {
         tangents.resize(vertices.size());
 
     indices = sim_mesh.indices;
-    const unsigned int nTriangles = sim_mesh.indices.size() / 3;
+    const unsigned int nTriangles = static_cast<unsigned int>(sim_mesh.indices.size()) / 3;
     for (unsigned int i = 0; i < nTriangles; i++) {
         // each triangle has 3 mesh.vertices -> 9 coordinates
         const Vec3 x1 = Vec3(sim_mesh.vertices[3*sim_mesh.indices[3*i+0] + 0], sim_mesh.vertices[3*sim_mesh.indices[3*i+0] + 1] , sim_mesh.vertices[3*sim_mesh.indices[3*i+0] + 2]);
@@ -333,7 +333,7 @@ void RenderMesh::smoothNormals() {
     new_normals.resize(3*indices.size(), 0.0);
 
     // Compute smooth normals
-    const unsigned int nTriangles = indices.size() / 3;
+    const unsigned int nTriangles = static_cast<unsigned int>(indices.size()) / 3;
     for (unsigned int i = 0; i < nTriangles; i++) {
         // The triangle only has one normal!
         const Vec3 normal = Vec3(normals[9*i + 0 + 3*0], normals[9*i + 1 + 3*0], normals[9*i + 2 + 3*0]);

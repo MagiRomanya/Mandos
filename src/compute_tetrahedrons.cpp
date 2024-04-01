@@ -22,12 +22,12 @@ void tetgen_compute_tetrahedrons(const std::vector<unsigned int>& triangle_indic
     std::vector<double> doubleVertices(triangle_vertices.begin(), triangle_vertices.end());
 
     // Initialize the triangle mesh vertices
-    in.numberofpoints = doubleVertices.size() / 3;
+    in.numberofpoints = static_cast<int>(doubleVertices.size()) / 3;
     in.pointlist = new REAL[in.numberofpoints * 3];
     memcpy(in.pointlist, doubleVertices.data(), doubleVertices.size()*sizeof(double));
 
     // Initialize the triangle mesh indices
-    in.numberoffacets = triangle_indices.size() / 3;
+    in.numberoffacets = static_cast<int>(triangle_indices.size()) / 3;
     in.facetlist = new tetgenio::facet[in.numberoffacets];
     in.facetmarkerlist = new int[in.numberoffacets];
     for (int i = 0; i < in.numberoffacets; i++) {

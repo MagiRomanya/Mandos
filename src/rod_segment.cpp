@@ -4,7 +4,7 @@
 #include <cassert>
 
 inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local_matrix(const Mat3& R) {
-    return vectorized_levi_civita() * block_matrix(R);
+    return vectorized_levi_civita() * block_matrix<3,3>(R);
 }
 
 Vec3 compute_darboux_vector(const Scalar L0, const Mat3& R1, const Mat3& R2) {
