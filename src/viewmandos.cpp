@@ -305,6 +305,7 @@ struct RenderState {
     Model vector_model;
     Model cylinder_model;
     Model screen_rectangle_model;
+    std::vector<MeshGPU> sdf_collider_meshes;
 
     // MeshGPU* axis3D = nullptr;
     LinesGPU* tetLines = nullptr;
@@ -1353,6 +1354,18 @@ void MandosViewer::draw_colliders(const Simulation& simulation) {
         const Vec3 up = Vec3(0.0, 0.0, 1.0);
         const Mat3 rotation = rotation_from_vector(plane.normal, up);
         const Matrix transform = raylib_transform_matrix(rotation, 1000 * Mat3::Identity(), plane.center);
-        DrawMesh(renderState->screen_rectangle_model.meshes[0], LoadMaterialDefault(), transform);
+        DrawMesh(renderState->screen_rectangle_model.meshes[0], renderState->base_material, transform);
+    }
+
+    if (renderState->sdf_collider_meshes.size() != simulation.colliders.sdf_colliders.size()) {
+        for (unsigned int i = 0; i < simulation.colliders.sdf_colliders.size(); i++) {
+            const SDFCollider& collider = simulation.colliders.sdf_colliders[i];
+            renderState->sdf_collider_meshes.emplace_back(collider.mesh);
+        }
+    }
+    for (unsigned int i = 0; i < simulation.colliders.sdf_colliders.size(); i++) {
+        const SDFCollider& collider = simulation.colliders.sdf_colliders[i];
+        Mesh raymesh = MeshGPUtoRaymesh(renderState->sdf_collider_meshes[i], mem_pool);
+        DrawMesh(raymesh, renderState->base_material, MatrixIdentity());
     }
 };

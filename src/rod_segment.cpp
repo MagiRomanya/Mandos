@@ -12,7 +12,6 @@ Vec3 compute_darboux_vector(const Scalar L0, const Mat3& R1, const Mat3& R2) {
     const Mat3 R = (R2 + R1) / 2.0;
     const Mat3 skew_u = dR_dx * R.transpose();
     const Vec3 u = 0.5 * vectorized_levi_civita() * vectorize_matrix<3>(skew_u);
-    // return u;
     return R.transpose() * u;
     // return u;
 }

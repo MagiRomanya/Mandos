@@ -23,3 +23,6 @@
 [submodule "nativefielddialog-extended"]
 	path = external/nativefiledialog-extended
 	url = https://github.com/btzy/nativefiledialog-extended.git
+[submodule "external/TriangleMeshDistance"]
+	path = external/TriangleMeshDistance
+	url = https://github.com/InteractiveComputerGraphics/TriangleMeshDistance.git

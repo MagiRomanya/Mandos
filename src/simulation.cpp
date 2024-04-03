@@ -64,7 +64,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     // Initial guess for our energy minimization
     // state =  PhysicsState(state0.x + simulation.TimeStep * state0.v, state0.v);
 
-    const unsigned int maxIter = 1;
+    const unsigned int maxIter = 2;
     for (unsigned int i = 0; i < maxIter; i++) {
 
         // Compute energy and derivatives

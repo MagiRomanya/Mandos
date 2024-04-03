@@ -66,6 +66,7 @@ target_include_directories(libmandos PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/include/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/nativefiledialog-extended/src/include/
+  ${CMAKE_CURRENT_SOURCE_DIR}/external/TriangleMeshDistance/TriangleMeshDistance/include/
 )
 
 target_link_libraries(libmandos

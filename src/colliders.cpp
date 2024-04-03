@@ -1,6 +1,9 @@
 #include "colliders.hpp"
 #include "simulation.hpp"
-
+#include "utility_functions.hpp"
+#include <memory>
+#include <tmd/TriangleMeshDistance.h>
+#include <clock.hpp>
 
 void SphereCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out) const {
     const Vec3 delta = point - center;
@@ -14,12 +17,38 @@ void PlaneCollider::compute_contact_geometry(const Vec3& point, ContactEvent& ou
     out.normal = normal;
 }
 
+void SDFCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out) const {
+    tmd::Result result = sdf.signed_distance(point);
+
+    // Compute normal from triangle
+    const int triangle_idx = result.triangle_id;
+    const Vec3 A = Vec3(mesh.vertices[3*mesh.indices[3*triangle_idx + 0] + 0],
+                        mesh.vertices[3*mesh.indices[3*triangle_idx + 0] + 1],
+                        mesh.vertices[3*mesh.indices[3*triangle_idx + 0] + 2]);
+
+    const Vec3 B = Vec3(mesh.vertices[3*mesh.indices[3*triangle_idx + 1] + 0],
+                        mesh.vertices[3*mesh.indices[3*triangle_idx + 1] + 1],
+                        mesh.vertices[3*mesh.indices[3*triangle_idx + 1] + 2]);
+
+    const Vec3 C = Vec3(mesh.vertices[3*mesh.indices[3*triangle_idx + 2] + 0],
+                        mesh.vertices[3*mesh.indices[3*triangle_idx + 2] + 1],
+                        mesh.vertices[3*mesh.indices[3*triangle_idx + 2] + 2]);
+    const Vec3 normal = cross(B - A, C - A).normalized();
+    // DEBUG_LOG(normal.transpose());
+    out.s_distance = result.distance;
+    out.normal = normal;
+}
+
 void find_point_particle_contact_events(const Colliders& colliders, const Simulables& simulables, const PhysicsState& state, std::vector<ContactEvent>& events) {
+    const Scalar particle_radius = 0.5;
 #define COL(type, name)                                               \
     for (unsigned int j = 0; j < colliders.name.size(); j++) {        \
         colliders.name[j].compute_contact_geometry(point, event);     \
         event.index = index;                                          \
-        if ( event.s_distance < 0.0 ) events.push_back(event);        \
+        if ( event.s_distance < particle_radius ) {                   \
+            event.s_distance -= particle_radius;                      \
+            events.push_back(event);                                  \
+        }                                                             \
     }
 
     for (unsigned int i = 0; i < simulables.particles.size(); i++) {
@@ -40,7 +69,7 @@ void find_point_particle_contact_events(const Colliders& colliders, const Simula
 }
 
 void compute_contact_events_energy_and_derivatives(const Scalar TimeStep, const std::vector<ContactEvent>& events, const PhysicsState state, EnergyAndDerivatives& out) {
-    const Scalar contact_stiffness = 10000.0;
+    const Scalar contact_stiffness = 100000.0;
     const Scalar friction_coefficient = 100.0;
     for (unsigned int i = 0; i < events.size(); i++) {
         // Compute the energy and derivatives
@@ -67,4 +96,11 @@ void compute_contact_events_energy_and_derivatives(const Scalar TimeStep, const 
             for (unsigned int b = 0; b < 3; b++)
                 out.hessian_triplets.emplace_back(event.index + a, event.index + b, c_hessian(a,b) + f_hessian(a,b));
     }
+}
+
+SDFCollider::SDFCollider(const SimulationMesh& mesh)
+{
+    this->mesh = mesh;
+    this->sdf = tmd::TriangleMeshDistance(mesh.vertices.data(), mesh.vertices.size() / 3,
+                                          mesh.indices.data(), mesh.indices.size() / 3);
 }

@@ -65,6 +65,7 @@ PYBIND11_MODULE(pymandos, m) {
         .def_readonly("indices", &TetrahedronMesh::indices)
         ;
 
+    m.def("load_curve", &LoadCurveTinyObj);
 
     // SIMULATION
     // -----------------------------------------------------------------------------

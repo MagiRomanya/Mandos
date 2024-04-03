@@ -3,7 +3,9 @@
 
 #include <vector>
 #include "linear_algebra.hpp"
+#include "mesh.hpp"
 #include "physics_state.hpp"
+#include <tmd/TriangleMeshDistance.h>
 
 struct ContactEvent {
     Vec3 normal;
@@ -24,6 +26,17 @@ struct PlaneCollider {
     void compute_contact_geometry(const Vec3& point, ContactEvent& out) const;
 };
 
+struct SDFCollider {
+    SDFCollider();
+    SDFCollider(const SimulationMesh &mesh);
+
+    SimulationMesh mesh;
+    tmd::TriangleMeshDistance sdf;
+
+    void compute_contact_geometry(const Vec3& point, ContactEvent& out) const;
+
+};
+
 // struct CapsuleCollider {
 //     Vec3 pointA, pointB;
 //     Scalar radius;
@@ -33,7 +46,8 @@ struct PlaneCollider {
 
 #define COLLIDER_MEMBERS \
     COL(std::vector<SphereCollider>, sphere_colliders) \
-    COL(std::vector<PlaneCollider>, plane_colliders)
+    COL(std::vector<PlaneCollider>, plane_colliders) \
+    COL(std::vector<SDFCollider>, sdf_colliders)
     // COL(std::vector<CapsuleCollider>, caplule_colliders) \
 
 #define COL(type, name) type name;

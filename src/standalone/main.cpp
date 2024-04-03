@@ -11,7 +11,11 @@ int main(void) {
     .center = Vec3(0.0, -1.0, 0.0),
     .normal = Vec3(0.0, 1.0, 0.0),
     };
-    simulation.colliders.plane_colliders.push_back(plane);
+
+    SimulationMesh collider_mesh = SimulationMesh("resources/obj/monke.obj");
+    SDFCollider mesh_collider = SDFCollider(collider_mesh);
+    // simulation.colliders.plane_colliders.push_back(plane);
+    simulation.colliders.sdf_colliders.push_back(mesh_collider);
 
     simulation.TimeStep = 0.05;
     const Scalar mass = 10;
@@ -39,26 +43,44 @@ int main(void) {
     .L0 = L0,
     .translational_damping = 5000.0,
     .rotational_damping = 0.0,
+    // .constraint_stiffness = 60000.0,
     .constraint_stiffness = 60000.0,
     .intrinsic_darboux = Vec3::Zero(),
     // .intrinsic_darboux = Vec3(0.0, 0.0, 0.1),
-    .stiffness_tensor = 50000000.0 * Vec3::Ones(),
-    // .stiffness_tensor = 5000.0 * Vec3::Ones(),
+    // .stiffness_tensor = 50000000.0 * Vec3::Ones(),
+    .stiffness_tensor = 5000.0 * Vec3::Ones(),
     // .stiffness_tensor = Vec3(500000.0, 500000.0, 500000.0),
     };
 
     std::vector<Scalar> vertices;
     LoadCurveTinyObj("resources/obj/spring-curve.obj", vertices);
-    // generate_rod(simulation, nRigidBodies-1, 10*nRigidBodies, 15.0, Vec3(0,0,0), Vec3(0,0,1), parameters);
-    // RodHandle rod = RodHandle(simulation, nRigidBodies, 15*Vec3(1.0, 1.0, 0.0).normalized(), 10*nRigidBodies, parameters)
-    //     .set_initial_origin_position(Vec3(-7.5, 0.0 ,0.0 ))
-    //     .add_gravity(gravity)
-    //     ;
 
-    RodHandle rod = RodHandle(simulation, vertices, 30, parameters)
-        .set_initial_origin_position(Vec3(0.0, 10.0 ,0.0 ))
+    const Scalar length = 100;
+    const unsigned int segments = 100;
+    RodHandle rod = RodHandle(simulation, segments, length*Vec3(1.0, 0.0, 0.0).normalized(), 10*nRigidBodies, parameters)
+        .set_initial_origin_position(Vec3(-length * 0.5, 20.0 , 0.0 ))
         .add_gravity(gravity)
         ;
+
+    RodHandle rod2 = RodHandle(simulation, segments, length*Vec3(0.0, 0.0, 1.0).normalized(), 10*nRigidBodies, parameters)
+        .set_initial_origin_position(Vec3(0, 20.0 , -length * 0.5))
+        .add_gravity(gravity)
+        ;
+
+    RodHandle rod3 = RodHandle(simulation, segments, length*Vec3(1.0, 0.0, 1.0).normalized(), 10*nRigidBodies, parameters)
+        .set_initial_origin_position(Vec3(1, 0, 1).normalized() * (-length * 0.5) + Vec3(0,20.0,0))
+        .add_gravity(gravity)
+        ;
+
+    RodHandle rod4 = RodHandle(simulation, segments, length*Vec3(1.0, 0.0, -1.0).normalized(), 10*nRigidBodies, parameters)
+        .set_initial_origin_position(Vec3(1, 0, -1).normalized() * (-length * 0.5) + Vec3(0,20.0,0))
+        .add_gravity(gravity)
+        ;
+
+    // RodHandle rod = RodHandle(simulation, vertices, 30, parameters)
+    //     .set_initial_origin_position(Vec3(0.0, 10.0 ,0.0 ))
+    //     .add_gravity(gravity)
+    //     ;
 
 
     RigidBody rb = simulation.simulables.rigid_bodies[0];
