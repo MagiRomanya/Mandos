@@ -1,6 +1,7 @@
 #include <Eigen/Geometry>
 
 #include "mandos.hpp"
+#include "colliders.hpp"
 #include "fem_element.hpp"
 #include "inertia_energies.hpp"
 #include "rigid_body.hpp"
@@ -307,4 +308,53 @@ RodHandle RodHandle::freeze_rigid_body(unsigned int index) const {
         simulation.frozen_dof.push_back(rb.index + index + i);
 
     return *this;
+}
+
+
+PlaneColliderHandle::PlaneColliderHandle(Simulation& simulation)
+    :simulation(simulation)
+{
+    PlaneCollider collider;
+    collider.center = Vec3::Zero();
+    collider.normal = Vec3(0.0, 1.0, 0.0);
+    index = simulation.colliders.plane_colliders.size();
+    simulation.colliders.plane_colliders.push_back(collider);
+}
+
+PlaneColliderHandle PlaneColliderHandle::set_origin_position(const Vec3& origin) const {
+    simulation.colliders.plane_colliders[index].center = origin;
+    return *this;
+}
+
+PlaneColliderHandle PlaneColliderHandle::set_direction(const Vec3& direction) const {
+    simulation.colliders.plane_colliders[index].normal = direction.normalized();
+    return *this;
+}
+
+SphereColliderHandle::SphereColliderHandle(Simulation& simulation)
+    :simulation(simulation)
+{
+    SphereCollider collider;
+    collider.center = Vec3::Zero();
+    collider.radius = 10.0;
+    index = simulation.colliders.sphere_colliders.size();
+    simulation.colliders.sphere_colliders.push_back(collider);
+}
+
+SphereColliderHandle SphereColliderHandle::set_origin_position(const Vec3& origin) const {
+    simulation.colliders.sphere_colliders[index].center = origin;
+    return *this;
+}
+
+SphereColliderHandle SphereColliderHandle::set_radius(const Scalar& radius) const {
+    simulation.colliders.sphere_colliders[index].radius = radius;
+    return *this;
+}
+
+
+SDFColliderHandle::SDFColliderHandle(Simulation& simulation, const SimulationMesh& sim_mesh)
+    :simulation(simulation)
+{
+    index = simulation.colliders.sdf_colliders.size();
+    simulation.colliders.sdf_colliders.emplace_back(sim_mesh);
 }

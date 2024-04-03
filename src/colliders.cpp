@@ -18,7 +18,7 @@ void PlaneCollider::compute_contact_geometry(const Vec3& point, ContactEvent& ou
 }
 
 void SDFCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out) const {
-    tmd::Result result = sdf.signed_distance(point);
+    tmd::Result result = sdf->signed_distance(point);
 
     // Compute normal from triangle
     const int triangle_idx = result.triangle_id;
@@ -40,7 +40,7 @@ void SDFCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out)
 }
 
 void find_point_particle_contact_events(const Colliders& colliders, const Simulables& simulables, const PhysicsState& state, std::vector<ContactEvent>& events) {
-    const Scalar particle_radius = 0.5;
+    const Scalar particle_radius = 0.1;
 #define COL(type, name)                                               \
     for (unsigned int j = 0; j < colliders.name.size(); j++) {        \
         colliders.name[j].compute_contact_geometry(point, event);     \
@@ -101,6 +101,17 @@ void compute_contact_events_energy_and_derivatives(const Scalar TimeStep, const 
 SDFCollider::SDFCollider(const SimulationMesh& mesh)
 {
     this->mesh = mesh;
-    this->sdf = tmd::TriangleMeshDistance(mesh.vertices.data(), mesh.vertices.size() / 3,
-                                          mesh.indices.data(), mesh.indices.size() / 3);
+    this->sdf = std::make_unique<tmd::TriangleMeshDistance>(mesh.vertices.data(), mesh.vertices.size() / 3,
+                                                            mesh.indices.data(), mesh.indices.size() / 3);
 }
+
+
+SDFCollider::SDFCollider(const SDFCollider &other) {
+    this->mesh = other.mesh;
+    this->sdf = std::make_unique<tmd::TriangleMeshDistance>(mesh.vertices.data(), mesh.vertices.size() / 3,
+                                                            mesh.indices.data(), mesh.indices.size() / 3);
+}
+
+// Define default constructor and destructor where the complete TriangleMeshDistance type is defined
+SDFCollider::SDFCollider() {}
+SDFCollider::~SDFCollider() {}

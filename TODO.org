@@ -55,5 +55,17 @@ CLOSED: [2024-02-20 Tue 09:26]
 
 
 * TODO Put most of the headers to the src directory and only let the user include mandos and viewmandos
-** TODO Figure out a way to hide the underlying structs e.g. RigidBody, Particle etc and only use the mandos API.
-Maybe this can be done using forward declaration struct RigidBody; and pointers.
+** TODO Figure out a way to hide the underlying structs e.g. RigidBody, Particle etc and only use the mandos API
+- Maybe this can be done using forward declaration struct RigidBody; and pointers.
+- Think this through. Right now is it possible to do a lot by having the internal structures accesible from the mandos.hpp. However, it might be a confusing API for a new user to take advantadge of.
+
+* DONE Implement contact
+** DONE Implement plane and spheres
+** DONE Implement arbitrary mesh SDF collider
+
+* TODO Test Rod differenciablity
+** TODO Initial testing
+** TODO Test initial conditions
+** TODO Test material parameters
+** TODO Test shape parameters
+** TODO Test control force parameters

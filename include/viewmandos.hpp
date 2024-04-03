@@ -193,6 +193,7 @@ private:
     bool enable_draw_particles = false;
     bool enable_draw_rigid_bodies = false;
     bool enable_draw_springs = false;
+    bool enable_draw_colliders = true;
     enum FEM_TETRAHEDRON_VISUALIZATION {TET_NONE, TET_MESH, TET_LINES};
     int enable_draw_fem_tetrahedrons = TET_NONE;
 

@@ -190,4 +190,39 @@ class RodHandle {
         Simulation& simulation;
 };
 
+class PlaneColliderHandle {
+    public:
+        PlaneColliderHandle(Simulation& simulation);
+
+        PlaneColliderHandle set_origin_position(const Vec3& origin) const;
+        PlaneColliderHandle set_direction(const Vec3& direction) const;
+
+        unsigned int index;
+
+    private:
+        Simulation& simulation;
+};
+
+class SphereColliderHandle {
+    public:
+        SphereColliderHandle(Simulation& simulation);
+
+        SphereColliderHandle set_origin_position(const Vec3& origin) const;
+        SphereColliderHandle set_radius(const Scalar& radius) const;
+
+        unsigned int index;
+
+    private:
+        Simulation& simulation;
+};
+
+class SDFColliderHandle {
+    public:
+        SDFColliderHandle(Simulation& simulation, const SimulationMesh& sim_mesh);
+
+        unsigned int index;
+    private:
+        Simulation& simulation;
+};
+
 #endif // MANDOS_H_

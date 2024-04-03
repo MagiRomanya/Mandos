@@ -1,11 +1,15 @@
 #ifndef COLLIDERS_H_
 #define COLLIDERS_H_
 
+#include <memory>
 #include <vector>
 #include "linear_algebra.hpp"
 #include "mesh.hpp"
 #include "physics_state.hpp"
-#include <tmd/TriangleMeshDistance.h>
+
+namespace tmd {
+    class TriangleMeshDistance;
+}
 
 struct ContactEvent {
     Vec3 normal;
@@ -28,10 +32,12 @@ struct PlaneCollider {
 
 struct SDFCollider {
     SDFCollider();
+    SDFCollider(const SDFCollider &other);
     SDFCollider(const SimulationMesh &mesh);
+    ~SDFCollider();
 
     SimulationMesh mesh;
-    tmd::TriangleMeshDistance sdf;
+    std::unique_ptr<tmd::TriangleMeshDistance> sdf;
 
     void compute_contact_geometry(const Vec3& point, ContactEvent& out) const;
 

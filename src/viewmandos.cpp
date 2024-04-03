@@ -41,6 +41,7 @@ Color MASS_SPRING_COLOR  = GREEN;
 Color FROZEN_PARTICLE_COLOR = WHITE;
 Color TETRAHEDRON_VISUALIZATION_COLOR = PURPLE;
 Color RODS_COLOR = DARKGREEN;
+Color COLLIDERS_COLOR = DARKPURPLE;
 
 inline Matrix matrix_eigen_to_raylib(const Mat4& m) {
     Matrix r = {
@@ -822,6 +823,8 @@ void MandosViewer::drawGUI() {
         GUI_control_color(RB_COLOR, "Rigid Body color");
         GUI_control_color(MASS_SPRING_COLOR, "Mass spring color");
         GUI_control_color(FEM_COLOR, "FEM color");
+        GUI_control_color(RODS_COLOR, "Rods color");
+        GUI_control_color(COLLIDERS_COLOR, "Colliders color");
 
         ImGui::SeparatorText("Simulable shaders");
         ImVec2 buttonBox = ImVec2(ImGui::GetContentRegionAvail().x, 30);
@@ -850,6 +853,7 @@ void MandosViewer::drawGUI() {
 
         ImGui::SeparatorText("Simulation state visualization");
         ImGui::Checkbox("Render simulable meshes", &enable_draw_simulable_meshes);
+        ImGui::Checkbox("Render colliders", &enable_draw_colliders);
         ImGui::Checkbox("Render particles", &enable_draw_particles);
         ImGui::Checkbox("Render rigid bodies", &enable_draw_rigid_bodies);
         ImGui::Checkbox("Render springs", &enable_draw_springs);
@@ -1234,6 +1238,8 @@ void MandosViewer::draw_simulation_state(const Simulation& simulation, const Phy
         draw_FEM_tetrahedrons_lines(simulation, state);
     else if (enable_draw_fem_tetrahedrons ==TET_MESH)
         draw_FEM_tetrahedrons(simulation, state);
+    if (enable_draw_colliders)
+        draw_colliders(simulation);
 }
 
 
@@ -1343,17 +1349,19 @@ void MandosViewer::draw_rods(const Simulation& simulation, const PhysicsState& s
 }
 
 void MandosViewer::draw_colliders(const Simulation& simulation) {
+    renderState->base_material.maps[MATERIAL_MAP_ALBEDO].color = COLLIDERS_COLOR;
+
     for (unsigned int i = 0; i < simulation.colliders.sphere_colliders.size(); i++) {
         const SphereCollider& sphere = simulation.colliders.sphere_colliders[i];
         Matrix transform = raylib_transform_matrix(Mat3::Identity(), sphere.radius * Mat3::Identity(), sphere.center);
-        DrawMesh(renderState->sphere_mesh, LoadMaterialDefault(), transform);
+        DrawMesh(renderState->sphere_mesh, renderState->base_material, transform);
     }
 
     for (unsigned int i = 0; i < simulation.colliders.plane_colliders.size(); i++) {
         const PlaneCollider& plane = simulation.colliders.plane_colliders[i];
         const Vec3 up = Vec3(0.0, 0.0, 1.0);
-        const Mat3 rotation = rotation_from_vector(plane.normal, up);
-        const Matrix transform = raylib_transform_matrix(rotation, 1000 * Mat3::Identity(), plane.center);
+        const Mat3 rotation = rotation_from_vector(-plane.normal, up);
+        const Matrix transform = raylib_transform_matrix(rotation, 300 * Mat3::Identity(), plane.center);
         DrawMesh(renderState->screen_rectangle_model.meshes[0], renderState->base_material, transform);
     }
 
@@ -1368,4 +1376,6 @@ void MandosViewer::draw_colliders(const Simulation& simulation) {
         Mesh raymesh = MeshGPUtoRaymesh(renderState->sdf_collider_meshes[i], mem_pool);
         DrawMesh(raymesh, renderState->base_material, MatrixIdentity());
     }
+
+    renderState->base_material.maps[MATERIAL_MAP_ALBEDO].color = WHITE;
 };

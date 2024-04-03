@@ -159,6 +159,24 @@ PYBIND11_MODULE(pymandos, m) {
         .def("freeze_rigid_body", &RodHandle::freeze_rigid_body)
         ;
 
+    // COLLIDERS
+    // -----------------------------------------------------------------------------
+    py::class_<PlaneColliderHandle>(m, "PlaneCollider")
+        .def(py::init<Simulation&>())
+        .def("set_origin_position", &PlaneColliderHandle::set_origin_position)
+        .def("set_direction", &PlaneColliderHandle::set_direction)
+        ;
+
+    py::class_<SphereColliderHandle>(m, "SphereCollider")
+        .def(py::init<Simulation&>())
+        .def("set_origin_position", &SphereColliderHandle::set_origin_position)
+        .def("set_radius", &SphereColliderHandle::set_radius)
+        ;
+
+    py::class_<SDFColliderHandle>(m, "SDFCollider")
+        .def(py::init<Simulation&, const SimulationMesh&>())
+        ;
+
     // DIFFERENTIABLE SIMULATION
     // -----------------------------------------------------------------------------
     py::class_<LossFunctionAndDerivatives>(m, "LossFunctionAndDerivatives")

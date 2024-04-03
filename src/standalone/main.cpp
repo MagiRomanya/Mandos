@@ -7,15 +7,12 @@ int main(void) {
     // Simulation description
     Simulation simulation;
 
-    PlaneCollider plane = {
-    .center = Vec3(0.0, -1.0, 0.0),
-    .normal = Vec3(0.0, 1.0, 0.0),
-    };
-
     SimulationMesh collider_mesh = SimulationMesh("resources/obj/monke.obj");
-    SDFCollider mesh_collider = SDFCollider(collider_mesh);
-    // simulation.colliders.plane_colliders.push_back(plane);
-    simulation.colliders.sdf_colliders.push_back(mesh_collider);
+    SDFColliderHandle sdf_collider = SDFColliderHandle(simulation, collider_mesh);
+    PlaneColliderHandle plane_collider = PlaneColliderHandle(simulation)
+        .set_direction(Vec3(0.0, 1.0, 0.0))
+        .set_origin_position(Vec3(0.0, -30.0, 0.0))
+        ;
 
     simulation.TimeStep = 0.05;
     const Scalar mass = 10;
@@ -48,7 +45,7 @@ int main(void) {
     .intrinsic_darboux = Vec3::Zero(),
     // .intrinsic_darboux = Vec3(0.0, 0.0, 0.1),
     // .stiffness_tensor = 50000000.0 * Vec3::Ones(),
-    .stiffness_tensor = 5000.0 * Vec3::Ones(),
+    .stiffness_tensor = 500000.0 * Vec3::Ones(),
     // .stiffness_tensor = Vec3(500000.0, 500000.0, 500000.0),
     };
 
