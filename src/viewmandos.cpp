@@ -261,8 +261,8 @@ TetrahedronMeshVisualization::~TetrahedronMeshVisualization() {
     SHADER(axis_shader, "resources/shaders/axis.vs", "resources/shaders/axis.fs") \
     SHADER(instancing_shader, "resources/shaders/lighting_instancing.vs", "resources/shaders/lighting.fs") \
     SHADER(solid_shader, "resources/shaders/lighting.vs", "resources/shaders/diffuse_solid_color.fs") \
-    SHADER(raymarching_shader, "resources/shaders/raymarching.vs", "resources/shaders/raymarching.fs") \
-    SHADER(texture_coordinates_shader, "resources/shaders/lighting.vs", "resources/shaders/uv.fs")
+    SHADER(texture_coordinates_shader, "resources/shaders/lighting.vs", "resources/shaders/uv.fs") \
+    SHADER(rod_skinning_shader, "resources/shaders/rod_skinning.vs", "resources/shaders/lighting.fs")
 
 /**
  * INFO Global data for our renderer that will be used throughout the runtime of the application.
@@ -286,9 +286,6 @@ struct RenderState {
 #define SHADER(var, vspath, fspath) Shader var;
     SHADER_LIST
 #undef SHADER
-
-    int raymarching_locs[10];
-    Texture1D RodVector;
 
     // TEXTURES
     // -------------------------------------------------------------
@@ -349,13 +346,6 @@ void RenderState::initialize() {
     instancing_shader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(instancing_shader, "instanceTransform");
     solid_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(solid_shader, "slicePlane");
     normals_shader.locs[SHADER_LOC_SLICE_PLANE] = GetShaderLocation(normals_shader, "slicePlane");
-    raymarching_locs[0] = GetShaderLocation(raymarching_shader, "viewPos");
-    raymarching_locs[1] = GetShaderLocation(raymarching_shader, "viewTarget");
-    raymarching_locs[2] = GetShaderLocation(raymarching_shader, "Resolution");
-    raymarching_locs[3] = GetShaderLocation(raymarching_shader, "RodVectorSize");
-
-
-    RodVector = CreateTexture1D();
 
     // Set sefault shader
     base_shader = bling_phong_shader;
@@ -372,7 +362,6 @@ void RenderState::initialize() {
     vector_model = LoadModel("resources/obj/vector.obj");
     cylinder_model = LoadModel("resources/obj/cylinder.obj");
     screen_rectangle_model = LoadModel("resources/obj/screen-rectangle.obj");
-    screen_rectangle_model.materials[0] = createMaterialFromShader(raymarching_shader);
     sphere_mesh = GenMeshSphere(0.1, SPHERE_SUBDIVISIONS, SPHERE_SUBDIVISIONS);
     axis3D_model = LoadModel("resources/obj/axis.obj");
     std::vector<float> vertices = {0.0f, 1.0f, 4.0f, 2.0f};
@@ -412,7 +401,6 @@ void RenderState::deinitialize() {
     UnloadTexture(diffuseTexture);
     UnloadTexture(normalMapTexture);
     UnloadRenderTexture(screenFBO);
-    rlUnloadTexture(RodVector.id);
 
     // SkyBox
     UnloadTexture(sky_box_model.materials[0].maps[MATERIAL_MAP_CUBEMAP].texture);
@@ -510,11 +498,6 @@ void MandosViewer::begin_drawing() {
     float cameraPos[3] = { renderState->camera.position.x, renderState->camera.position.y, renderState->camera.position.z };
     SetShaderValue(renderState->base_shader, renderState->base_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
     SetShaderValue(renderState->instancing_shader, renderState->instancing_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
-    SetShaderValue(renderState->raymarching_shader, renderState->raymarching_locs[0], cameraPos, SHADER_UNIFORM_VEC3);
-    float cameraTarget[3] = { renderState->camera.target.x, renderState->camera.target.y, renderState->camera.target.z };
-    SetShaderValue(renderState->raymarching_shader, renderState->raymarching_locs[1], cameraTarget, SHADER_UNIFORM_VEC3);
-    float resolution[2] = {static_cast<float>(renderState->screenFBO.texture.width), static_cast<float>(renderState->screenFBO.texture.height)};
-    SetShaderValue(renderState->raymarching_shader, renderState->raymarching_locs[2], resolution, SHADER_UNIFORM_VEC2);
 
     // ClearBackground(RAYWHITE);
     rlSetBlendMode(RL_BLEND_SRC_ALPHA);
@@ -850,6 +833,11 @@ void MandosViewer::drawGUI() {
             renderState->textureFrameOpen = not renderState->textureFrameOpen;
         }
         ImGui::Checkbox("Smooth normals", &enable_normal_smoothing);
+        static bool enableWireframe = false;
+        if (ImGui::Checkbox("Wireframe mode", &enableWireframe)) {
+            if (enableWireframe) rlEnableWireMode();
+            else rlDisableWireMode();
+        }
 
         ImGui::SeparatorText("Simulation state visualization");
         ImGui::Checkbox("Render simulable meshes", &enable_draw_simulable_meshes);
@@ -857,6 +845,7 @@ void MandosViewer::drawGUI() {
         ImGui::Checkbox("Render particles", &enable_draw_particles);
         ImGui::Checkbox("Render rigid bodies", &enable_draw_rigid_bodies);
         ImGui::Checkbox("Render springs", &enable_draw_springs);
+        ImGui::Checkbox("Render rods", &enable_draw_rods);
         static bool bool_draw_fem_tetrahedrons = false;
         if (ImGui::Checkbox("Render tetrahedrons", &bool_draw_fem_tetrahedrons)) {
             if (bool_draw_fem_tetrahedrons) enable_draw_fem_tetrahedrons = TET_LINES;
@@ -1230,13 +1219,15 @@ void MandosViewer::draw_simulation_state(const Simulation& simulation, const Phy
     SavedState = &state;
     if (enable_draw_springs)
         draw_springs(simulation, state);
+    if (enable_draw_rods)
+        draw_rods(simulation, state);
     if (enable_draw_particles)
         draw_particles(simulation, state);
     if (enable_draw_rigid_bodies)
         draw_rigid_bodies(simulation, state);
-    if (enable_draw_fem_tetrahedrons ==TET_LINES)
+    if (enable_draw_fem_tetrahedrons == TET_LINES)
         draw_FEM_tetrahedrons_lines(simulation, state);
-    else if (enable_draw_fem_tetrahedrons ==TET_MESH)
+    else if (enable_draw_fem_tetrahedrons == TET_MESH)
         draw_FEM_tetrahedrons(simulation, state);
     if (enable_draw_colliders)
         draw_colliders(simulation);
@@ -1277,60 +1268,6 @@ void MandosViewer::draw_vector(const Vec3& vector, const Vec3& origin) {
 }
 
 void MandosViewer::draw_rods(const Simulation& simulation, const PhysicsState& state) {
-    // std::vector<float> rod_vector;
-    // int i = 0;
-    // for (i = 0; i < simulation.energies.rod_segments.size(); i++) {
-    //     const RodSegment s = simulation.energies.rod_segments[i];
-    //     const Vec3 x1 = s.rbB.get_COM_position(state.x);
-    //     const Vec3 x2 = s.rbA.get_COM_position(state.x);
-
-    //     rod_vector.push_back(x1.x());
-    //     rod_vector.push_back(x1.y());
-    //     rod_vector.push_back(x1.z());
-
-    //     rod_vector.push_back(x2.x());
-    //     rod_vector.push_back(x2.y());
-    //     rod_vector.push_back(x2.z());
-    // }
-
-    // int rod_vector_size = rod_vector.size();
-
-    // // Update Rod endpoints positions
-    // Mesh mesh = renderState->screen_rectangle_model.meshes[0];
-    // Shader shader = renderState->raymarching_shader;
-
-    // UpdateTexture1D(renderState->RodVector, rod_vector);
-    // SetShaderValue(shader, renderState->raymarching_locs[3], &rod_vector_size, SHADER_UNIFORM_INT);
-    // rlEnableShader(shader.id);
-    // UseTexture1D(renderState->RodVector);
-
-    // // const int textureSlot = 0;
-    // // rlSetUniform(rlGetLocationUniform(shader.id, "RodVector"), &textureSlot, SHADER_UNIFORM_INT, 1);
-    // if (!rlEnableVertexArray(mesh.vaoId)) {
-    //     // Bind mesh VBO data: vertex position (shader-location = 0)
-    //     rlEnableVertexBuffer(mesh.vboId[0]);
-    //     rlSetVertexAttribute(shader.locs[SHADER_LOC_VERTEX_POSITION], 3, RL_FLOAT, 0, 0, 0);
-    //     rlEnableVertexAttribute(shader.locs[SHADER_LOC_VERTEX_POSITION]);
-    //     if (mesh.indices != NULL) rlEnableVertexBufferElement(mesh.vboId[6]);
-    // }
-    // // WARNING: Disable vertex attribute color input if mesh can not provide that data (despite location being enabled in shader)
-    // if (mesh.vboId[3] == 0) rlDisableVertexAttribute(shader.locs[SHADER_LOC_VERTEX_COLOR]);
-
-    // // Draw mesh
-    // if (mesh.indices != NULL) rlDrawVertexArrayElements(0, mesh.triangleCount*3, 0);
-    // else rlDrawVertexArray(0, mesh.vertexCount);
-
-    // // Disable all possible vertex array objects (or VBOs)
-    // rlDisableVertexArray();
-    // rlDisableVertexBuffer();
-    // rlDisableVertexBufferElement();
-
-    // // Disable shader program
-    // rlDisableShader();
-
-    // rlEnableShader(0);
-
-
     std::vector<Matrix> transforms;
     transforms.reserve(simulation.energies.rod_segments.size());
 
@@ -1372,10 +1309,97 @@ void MandosViewer::draw_colliders(const Simulation& simulation) {
         }
     }
     for (unsigned int i = 0; i < simulation.colliders.sdf_colliders.size(); i++) {
-        const SDFCollider& collider = simulation.colliders.sdf_colliders[i];
         Mesh raymesh = MeshGPUtoRaymesh(renderState->sdf_collider_meshes[i], mem_pool);
         DrawMesh(raymesh, renderState->base_material, MatrixIdentity());
     }
 
     renderState->base_material.maps[MATERIAL_MAP_ALBEDO].color = WHITE;
 };
+
+
+
+void compute_rod_skinning_weights(const std::vector<Scalar>& vertices, const unsigned int segments,
+                                  Eigen::Matrix<Scalar,2,Eigen::Dynamic>& boneWeights,
+                                  Eigen::Matrix<unsigned int, 2, Eigen::Dynamic>& boneIDs) {
+    constexpr Scalar MERGE_REGION = 0.5;
+    const unsigned int n_vertices = vertices.size() / 3;
+    const unsigned int final_segment = segments - 1;
+    boneWeights = Eigen::Matrix<Scalar,2,Eigen::Dynamic>::Zero(2, n_vertices);
+    boneIDs = Eigen::Matrix<unsigned int,2,Eigen::Dynamic>::Zero(2, n_vertices);
+
+    // Find the bounds of the mesh in the z axis
+    std::pair<Scalar, unsigned int> max_z = std::pair<Scalar, unsigned int>(-1e10, 0);
+    std::pair<Scalar, unsigned int> min_z = std::pair<Scalar, unsigned int>(1e10, 0);
+    for (unsigned int i = 0; i < n_vertices; i++) {
+        const Scalar z = vertices[3*i+2];
+        if (z > max_z.first) {
+            max_z.first = z;
+            max_z.second = i;
+        }
+        if (z < min_z.first) {
+            min_z.first = z;
+            min_z.second = i;
+        }
+    }
+
+    const Scalar epsilon = 1e-6;
+    max_z.first += epsilon; // Avoid edge case in the end of the rod
+    const Scalar normalization_constant = 1.0 / (max_z.first - min_z.first);
+    const Scalar segment_width = 1.0 / segments;
+
+    for (unsigned int i = 0; i < n_vertices; i++) {
+        const Vec3 vertex = Vec3(vertices[3*i+0], vertices[3*i+1], vertices[3*i+2]);
+        const Scalar normalized_z = (vertex.z() - min_z.first) * normalization_constant;
+        const unsigned int current_segment = static_cast<unsigned int>(std::floor(normalized_z / segment_width));
+        const Scalar segment_rel_pos = normalized_z / segment_width - static_cast<Scalar>(current_segment);
+
+        boneWeights(0, i) = 1.0;
+        boneIDs(0, i) = current_segment;
+        if (segment_rel_pos < MERGE_REGION && current_segment != 0) {
+            const Scalar proximity = segment_rel_pos / MERGE_REGION;
+            // DEBUG_LOG(proximity);
+            // DEBUG_LOG(segment_rel_pos);
+            // DEBUG_LOG(MERGE_REGION);
+            boneWeights(0, i) = 0.5 * proximity + 0.5;
+            boneWeights(1, i) = 1.0 - boneWeights(0, i);
+            boneIDs(1, i) = current_segment - 1;
+        }
+        else if (segment_rel_pos > 1.0 - MERGE_REGION && current_segment != final_segment) {
+            const Scalar proximity = (segment_rel_pos - (1.0 - MERGE_REGION)) / MERGE_REGION;
+            boneWeights(0, i) = 1.0 - 0.5 * proximity + 0.5;
+            boneWeights(1, i) = 0.5 * proximity + 0.5;
+            boneIDs(1, i) = current_segment + 1;
+        }
+    }
+}
+
+
+void MandosViewer::draw_rod(const RodHandle& rod, const PhysicsState& state, const SkinnedRodGPU& rodGPU) {
+    if (not enable_draw_simulable_meshes) return;
+    std::vector<Matrix> transforms;
+    const unsigned int start_index = rod.bounds.dof_index;
+    const unsigned int n_segments = rod.get_n_rigid_bodies() - 1;
+    for (unsigned int i = 0; i < n_segments; i++) {
+        const Vec3 posA = state.x.segment<3>(start_index + 6*i);
+        const Vec3 thetaA = state.x.segment<3>(start_index + 6*i + 3);
+        const Vec3 posB = state.x.segment<3>(start_index + 6*(i+1));
+        const Vec3 thetaB = state.x.segment<3>(start_index + 6*(i+1) + 3);
+
+        const Vec3 pos = 0.5 * (posA + posB);
+        const Mat3 rot = 0.5 * (compute_rotation_matrix_rodrigues(thetaA) + compute_rotation_matrix_rodrigues(thetaB));
+
+        // const Vec3 pos = posA;
+        // const Mat3 rot = compute_rotation_matrix_rodrigues(thetaA);
+
+        // const Vec3 pos = Vec3(0.0, i, i);
+        // const Mat3 rot = Mat3::Identity();
+        Matrix transform = raylib_transform_matrix(rot, Mat3::Identity(), pos);
+
+        transforms.push_back(transform);
+    }
+
+    Material material = LoadMaterialDefault();
+    material.shader = renderState->rod_skinning_shader;
+    material.maps[MATERIAL_MAP_DIFFUSE].color = RODS_COLOR;
+    DrawSkinnedRodGPU(rodGPU, material, transforms);
+}

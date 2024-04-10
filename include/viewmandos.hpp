@@ -130,6 +130,14 @@ struct MeshGPU {
     float *vertices, *texcoords, *normals, *tangents;
 };
 
+struct SkinnedRodGPU {
+    unsigned int VAO, posVBO, normalVBO, uvVBO, tangentVBO, idVBO, weightVBO;
+    RenderMesh mesh;
+    SkinnedRodGPU(const RenderMesh& mesh, const unsigned int segments);
+    ~SkinnedRodGPU();
+};
+
+
 struct MandosViewer {
     const int initialScreenWidth = 1600;
     const int initialScreenHeight = 900;
@@ -160,6 +168,8 @@ struct MandosViewer {
     void draw_FEM(const FEMHandle& fem, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh);
 
     void draw_MassSpring(const MassSpringHandle& mass_spring, const PhysicsState& state, MeshGPU& gpuMesh, RenderMesh& renderMesh, SimulationMesh& simMesh);
+
+    void draw_rod(const RodHandle& rod, const PhysicsState& state, const SkinnedRodGPU& rodGPU);
 
     void draw_mesh(const Mat4& transform, const MeshGPU& mesh);
 
@@ -193,6 +203,7 @@ private:
     bool enable_draw_particles = false;
     bool enable_draw_rigid_bodies = false;
     bool enable_draw_springs = false;
+    bool enable_draw_rods = false;
     bool enable_draw_colliders = true;
     enum FEM_TETRAHEDRON_VISUALIZATION {TET_NONE, TET_MESH, TET_LINES};
     int enable_draw_fem_tetrahedrons = TET_NONE;
@@ -207,5 +218,9 @@ private:
     const Simulation* SavedSim = nullptr;
     const PhysicsState* SavedState = nullptr;
 };
+
+void compute_rod_skinning_weights(const std::vector<Scalar>& vertices, const unsigned int segments,
+                                  Eigen::Matrix<Scalar,2,Eigen::Dynamic>& boneWeights,
+                                  Eigen::Matrix<unsigned int, 2, Eigen::Dynamic>& boneIDs);
 
 #endif // VIEWMANDOS_H_

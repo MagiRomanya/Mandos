@@ -27,6 +27,7 @@ PYBIND11_MODULE(pymandos, m) {
 
     py::class_<PhysicsState>(m, "PhysicsState")
         .def(py::init())
+        .def("get_nDoF", &PhysicsState::get_nDoF)
         .def_readwrite("x", &PhysicsState::x)
         .def_readwrite("v", &PhysicsState::v)
         .def("copy",  [](const PhysicsState &self) {
@@ -155,7 +156,9 @@ PYBIND11_MODULE(pymandos, m) {
         .def(py::init<Simulation&, const std::vector<Scalar>&, Scalar, RodSegmentParameters>())
         .def("compute_center_of_mass", &RodHandle::compute_center_of_mass)
         .def("add_gravity", &RodHandle::add_gravity)
-        .def("set_initial_origin_position", &RodHandle::set_initial_origin_position)
+        .def("set_initial_rigid_body_position", &RodHandle::set_initial_rigid_body_position)
+        .def("set_initial_rigid_body_velocity", &RodHandle::set_initial_rigid_body_velocity)
+        .def("set_initial_rod_position", &RodHandle::set_initial_rod_position)
         .def("freeze_rigid_body", &RodHandle::freeze_rigid_body)
         ;
 
@@ -214,6 +217,7 @@ PYBIND11_MODULE(pymandos, m) {
         .def("draw_MassSpring", &MandosViewer::draw_MassSpring)
         .def("draw_mesh", &MandosViewer::draw_mesh)
         .def("draw_springs", &MandosViewer::draw_springs)
+        .def("draw_rods", &MandosViewer::draw_rods)
         .def("draw_particles", &MandosViewer::draw_particles)
         .def("draw_rigid_bodies", &MandosViewer::draw_rigid_bodies)
         .def("draw_FEM_tetrahedrons", &MandosViewer::draw_FEM_tetrahedrons_lines)

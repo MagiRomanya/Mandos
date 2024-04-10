@@ -31,6 +31,7 @@ SimulableBounds generate_rod(Simulation& simulation,
     const Scalar rb_mass = TotalMass / (segments + 1);
 
     // Resize degrees of freedom
+    const unsigned int dof_index = static_cast<unsigned int>(simulation.initial_state.x.size());
     simulation.initial_state.add_size(nDoF);
 
     // Generate the rigid bodies
@@ -75,6 +76,7 @@ SimulableBounds generate_rod(Simulation& simulation,
     bounds.nDoF = nDoF;
     bounds.n_rb = segments + 1;
     bounds.rb_index = rigid_body_index;
+    bounds.dof_index = dof_index;
 
     return bounds;
 }
@@ -96,6 +98,7 @@ SimulableBounds generate_rod(Simulation& simulation,
     const Scalar rb_mass = TotalMass / nRB;
 
     // Resize degrees of freedom
+    const unsigned int dof_index = static_cast<unsigned int>(simulation.initial_state.x.size());
     simulation.initial_state.add_size(nDoF);
 
     // Generate the rigid bodies
@@ -166,6 +169,7 @@ SimulableBounds generate_rod(Simulation& simulation,
     bounds.nDoF = nDoF;
     bounds.n_rb = nRB;
     bounds.rb_index = rigid_body_index;
+    bounds.dof_index = dof_index;
 
     return bounds;
 }

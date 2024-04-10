@@ -179,8 +179,10 @@ class RodHandle {
         Vec3 compute_center_of_mass(const PhysicsState& state) const;
 
         RodHandle add_gravity(Scalar gravity) const;
-        RodHandle set_initial_origin_position(const Vec3& origin) const;
-        RodHandle freeze_rigid_body(unsigned int index) const;
+        RodHandle set_initial_rigid_body_position(const Scalar s, const Vec3& x) const;
+        RodHandle set_initial_rigid_body_velocity(const Scalar s, const Vec3& v) const;
+        RodHandle set_initial_rod_position(const Vec3& origin) const;
+        RodHandle freeze_rigid_body(Scalar s) const;
 
         inline unsigned int get_n_rigid_bodies() const { return bounds.n_rb; }
 

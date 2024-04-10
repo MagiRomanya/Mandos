@@ -7,7 +7,7 @@ int main(void) {
     // Simulation description
     Simulation simulation;
 
-    SimulationMesh collider_mesh = SimulationMesh("resources/obj/monke.obj");
+    SimulationMesh collider_mesh = SimulationMesh("resources/obj/templateM.obj");
     SDFColliderHandle sdf_collider = SDFColliderHandle(simulation, collider_mesh);
     PlaneColliderHandle plane_collider = PlaneColliderHandle(simulation)
         .set_direction(Vec3(0.0, 1.0, 0.0))
@@ -16,98 +16,69 @@ int main(void) {
 
     simulation.TimeStep = 0.05;
     const Scalar mass = 10;
-    const Scalar gravity = -9.8;
-
-    const unsigned int nRigidBodies = 30;
-    const Scalar L0 = 0.5;
-    const Scalar midpoint = L0 * nRigidBodies * 0.5;
-    const Vec3 fixer_pos0 = Vec3(0, 4, 0);
-    const Vec3 fixer_pos1 = Vec3(0, 1, -midpoint);
-    const Vec3 fixer_pos2 = Vec3(0, 1, midpoint - L0);
-    ParticleHandle p_fix0 = ParticleHandle(simulation,1)
-        .freeze()
-        .set_initial_position(fixer_pos0);
-    ParticleHandle p_fix1 = ParticleHandle(simulation,1)
-        .freeze()
-        .set_initial_position(fixer_pos1);
-
-    ParticleHandle p_fix2 = ParticleHandle(simulation,1)
-        .freeze()
-        .set_initial_position(fixer_pos2);
+    const Scalar gravity = -9.8 * mass;
 
     const RodSegmentParameters parameters = {
-    .Ks = 5000.0,
-    .L0 = L0,
+    .Ks = 50000.0,
+    .L0 = 0.5,
     .translational_damping = 5000.0,
     .rotational_damping = 0.0,
-    // .constraint_stiffness = 60000.0,
     .constraint_stiffness = 60000.0,
     .intrinsic_darboux = Vec3::Zero(),
-    // .intrinsic_darboux = Vec3(0.0, 0.0, 0.1),
     // .stiffness_tensor = 50000000.0 * Vec3::Ones(),
-    .stiffness_tensor = 500000.0 * Vec3::Ones(),
+    .stiffness_tensor = 5000.0 * Vec3::Ones(),
     // .stiffness_tensor = Vec3(500000.0, 500000.0, 500000.0),
     };
 
-    std::vector<Scalar> vertices;
-    LoadCurveTinyObj("resources/obj/spring-curve.obj", vertices);
 
-    const Scalar length = 100;
+    const Scalar height = 20.0;
+    const Scalar length = 40.0;
+    // const Scalar length = 10.0;
     const unsigned int segments = 100;
-    RodHandle rod = RodHandle(simulation, segments, length*Vec3(1.0, 0.0, 0.0).normalized(), 10*nRigidBodies, parameters)
-        .set_initial_origin_position(Vec3(-length * 0.5, 20.0 , 0.0 ))
+    RodHandle rod1 = RodHandle(simulation, segments, length*Vec3(1.0, 0.0, 0.0).normalized(), mass * segments, parameters)
+        .set_initial_rod_position(Vec3(-length * 0.5, height, 0.0 ))
         .add_gravity(gravity)
         ;
 
-    RodHandle rod2 = RodHandle(simulation, segments, length*Vec3(0.0, 0.0, 1.0).normalized(), 10*nRigidBodies, parameters)
-        .set_initial_origin_position(Vec3(0, 20.0 , -length * 0.5))
+    RodHandle rod2 = RodHandle(simulation, segments, length*Vec3(0.0, 0.0, 1.0).normalized(), mass*segments, parameters)
+        .set_initial_rod_position(Vec3(0, height , -length * 0.5))
         .add_gravity(gravity)
         ;
 
-    RodHandle rod3 = RodHandle(simulation, segments, length*Vec3(1.0, 0.0, 1.0).normalized(), 10*nRigidBodies, parameters)
-        .set_initial_origin_position(Vec3(1, 0, 1).normalized() * (-length * 0.5) + Vec3(0,20.0,0))
+    RodHandle rod3 = RodHandle(simulation, segments, length*Vec3(1.0, 0.0, 1.0).normalized(), mass*segments, parameters)
+        .set_initial_rod_position(Vec3(1, 0, 1).normalized() * (-length * 0.5) + Vec3(0,height,0))
         .add_gravity(gravity)
         ;
 
-    RodHandle rod4 = RodHandle(simulation, segments, length*Vec3(1.0, 0.0, -1.0).normalized(), 10*nRigidBodies, parameters)
-        .set_initial_origin_position(Vec3(1, 0, -1).normalized() * (-length * 0.5) + Vec3(0,20.0,0))
+    RodHandle rod4 = RodHandle(simulation, segments, length*Vec3(1.0, 0.0, -1.0).normalized(), mass*segments, parameters)
+        .set_initial_rod_position(Vec3(1, 0, -1).normalized() * (-length * 0.5) + Vec3(0,height,0))
         .add_gravity(gravity)
         ;
 
-    // RodHandle rod = RodHandle(simulation, vertices, 30, parameters)
-    //     .set_initial_origin_position(Vec3(0.0, 10.0 ,0.0 ))
+
+
+    // std::vector<Scalar> spring_curve;
+    // LoadCurveTinyObj("resources/obj/spring-curve.obj", spring_curve);
+    // RodHandle rod = RodHandle(simulation, spring_curve, 30, parameters)
+    //     // .set_initial_origin_position(Vec3(0, 20.0, -4.0))
     //     .add_gravity(gravity)
     //     ;
 
 
-    RigidBody rb = simulation.simulables.rigid_bodies[0];
-    RigidBody rb2 = simulation.simulables.rigid_bodies[nRigidBodies-1];
+    // RigidBody rb = simulation.simulables.rigid_bodies[0];
+    // RigidBody rb2 = simulation.simulables.rigid_bodies[rod.get_n_rigid_bodies()-1];
 
     // for (unsigned int i = 0; i < 6; i++) {
-    //     simulation.frozen_dof.push_back(rb.index+i);
-    //     // simulation.frozen_dof.push_back(rb2.index+i);
+    //     // simulation.frozen_dof.push_back(rb.index+i);
+    //     simulation.frozen_dof.push_back(rb2.index+i);
     // }
-
-    SpringParameters spring_param0 = SpringParameters(500.0,
-                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos0).norm(),
-                                                     10.0);
-    SpringParameters spring_param1 = SpringParameters(500.0,
-                                                     (rb.get_COM_position(simulation.initial_state.x) - fixer_pos0).norm(),
-                                                     10.0);
-    SpringParameters spring_param2 = SpringParameters(500.0,
-                                                     (rb2.get_COM_position(simulation.initial_state.x) - fixer_pos0).norm(),
-                                                     10.0);
-
-    // simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix0.particle, spring_param1);
-    // simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix0.particle, spring_param2);
-
-    // simulation.energies.particle_springs.emplace_back(Particle(rb.mass, rb.index), p_fix1.particle, spring_param1);
-    // simulation.energies.particle_springs.emplace_back(Particle(rb2.mass, rb2.index), p_fix2.particle, spring_param2);
 
 
     PhysicsState state = simulation.initial_state;
     // Render loop
     MandosViewer viewer;
+    RenderMesh rodMesh = RenderMesh("resources/obj/skinning-cylinder.obj");
+    SkinnedRodGPU rodGPU = SkinnedRodGPU(rodMesh, rod1.get_n_rigid_bodies() - 1);
     bool simulation_paused = true;
     Scalar time = 0.0;
     while (not viewer.window_should_close()) {
@@ -148,9 +119,15 @@ int main(void) {
         // viewer.draw_particles(simulation, state);
         // viewer.draw_rigid_bodies(simulation, state);
         viewer.draw_springs(simulation, state);
-        viewer.draw_rods(simulation, state);
-        viewer.draw_colliders(simulation);
+        viewer.draw_rod(rod1, state, rodGPU);
+        viewer.draw_rod(rod2, state, rodGPU);
+        viewer.draw_rod(rod3, state, rodGPU);
+        viewer.draw_rod(rod4, state, rodGPU);
+        // viewer.draw_rods(simulation, state);
 
         viewer.end_drawing();
     }
+
+    Eigen::Matrix<Scalar,2,Eigen::Dynamic> boneWeights;
+    Eigen::Matrix<unsigned int, 2, Eigen::Dynamic> boneIDs;
 }

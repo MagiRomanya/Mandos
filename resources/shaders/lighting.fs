@@ -79,4 +79,7 @@ void main()
     if (!gl_FrontFacing) {
         finalColor = vec4(vec3(1.0) - finalColor.xyz, 1.0);
     }
+    // finalColor = vec4(0.5*fragNormal + 0.5, 1.0);
+    // finalColor = vec4(normalize(fragTexCoord), 0.0, 1.0);
+    // finalColor = vec4(fragTexCoord, 0.0, 1.0);
 }

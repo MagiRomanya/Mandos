@@ -262,11 +262,27 @@ RodHandle RodHandle::add_gravity(Scalar gravity) const {
     return *this;
 }
 
-RodHandle RodHandle::set_initial_origin_position(const Vec3& origin) const {
+RodHandle RodHandle::set_initial_rod_position(const Vec3& origin) const {
     for (unsigned int i = 0; i < bounds.n_rb; i++) {
         const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + i];
         simulation.initial_state.x.segment<3>(rb.index) += origin;
     }
+    return *this;
+}
+
+RodHandle RodHandle::set_initial_rigid_body_position(const Scalar s, const Vec3& x) const {
+    assert(s >= 0 && s <= 1.0);
+    const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb));
+    const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + index];
+    simulation.initial_state.x.segment<3>(rb.index) = x;
+    return *this;
+}
+
+RodHandle RodHandle::set_initial_rigid_body_velocity(const Scalar s, const Vec3& v) const {
+    assert(s >= 0 && s <= 1.0);
+    const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb - 1));
+    const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + index];
+    simulation.initial_state.v.segment<3>(rb.index) = v;
     return *this;
 }
 
@@ -298,11 +314,9 @@ RodHandle RodHandle::set_initial_origin_position(const Vec3& origin) const {
 //     return *this;
 // }
 
-RodHandle RodHandle::freeze_rigid_body(unsigned int index) const {
-    if (index >= bounds.n_rb) {
-        std::cerr << "ERROR::ROD_HANDLE::FREEZE_RIGID_BODY: The rigid body index is out of bounds!" << std::endl;
-        return *this;
-    }
+RodHandle RodHandle::freeze_rigid_body(Scalar s) const {
+    assert(s >= 0 && s <= 1.0);
+    const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb));
     const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + index];
     for (unsigned int i = 0; i < 6; i++)
         simulation.frozen_dof.push_back(rb.index + index + i);

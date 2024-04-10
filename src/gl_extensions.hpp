@@ -1,7 +1,9 @@
 #ifndef GL_EXTENSIONS_H_
 #define GL_EXTENSIONS_H_
 
+#include "mesh.hpp"
 #include "raylib.h"
+#include "viewmandos.hpp"
 #include <vector>
 
 /**
@@ -50,5 +52,7 @@ struct LinesGPU {
 
     ~LinesGPU();
 };
+
+void DrawSkinnedRodGPU(const SkinnedRodGPU& rod, Material material, const std::vector<Matrix>& bone_transforms);
 
 #endif // GL_EXTENSIONS_H_

@@ -7,6 +7,7 @@
 #include "raylib.h"
 #include "raymath.h"
 #include "utility_functions.hpp"
+#include "viewmandos.hpp"
 #include <rlgl.h>
 
 // OPENGL ERROR HANDLING
@@ -39,6 +40,7 @@ void EnableUserDefinedClipping() {
 void DisableUserDefinedClipping() {
     GL_CALL(glDisable(GL_CLIP_DISTANCE0));
 }
+
 
 // Multisampled framebuffer, color and depth attachements
 unsigned int msFBO, msRBO, msTexture;
@@ -244,4 +246,163 @@ LinesGPU::~LinesGPU() {
     // Destroy GPU resources
     GL_CALL(glDeleteBuffers(1, &VBO));
     GL_CALL(glDeleteVertexArrays(1, &VAO));
+}
+
+inline std::vector<float> static_cast_vector_to_float(const std::vector<Scalar>& vec) {
+    std::vector<float> out;
+    out.resize(vec.size());
+    for (unsigned int i = 0; i < vec.size(); i++)
+        out[i] = static_cast<float>(vec[i]);
+    return out;
+}
+
+SkinnedRodGPU::SkinnedRodGPU(const RenderMesh& mesh, const unsigned int segments) {
+    this->mesh = mesh;
+    // Compute skinning weights
+    Eigen::Matrix<Scalar, 2, Eigen::Dynamic> weightsMat;
+    Eigen::Matrix<unsigned int, 2, Eigen::Dynamic> boneIDsMat;
+    compute_rod_skinning_weights(mesh.vertices, segments, weightsMat, boneIDsMat);
+
+    std::vector<float> weights;
+    std::vector<float> boneIDs;
+    for (unsigned int i = 0; i < weightsMat.cols(); i++) {
+        weights.push_back(static_cast<float>(weightsMat(0,i)));
+        weights.push_back(static_cast<float>(weightsMat(1,i)));
+        // printf("%f, ", weights[weights.size()-2]);
+        // printf("%f\n", weights[weights.size()-1]);
+
+        boneIDs.push_back(static_cast<float>(boneIDsMat(0,i)));
+        boneIDs.push_back(static_cast<float>(boneIDsMat(1,i)));
+        // printf("%i, ", boneIDs[boneIDs.size()-2]);
+        // printf("%i\n", boneIDs[boneIDs.size()-1]);
+    }
+
+    // In GPU we want to use floats
+    std::vector<float> vertices = static_cast_vector_to_float(mesh.vertices);
+    std::vector<float> normals = static_cast_vector_to_float(mesh.normals);
+    std::vector<float> tangents = static_cast_vector_to_float(mesh.tangents);
+    std::vector<float> texcoords = static_cast_vector_to_float(mesh.texcoords);
+
+    // Create VAO and VBO and allocate memory in GPU
+    GL_CALL(glGenVertexArrays(1, &VAO));
+    GL_CALL(glBindVertexArray(VAO));
+
+    // Vertices postions
+    GL_CALL(glGenBuffers(1, &posVBO));
+    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, posVBO));
+    GL_CALL(glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW));
+
+    GL_CALL(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), NULL));
+    GL_CALL(glEnableVertexAttribArray(0));
+
+    // Vertices normals
+    GL_CALL(glGenBuffers(1, &normalVBO));
+    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, normalVBO));
+    GL_CALL(glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), normals.data(), GL_STATIC_DRAW));
+
+    GL_CALL(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), NULL));
+    GL_CALL(glEnableVertexAttribArray(1));
+
+    // Vertices texture coordinates
+    GL_CALL(glGenBuffers(1, &uvVBO));
+    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, uvVBO));
+    GL_CALL(glBufferData(GL_ARRAY_BUFFER, texcoords.size() * sizeof(float), texcoords.data(), GL_STATIC_DRAW));
+
+    GL_CALL(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), NULL));
+    GL_CALL(glEnableVertexAttribArray(2));
+
+    // Vertices tangents
+    GL_CALL(glGenBuffers(1, &tangentVBO));
+    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, tangentVBO));
+    GL_CALL(glBufferData(GL_ARRAY_BUFFER, tangents.size() * sizeof(float), tangents.data(), GL_STATIC_DRAW));
+
+    GL_CALL(glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), NULL));
+    GL_CALL(glEnableVertexAttribArray(3));
+
+    // Vertices bone indices
+    GL_CALL(glGenBuffers(1, &idVBO));
+    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, idVBO));
+    GL_CALL(glBufferData(GL_ARRAY_BUFFER, boneIDs.size() * sizeof(float), boneIDs.data(), GL_STATIC_DRAW));
+
+    GL_CALL(glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), NULL));
+    GL_CALL(glEnableVertexAttribArray(4));
+
+    // Vertices bone weights
+    GL_CALL(glGenBuffers(1, &weightVBO));
+    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, weightVBO));
+    GL_CALL(glBufferData(GL_ARRAY_BUFFER, weights.size() * sizeof(float), weights.data(), GL_STATIC_DRAW));
+
+    GL_CALL(glVertexAttribPointer(5, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), NULL));
+    GL_CALL(glEnableVertexAttribArray(5));
+
+    // Disable VBO and VAO
+    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, 0));
+    GL_CALL(glBindVertexArray(0));
+}
+
+SkinnedRodGPU::~SkinnedRodGPU() {
+    // Destroy GPU resources
+    GL_CALL(glDeleteBuffers(1, &posVBO));
+    GL_CALL(glDeleteBuffers(1, &normalVBO));
+    GL_CALL(glDeleteBuffers(1, &uvVBO));
+    GL_CALL(glDeleteBuffers(1, &tangentVBO));
+    GL_CALL(glDeleteBuffers(1, &idVBO));
+    GL_CALL(glDeleteBuffers(1, &weightVBO));
+    GL_CALL(glDeleteVertexArrays(1, &VAO));
+}
+
+void DrawSkinnedRodGPU(const SkinnedRodGPU& rod, Material material, const std::vector<Matrix>& bone_transforms) {
+    rlEnableShader(material.shader.id);
+    // Upload to shader material.colDiffuse
+    if (material.shader.locs[SHADER_LOC_COLOR_DIFFUSE] != -1)
+    {
+        float values[4] = {
+            (float)material.maps[MATERIAL_MAP_DIFFUSE].color.r/255.0f,
+            (float)material.maps[MATERIAL_MAP_DIFFUSE].color.g/255.0f,
+            (float)material.maps[MATERIAL_MAP_DIFFUSE].color.b/255.0f,
+            (float)material.maps[MATERIAL_MAP_DIFFUSE].color.a/255.0f
+        };
+
+        rlSetUniform(material.shader.locs[SHADER_LOC_COLOR_DIFFUSE], values, SHADER_UNIFORM_VEC4, 1);
+    }
+
+    // MATRIX UNIFORMS
+    Matrix matModel = MatrixIdentity();
+    Matrix matView = rlGetMatrixModelview();
+    Matrix matProjection = rlGetMatrixProjection();
+    Matrix matModelViewProjection = MatrixMultiply(matView, matProjection);
+
+    // Upload view and projection matrices (if locations available)
+    if (material.shader.locs[SHADER_LOC_MATRIX_VIEW] != -1) rlSetUniformMatrix(material.shader.locs[SHADER_LOC_MATRIX_VIEW], matView);
+    if (material.shader.locs[SHADER_LOC_MATRIX_PROJECTION] != -1) rlSetUniformMatrix(material.shader.locs[SHADER_LOC_MATRIX_PROJECTION], matProjection);
+    // Model transformation matrix is sent to shader uniform location: SHADER_LOC_MATRIX_MODEL
+    if (material.shader.locs[SHADER_LOC_MATRIX_MODEL] != -1) rlSetUniformMatrix(material.shader.locs[SHADER_LOC_MATRIX_MODEL], matModel);
+    if (material.shader.locs[SHADER_LOC_MATRIX_NORMAL] != -1) rlSetUniformMatrix(material.shader.locs[SHADER_LOC_MATRIX_NORMAL], MatrixTranspose(MatrixInvert(matModel)));
+    // Send combined model-view-projection matrix to shader
+    rlSetUniformMatrix(material.shader.locs[SHADER_LOC_MATRIX_MVP], matModelViewProjection);
+
+    const unsigned int boneMatricesID = rlGetLocationUniform(material.shader.id, "bonesMatrices");
+    std::vector<float> matrices;
+    const unsigned int n_transforms = bone_transforms.size();
+    for (unsigned int i = 0; i < n_transforms; i++) {
+        Matrix mat = bone_transforms[i];
+        matrices.insert(matrices.end(), {
+            mat.m0, mat.m1, mat.m2, mat.m3,
+            mat.m4, mat.m5, mat.m6, mat.m7,
+            mat.m8, mat.m9, mat.m10, mat.m11,
+            mat.m12, mat.m13, mat.m14, mat.m15
+        });
+    }
+    GL_CALL(glUniformMatrix4fv(boneMatricesID, n_transforms, GL_FALSE, matrices.data()));
+
+    // Draw the Lines
+    const unsigned int n_triangles = rod.mesh.vertices.size() / 3;
+    GL_CALL(glBindVertexArray(rod.VAO));
+    GL_CALL(glDrawArrays(GL_TRIANGLES, 0, n_triangles));
+
+    rlDisableVertexArray();
+    rlDisableVertexBuffer();
+    rlDisableShader();
+    rlSetMatrixModelview(matView);
+    rlSetMatrixProjection(matProjection);
 }
