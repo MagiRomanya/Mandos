@@ -1050,6 +1050,23 @@ void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState
     matInstances.shader = renderState->instancing_shader;
     matInstances.maps[MATERIAL_MAP_DIFFUSE].color = PARTICLE_COLOR;
     DrawMeshInstanced(renderState->spring_model.meshes[0], matInstances, transforms.data(), transforms.size());
+
+    transforms.clear();
+    for (size_t i = 0; i < simulation.energies.rigid_body_springs.size(); i++) {
+        RigidBodySpring s = simulation.energies.rigid_body_springs[i];
+        const Vec3 x1 = s.rbA.get_COM_position(state.x);
+        const Vec3 x2 = s.rbB.get_COM_position(state.x);
+        const Mat3 R1 = s.rbA.compute_rotation_matrix(state.x);
+        const Mat3 R2 = s.rbB.compute_rotation_matrix(state.x);
+
+        const Vec3 world1 = R1 * s.posA + x1;
+        const Vec3 world2 = R2 * s.posB + x2;
+        const Matrix transform = compute_transform_from_two_points(world1, world2);
+        transforms.push_back(transform);
+    }
+
+    matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RED;
+    DrawMeshInstanced(renderState->spring_model.meshes[0], matInstances, transforms.data(), transforms.size());
 }
 
 void MandosViewer::draw_particles(const Simulation& simulation, const PhysicsState& state) {

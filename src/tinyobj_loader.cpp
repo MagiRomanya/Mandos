@@ -371,7 +371,8 @@ void RenderMesh::smoothNormals() {
     }
 }
 
-void LoadCurveTinyObj(std::string inputfile, std::vector<Scalar>& out_vertices) {
+std::vector<Scalar> LoadCurveTinyObj(std::string inputfile) {
+    std::vector<Scalar> vertices;
     tinyobj::ObjReaderConfig reader_config;
     tinyobj::ObjReader reader;
     if (!reader.ParseFromFile(inputfile, reader_config)) {
@@ -386,8 +387,9 @@ void LoadCurveTinyObj(std::string inputfile, std::vector<Scalar>& out_vertices) 
 
     auto& attrib = reader.GetAttrib();
 
-    out_vertices.resize(attrib.vertices.size());
+    vertices.resize(attrib.vertices.size());
     for (size_t i = 0; i < attrib.vertices.size(); i++) {
-        out_vertices[i] = static_cast<Scalar>(attrib.vertices[i]);
+        vertices[i] = static_cast<Scalar>(attrib.vertices[i]);
     }
+    return vertices;
 }

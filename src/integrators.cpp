@@ -3,6 +3,7 @@
 #include <vector>
 #include <Eigen/SparseCore>
 #include <Eigen/IterativeLinearSolvers>
+#include <Eigen/SparseLU>
 #include "linear_algebra.hpp"
 
 #include "integrators.hpp"
@@ -32,16 +33,17 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
     // Solving the system of equations
     // ----------------------------------------------------------------------------------
     Eigen::setNbThreads(std::thread::hardware_concurrency());
-    Eigen::setNbThreads(0);
-    Eigen::ConjugateGradient<SparseMat, Eigen::Lower | Eigen::Upper> cg;
+    Eigen::ConjugateGradient<SparseMat, Eigen::Lower | Eigen::Upper> solver;
+    // Eigen::SparseLU<SparseMat> solver;
     const Scalar tol = 1e-9;
-    double time = 0;
+    double integration_solve_time = 0;
     {
-        Clock clock(time);
-        cg.setTolerance(tol);
-        cg.compute(equation_matrix);
-        dx = copuling_jacobian * cg.solve(equation_vector);
+        Clock clock(integration_solve_time);
+        // solver.setTolerance(tol);
+        solver.compute(equation_matrix);
+        dx = copuling_jacobian * solver.solve(equation_vector);
     }
+    // DEBUG_LOG(integration_solve_time);
 }
 
 struct FrozenDoFPredicate {

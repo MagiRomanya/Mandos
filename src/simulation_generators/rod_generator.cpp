@@ -2,20 +2,19 @@
 #include "../simulable_generator.hpp"
 #include "../rod_segment.hpp"
 
-inline Vec3 compute_axis_angle_from_direction(const Vec3& direction) {
+Vec3 compute_axis_angle_from_direction(const Vec3& direction) {
     const Vec3 normalized_direction = direction.normalized();
 
     // Compute initial rotation
-    Vec3 axis_angle = Vec3::Zero();
     if (not normalized_direction.isApprox(Vec3(0.0, 0.0, 1.0), 1e-6)) {
         const Vec3 tangent = cross(normalized_direction, Vec3(0.0, 1.0, 0.0)).normalized();
         const Vec3 bitangent = cross(normalized_direction, tangent).normalized();
         Mat3 rotation;
         rotation << tangent, bitangent, normalized_direction;
         Eigen::AngleAxis<Scalar> angle_axis = Eigen::AngleAxis<Scalar>(rotation);
-        axis_angle = angle_axis.axis() * angle_axis.angle();
+        return angle_axis.axis() * angle_axis.angle();
     }
-    return axis_angle;
+    return Vec3(0.0, 0.0, 0.0);
 }
 
 

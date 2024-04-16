@@ -86,4 +86,6 @@ SimulableBounds generate_rod(Simulation& simulation,
                              Scalar TotalMass,
                              const RodSegmentParameters& rod_parameters);
 
+
+Vec3 compute_axis_angle_from_direction(const Vec3& direction);
 #endif // SIMULABLE_GENERATOR_H_

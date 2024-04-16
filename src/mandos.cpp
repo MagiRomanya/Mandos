@@ -87,6 +87,43 @@ Scalar RigidBodyHandle::compute_energy(const PhysicsState& state, const PhysicsS
     return i.compute_energy(simulation.TimeStep, state, state0);
 }
 
+void join_rigid_body_com_with_spring(Simulation& simulation, const RigidBodyHandle& rbA, const RigidBodyHandle& rbB, Scalar k, Scalar damping) {
+    Particle pA = Particle(rbA.rb.mass, rbA.rb.index);
+    Particle pB = Particle(rbB.rb.mass, rbB.rb.index);
+    const Vec3 x1 = pA.get_position(simulation.initial_state);
+    const Vec3 x2 = pB.get_position(simulation.initial_state);
+    const Scalar distance = (x1 -x2).norm();
+    simulation.energies.particle_springs.emplace_back(pA, pB, SpringParameters{.k = k, .L0 = distance, .damping = damping});
+}
+
+void join_rigid_body_with_spring(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping) {
+    const Vec3 comA = rbA.rb.get_COM_position(simulation.initial_state.x);
+    const Vec3 comB = rbB.rb.get_COM_position(simulation.initial_state.x);
+
+    const Mat3 RA = rbA.rb.compute_rotation_matrix(simulation.initial_state.x);
+    const Mat3 RB = rbB.rb.compute_rotation_matrix(simulation.initial_state.x);
+
+    const Vec3 xA = RA * pA + comA;
+    const Vec3 xB = RB * pB + comB;
+
+    const Scalar distance = (xA -xB).norm();
+    const SpringParameters parameters = {.k = k, .L0 = distance, .damping = damping};
+    simulation.energies.rigid_body_springs.emplace_back(rbA.rb, rbB.rb, pA, pB, parameters);
+}
+
+void join_rigid_body_with_rod_segment(Simulation& simulation, RigidBodyHandle& rbA, RigidBodyHandle& rbB, RodSegmentParameters parameters) {
+    const Vec3 comA = rbA.rb.get_COM_position(simulation.initial_state.x);
+    const Vec3 comB = rbB.rb.get_COM_position(simulation.initial_state.x);
+    const Scalar distance = (comA - comB).norm();
+    const Vec3 u = (comA - comB) / distance;
+    const Vec3 axis_angle = compute_axis_angle_from_direction(u);
+    rbA.set_initial_orientation(axis_angle);
+    rbB.set_initial_orientation(axis_angle);
+    parameters.L0 = distance;
+    simulation.energies.rod_segments.emplace_back(rbA.rb, rbB.rb, parameters);
+}
+
+
 MassSpringHandle::MassSpringHandle(Simulation& simulation,
                                    const std::vector<Scalar>& vertices,
                                    const std::vector<unsigned int>& indices,

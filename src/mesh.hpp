@@ -134,6 +134,6 @@ void recenter_mesh(RenderMesh& mesh, const Vec3& com);
  */
 void compute_triangle_indices_from_tetrahedron_indices(const std::vector<unsigned int>& tet_ind, std::vector<unsigned int>& out_ind);
 
-void LoadCurveTinyObj(std::string inputfile, std::vector<Scalar>& out_vertices);
+std::vector<Scalar> LoadCurveTinyObj(std::string inputfile);
 
 #endif // MESH_H_

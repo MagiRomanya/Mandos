@@ -308,6 +308,83 @@ void RodSegment::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsSt
     const Mat6 hessian_B = parameters.compute_energy_hessian_B(values);
     const Mat6 hessian_AB = parameters.compute_energy_hessian_AB(values);
 
+    Mat6 hessian_A_finite = Mat6::Zero();
+    Mat6 hessian_B_finite = Mat6::Zero();
+    Mat6 hessian_AB_finite = Mat6::Zero();
+    Mat6 hessian_BA_finite = Mat6::Zero();
+    Vec6 grad0A;
+    grad0A << linear_gradient, rotational_gradient_A;
+    Vec6 grad0B;
+    grad0B << -linear_gradient, rotational_gradient_B;
+    const Scalar dx = 1e-8;
+    for (unsigned int i = 0; i < 3; i++) {
+        Vec3 dx_vec = Vec3::Zero();
+        dx_vec[i] = dx;
+        auto valuesXA = RodSegmentPrecomputedValues(parameters.L0, TimeStep,
+                                                    x1 + dx_vec, x2, v1, v2, R1, R2,
+                                                    R_dot1, R_dot2);
+        auto valuesRA = RodSegmentPrecomputedValues(parameters.L0, TimeStep,
+                                                    x1, x2, v1, v2, compute_rotation_matrix_rodrigues(dx_vec)*R1, R2,
+                                                    R_dot1, R_dot2);
+
+        auto valuesXB = RodSegmentPrecomputedValues(parameters.L0, TimeStep,
+                                                    x1, x2 + dx_vec, v1, v2, R1, R2,
+                                                    R_dot1, R_dot2);
+        auto valuesRB = RodSegmentPrecomputedValues(parameters.L0, TimeStep,
+                                                    x1, x2, v1, v2, R1, compute_rotation_matrix_rodrigues(dx_vec)*R2,
+                                                    R_dot1, R_dot2);
+        Vec6 dgradXA;
+        dgradXA << parameters.compute_energy_linear_gradient(valuesXA), parameters.compute_energy_rotational_gradient_A(valuesXA);
+        Vec6 dgradRA;
+        dgradRA << parameters.compute_energy_linear_gradient(valuesRA), parameters.compute_energy_rotational_gradient_A(valuesRA);
+
+        Vec6 dgradXB;
+        dgradXB << -parameters.compute_energy_linear_gradient(valuesXB), parameters.compute_energy_rotational_gradient_B(valuesXB);
+        Vec6 dgradRB;
+        dgradRB << -parameters.compute_energy_linear_gradient(valuesRB), parameters.compute_energy_rotational_gradient_B(valuesRB);
+
+        Vec6 dgradXAB;
+        dgradXAB << parameters.compute_energy_linear_gradient(valuesXB), parameters.compute_energy_rotational_gradient_A(valuesXB);
+        Vec6 dgradRAB;
+        dgradRAB << parameters.compute_energy_linear_gradient(valuesRB), parameters.compute_energy_rotational_gradient_A(valuesRB);
+
+        Vec6 dgradXBA;
+        dgradXBA << -parameters.compute_energy_linear_gradient(valuesXA), parameters.compute_energy_rotational_gradient_B(valuesXA);
+        Vec6 dgradRBA;
+        dgradRBA << -parameters.compute_energy_linear_gradient(valuesRA), parameters.compute_energy_rotational_gradient_B(valuesRA);
+
+        hessian_A_finite.col(i) = (dgradXA - grad0A) /dx;
+        hessian_A_finite.col(i+3) = (dgradRA - grad0A) / dx;
+
+        hessian_B_finite.col(i) = (dgradXB - grad0B) /dx;
+        hessian_B_finite.col(i+3) = (dgradRB - grad0B) / dx;
+
+        hessian_AB_finite.col(i) = (dgradXAB - grad0A) /dx;
+        hessian_AB_finite.col(i+3) = (dgradRAB - grad0A) / dx;
+
+        hessian_BA_finite.col(i) = (dgradXBA - grad0B) /dx;
+        hessian_BA_finite.col(i+3) = (dgradRBA - grad0B) / dx;
+    }
+    // std ::cout << "hessian_A"
+    //            << "\n" << hessian_A << std ::endl;
+    // std ::cout << "hessian_A_finite"
+    //            << "\n" << hessian_A_finite << std ::endl;
+
+    // std ::cout << "hessian_B"
+    //            << "\n" << hessian_B << std ::endl;
+    // std ::cout << "hessian_B_finite"
+    //            << "\n" << hessian_B_finite << std ::endl;
+
+    // std ::cout << "hessian_AB"
+    //            << "\n" << hessian_AB << std ::endl;
+    // std ::cout << "hessian_AB_finite"
+    //            << "\n" << hessian_AB_finite << std ::endl;
+
+    // std ::cout << "hessian_AB.transpose()"
+    //            << "\n" << hessian_AB.transpose() << std ::endl;
+    // std ::cout << "hessian_BA_finite"
+    //            << "\n" << hessian_BA_finite << std ::endl;
+
     // Add the energy derivatives to the global structure
     // ---------------------------------------------------------------
     out.energy += energy;
@@ -323,10 +400,15 @@ void RodSegment::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsSt
     // Fill in the hessian (symetric matrix)
     for (unsigned int i = 0; i < 6; i++) {
         for (unsigned int j = 0; j < 6; j++) {
-            out.hessian_triplets.emplace_back(rbA.index + i, rbA.index + j, hessian_A(i,j));
-            out.hessian_triplets.emplace_back(rbA.index + i, rbB.index + j, hessian_AB(i,j));
-            out.hessian_triplets.emplace_back(rbB.index + i, rbA.index + j, hessian_AB(j,i));
-            out.hessian_triplets.emplace_back(rbB.index + i, rbB.index + j, hessian_B(i,j));
+            out.hessian_triplets.emplace_back(rbA.index + i, rbA.index + j, hessian_A_finite(i,j));
+            out.hessian_triplets.emplace_back(rbA.index + i, rbB.index + j, hessian_AB_finite(i,j));
+            out.hessian_triplets.emplace_back(rbB.index + i, rbA.index + j, hessian_BA_finite(i,j));
+            out.hessian_triplets.emplace_back(rbB.index + i, rbB.index + j, hessian_B_finite(i,j));
+
+            // out.hessian_triplets.emplace_back(rbA.index + i, rbA.index + j, hessian_A(i,j));
+            // out.hessian_triplets.emplace_back(rbA.index + i, rbB.index + j, hessian_AB(i,j));
+            // out.hessian_triplets.emplace_back(rbB.index + i, rbA.index + j, hessian_AB(j,i));
+            // out.hessian_triplets.emplace_back(rbB.index + i, rbB.index + j, hessian_B(i,j));
         }
     }
 }

@@ -149,6 +149,12 @@ void join_particles_with_spring(Simulation& simulation, const ParticleHandle& p1
 
 void join_rigid_body_with_particle(Simulation& sim, RigidBodyHandle rbA, ParticleHandle p);
 
+void join_rigid_body_com_with_spring(Simulation& simulation, const RigidBodyHandle& rbA, const RigidBodyHandle& rbB, Scalar k, Scalar damping);
+
+void join_rigid_body_with_spring(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping);
+
+void join_rigid_body_with_rod_segment(Simulation& simulation, RigidBodyHandle& rbA, RigidBodyHandle& rbB, RodSegmentParameters parameters);
+
 class FEMHandle {
     public:
         FEMHandle(Simulation& simulation,

@@ -8,6 +8,7 @@ int main(void) {
     Simulation simulation;
 
     SimulationMesh collider_mesh = SimulationMesh("resources/obj/templateM.obj");
+    // SimulationMesh collider_mesh = SimulationMesh("resources/obj/monke.obj");
     SDFColliderHandle sdf_collider = SDFColliderHandle(simulation, collider_mesh);
     PlaneColliderHandle plane_collider = PlaneColliderHandle(simulation)
         .set_direction(Vec3(0.0, 1.0, 0.0))
@@ -19,13 +20,13 @@ int main(void) {
     const Scalar gravity = -9.8 * mass;
 
     const RodSegmentParameters parameters = {
-    .Ks = 50000.0,
+    .Ks = 500000.0,
     .L0 = 0.5,
     .translational_damping = 5000.0,
     .rotational_damping = 0.0,
-    .constraint_stiffness = 60000.0,
+    .constraint_stiffness = 20000.0,
     .intrinsic_darboux = Vec3::Zero(),
-    // .stiffness_tensor = 50000000.0 * Vec3::Ones(),
+    // .stiffness_tensor = 500000000.0 * Vec3::Ones(),
     .stiffness_tensor = 5000.0 * Vec3::Ones(),
     // .stiffness_tensor = Vec3(500000.0, 500000.0, 500000.0),
     };
@@ -59,8 +60,8 @@ int main(void) {
 
     // std::vector<Scalar> spring_curve;
     // LoadCurveTinyObj("resources/obj/spring-curve.obj", spring_curve);
-    // RodHandle rod = RodHandle(simulation, spring_curve, 30, parameters)
-    //     // .set_initial_origin_position(Vec3(0, 20.0, -4.0))
+    // RodHandle rod = RodHandle(simulation, spring_curve, 100, parameters)
+    //     .set_initial_rod_position(Vec3(0, 20.0, -4.0))
     //     .add_gravity(gravity)
     //     ;
 

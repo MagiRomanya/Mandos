@@ -1,6 +1,7 @@
 #include <cmath>
 #include <vector>
 
+#include "clock.hpp"
 #include "colliders.hpp"
 #include "fem_element.hpp"
 #include "simulation.hpp"
@@ -64,16 +65,33 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     // Initial guess for our energy minimization
     // state =  PhysicsState(state0.x + simulation.TimeStep * state0.v, state0.v);
 
-    const unsigned int maxIter = 2;
+    const unsigned int maxIter = 10;
+    // const Scalar reductionThreshold = 1e-4;
+    // Scalar lastGradNorm = 1e9;
     for (unsigned int i = 0; i < maxIter; i++) {
 
         // Compute energy and derivatives
         // -----------------------------------------------------------------------------------------
         f = EnergyAndDerivatives(nDoF);
-        compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
         std::vector<ContactEvent> events;
-        find_point_particle_contact_events(simulation.colliders, simulation.simulables, state, events);
-        compute_contact_events_energy_and_derivatives(simulation.TimeStep, events, state, f);
+        double compute_energies_time;
+        {
+            Clock clock(compute_energies_time);
+            compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
+            const Scalar gradNorm = f.gradient.norm();
+            DEBUG_LOG(gradNorm);
+            // if (lastGradNorm - gradNorm < reductionThreshold) continue;
+            // lastGradNorm = gradNorm;
+        }
+
+        double compute_contact_time;
+        {
+            Clock clock(compute_contact_time);
+            find_point_particle_contact_events(simulation.colliders, simulation.simulables, state, events);
+            compute_contact_events_energy_and_derivatives(simulation.TimeStep, events, state, f);
+        }
+        // DEBUG_LOG(compute_energies_time);
+        // DEBUG_LOG(compute_contact_time);
         const Scalar energy0 = f.energy;
 
         // Integration step
@@ -93,9 +111,8 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         Scalar lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
         Scalar alpha = 1.0f;
         const Scalar alpha_min_threshold = 1e-7;
-        // DEBUG_LOG(energy);
-        // DEBUG_LOG(lineSearchEnergy);
         while (lineSearchEnergy > energy0) {
+            DEBUG_LOG(alpha);
             if (alpha < alpha_min_threshold or std::isnan(energy0)) break;
             alpha /= 2.0f;
             state = stepState;
@@ -103,6 +120,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
             lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
         }
     }
+    DEBUG_LOG("---------------------------------------");
     // Output energy derivatives
     out = f;
 }

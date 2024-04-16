@@ -39,6 +39,12 @@ PYBIND11_MODULE(pymandos, m) {
         .def(py::init<unsigned int>())
         .def_readonly("energy", &EnergyAndDerivatives::energy)
         .def_readonly("gradient", &EnergyAndDerivatives::gradient)
+        .def("get_hessian", [](const EnergyAndDerivatives& self) {
+            const unsigned int nDoF = self.gradient.size();
+            SparseMat hessian(nDoF, nDoF);
+            hessian.setFromTriplets(self.hessian_triplets.begin(), self.hessian_triplets.end());
+            return hessian;
+        })
         ;
 
     py::class_<RenderMesh>(m, "RenderMesh")
@@ -79,6 +85,12 @@ PYBIND11_MODULE(pymandos, m) {
     m.def("join_rigid_body_with_particle", &join_rigid_body_with_particle);
 
     m.def("join_particles_with_spring", &join_particles_with_spring);
+
+    m.def("join_rigid_body_com_with_spring", &join_rigid_body_com_with_spring);
+
+    m.def("join_rigid_body_with_spring", &join_rigid_body_with_spring);
+
+    m.def("join_rigid_body_with_rod_segment", &join_rigid_body_with_rod_segment);
 
     m.def("get_particle", &get_particle_handle);
 
@@ -203,6 +215,9 @@ PYBIND11_MODULE(pymandos, m) {
         .def(py::init<const RenderMesh&>())
         .def("updateData", &MeshGPU::updateData)
         ;
+    py::class_<SkinnedRodGPU>(m, "SkinnedRodGPU")
+        .def(py::init<const RenderMesh&, const unsigned int>())
+        ;
 
     py::class_<MandosViewer>(m, "MandosViewer")
         .def(py::init<>())
@@ -215,6 +230,7 @@ PYBIND11_MODULE(pymandos, m) {
         .def("draw_rigid_body", &MandosViewer::draw_rigid_body)
         .def("draw_FEM", &MandosViewer::draw_FEM)
         .def("draw_MassSpring", &MandosViewer::draw_MassSpring)
+        .def("draw_rod", &MandosViewer::draw_rod)
         .def("draw_mesh", &MandosViewer::draw_mesh)
         .def("draw_springs", &MandosViewer::draw_springs)
         .def("draw_rods", &MandosViewer::draw_rods)

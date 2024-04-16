@@ -45,7 +45,7 @@ void SDFCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out)
 }
 
 void find_point_particle_contact_events(const Colliders& colliders, const Simulables& simulables, const PhysicsState& state, std::vector<ContactEvent>& events) {
-    const Scalar particle_radius = 0.3;
+    const Scalar particle_radius = 0.4;
 #define COL(type, name)                                               \
     for (unsigned int j = 0; j < colliders.name.size(); j++) {        \
         colliders.name[j].compute_contact_geometry(point, event);     \
