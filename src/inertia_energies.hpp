@@ -13,6 +13,7 @@ struct LinearInertia {
     const Particle p;
 
     Scalar compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const;
+    void compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const;
     void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const;
     inline void update_state(const Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0) const {
         state.x.segment<3>(p.index) += dx.segment<3>(p.index);
@@ -25,6 +26,7 @@ struct RotationalInertia {
     const RigidBody rb;
 
     Scalar compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const;
+    void compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const;
     void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const;
     void update_state(const Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0) const;
 };
@@ -34,6 +36,7 @@ struct RotationalInertiaGlobal {
     const RigidBody rb;
 
     Scalar compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const;
+    void compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const;
     void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const;
     void update_state(const Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0) const;
 };

@@ -272,7 +272,7 @@ int main(void) {
     .x2 = Vec3(0.0, 0.0, -1.0),
     .v1 = Vec3::Zero(),
     .v2 = Vec3::Zero(),
-    .R1 = compute_rotation_matrix_rodrigues(Vec3(1,1,0));
+    .R1 = compute_rotation_matrix_rodrigues(Vec3(1,1,0)),
     .R2 = Mat3::Identity(),
     // .R2 = compute_rotation_matrix_rodrigues(Vec3(0.00,0.2,0)),
     // .R1 = compute_rotation_matrix_rodrigues(Vec3(2,6,9).normalized()),

@@ -22,6 +22,10 @@ struct Gravity {
     return energy;
   }
 
+  inline void compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, Vec& grad) const {
+    grad(index) += - parameters.intensity; // Grad = - force
+  }
+
   inline void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const {
     const Scalar height = state.x(index);
     out.energy += - parameters.intensity * (height + default_height);

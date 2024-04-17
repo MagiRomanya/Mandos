@@ -203,6 +203,31 @@ Scalar FEM_Element3D<T>::compute_energy(Scalar TimeStep, const PhysicsState& sta
 }
 
 template <FEM_Material_Type T>
+void FEM_Element3D<T>::compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, Vec& grad) const {
+  // Get the relevant sate
+  // ---------------------------------------------------------------
+  const Vec3& x1 = p1.get_position(state);
+  const Vec3& x2 = p2.get_position(state);
+  const Vec3& x3 = p3.get_position(state);
+  const Vec3& x4 = p4.get_position(state);
+
+  // Compute deformation tensor
+  // ---------------------------------------------------------------
+  const Mat3 F = compute_deformation_tensor(dvecF_dx, x1, x2, x3, x4);
+
+  // Compute the energy derivatives
+  // ---------------------------------------------------------------
+  const Scalar volume = abs(compute_volume(x1, x2, x3, x4));
+  const Eigen::Vector<Scalar,12> gradient = volume * material.get_phi_gradient(F).transpose() *  dvecF_dx;
+
+  grad.segment<3>(p1.index) += gradient.segment<3>(3*0);
+  grad.segment<3>(p2.index) += gradient.segment<3>(3*1);
+  grad.segment<3>(p3.index) += gradient.segment<3>(3*2);
+  grad.segment<3>(p4.index) += gradient.segment<3>(3*3);
+
+}
+
+template <FEM_Material_Type T>
 void FEM_Element3D<T>::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const {
   // Get the relevant sate
   // ---------------------------------------------------------------

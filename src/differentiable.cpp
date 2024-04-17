@@ -68,7 +68,7 @@ inline Mat3 rotation_inertia_dgradE_domega0(const Mat3& J_inertia_tensor, const 
     return H;
 }
 
-// #define DIFF_LOCAL_RB
+#define DIFF_LOCAL_RB
 void compute_gradient_partial_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, SparseMat& dgradE_dx, SparseMat& dgradE_dx0, SparseMat& dgradE_dv0) {
     const unsigned int nDoF = state.get_nDoF();
     EnergyAndDerivatives f(nDoF);
@@ -198,6 +198,7 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
         // -------------------------------------------------------------------------
 #ifdef DIFF_LOCAL_RB
         Eigen::ConjugateGradient<SparseMat> solver;
+        // Eigen::SparseLU<SparseMat> solver;
         SparseMat jac_global_to_local(nDoF, nDoF);
         compute_simulation_global_to_local_jacobian(simulation.simulables, state, jac_global_to_local);
         const Vec equation_vector = - (loss_position_gradient + one_over_h * loss_velocity_gradient).transpose() * jac_global_to_local;
@@ -206,14 +207,46 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
         Eigen::SparseLU<SparseMat> solver;
 #endif
         solver.compute(hessian.transpose());
-        Vec alpha = solver.solve(equation_vector);
+
+        const Vec grad0 = compute_energy_gradient(simulation.TimeStep, simulation.energies, state, state0);
+
+        Vec h_grad = equation_vector;
+
+        const Scalar dx = 1e-7;
+        const unsigned int maxIterations = 10;
+        Vec z = solver.solve(equation_vector);
+        for (unsigned int j = 0; j < maxIterations; j++) {
+            PhysicsState diff_state = state;
+            // diff_state.x += dx * z;
+            // diff_state.v = (diff_state.x - state0.x) / simulation.TimeStep;
+            update_simulation_state(simulation.TimeStep, simulation.energies, dx * z, diff_state, state0);
+            Vec diff_grad = compute_energy_gradient(simulation.TimeStep, simulation.energies,
+                                                    diff_state, state0);
+            h_grad = (- (diff_grad - grad0) / dx) + equation_vector;
+            DEBUG_LOG(h_grad.norm());
+            // Solve the system
+            Vec dz = solver.solve(h_grad);
+            z += dz;
+
+            // Update z
+            // for (unsigned int pi = 0; pi < simulation.energies.linear_inertias.size(); pi++) {
+            //     const LinearInertia& linear = simulation.energies.linear_inertias[pi];
+            //     z.segment<3>(linear.p.index) += dz.segment<3>(linear.p.index);
+            // }
+            // for (unsigned int rbi = 0; rbi < simulation.energies.rotational_inertias.size(); rbi++) {
+            //     const RotationalInertia& rotational = simulation.energies.rotational_inertias[rbi];
+            //     const unsigned int index = rotational.rb.index+3;
+            //     z.segment<3>(index) = compose_axis_angle(dz.segment<3>(index), z.segment<3>(index));
+            // }
+        }
+        DEBUG_LOG("-------------");
 
         // Update the loss function gradients
         // -------------------------------------------------------------------------
-        loss_position_gradient = (loss.loss_position_partial_derivative[i].transpose() - one_over_h * loss_velocity_gradient.transpose() + alpha.transpose() * dgradE_dx0);
-        loss_velocity_gradient = (loss.loss_velocity_partial_derivative[i].transpose() + alpha.transpose() * dgradE_dv0);
+        loss_position_gradient = (loss.loss_position_partial_derivative[i].transpose() - one_over_h * loss_velocity_gradient.transpose() + z.transpose() * dgradE_dx0);
+        loss_velocity_gradient = (loss.loss_velocity_partial_derivative[i].transpose() + z.transpose() * dgradE_dv0);
 
-        loss_gradient += alpha.transpose() * dgradE_dp;
+        loss_gradient += z.transpose() * dgradE_dp;
     }
 
     // Add the initial conditions term

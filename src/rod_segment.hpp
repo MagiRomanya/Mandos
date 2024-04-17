@@ -60,6 +60,7 @@ struct RodSegment {
     const RodSegmentParameters parameters;
 
     Scalar compute_energy(Scalar TimeStep, const PhysicsState& state) const;
+    void compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, Vec& grad) const;
     void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const;
 };
 

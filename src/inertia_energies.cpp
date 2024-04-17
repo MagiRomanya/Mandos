@@ -19,6 +19,22 @@ Scalar LinearInertia::compute_energy(Scalar TimeStep, const PhysicsState& state,
     return energy;
 }
 
+void LinearInertia::compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const {
+    // Get the relevant sate
+    // ---------------------------------------------------------------
+    const Vec3 x = p.get_position(state);
+    const Vec3 x0 = p.get_position(state0);
+    const Vec3 v0 = p.get_velocity(state0);
+    const Vec3 x_guess = x0 + TimeStep * v0;
+    const Scalar one_over_h2 = 1 / (TimeStep * TimeStep);
+
+    const Vec3 gradient = one_over_h2 * Mass * (x - x_guess);
+
+    // Add the energy derivatives to the global structure
+    // ---------------------------------------------------------------
+    grad.segment<3>(p.index) += gradient;
+}
+
 void LinearInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
     // Get the relevant sate
     // ---------------------------------------------------------------
@@ -133,6 +149,25 @@ inline Mat3 rotation_inertia_energy_finite_hessian_global(const Scalar dx, const
 
     return hess;
 }
+void RotationalInertia::compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const {
+    // Get the relevant sate
+    // ---------------------------------------------------------------
+    const Mat3 inertia_tensor = rb.J_inertia_tensor0;
+    const Mat3 R = rb.compute_rotation_matrix(state.x);
+    const Vec3 theta0 = rb.get_axis_angle(state0.x);
+    const Vec3 omega0 = rb.get_axis_angle(state0.v);
+    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
+    const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - omega0 * TimeStep);
+    const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
+
+    const Mat3 rot_inertia = R * inertia_tensor * R_guess.transpose();
+    const Mat3 A = (rot_inertia - rot_inertia.transpose()) / 2.0;
+    const Scalar h2 = TimeStep * TimeStep;
+
+    const Vec3 gradient = 2.0 * Vec3(-A(1,2), A(0,2), -A(0,1)) / h2;                 // v s.t. A = skew(v)
+
+    grad.segment<3>(rb.index + 3) += gradient;
+}
 
 void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
     // Get the relevant sate
@@ -157,40 +192,6 @@ void RotationalInertia::compute_energy_and_derivatives(Scalar TimeStep, const Ph
     const Scalar KE = (deltaR * inertia_tensor * deltaR.transpose()).trace() / (2.0 * h2);
     const Vec3 gradient = 2.0 * Vec3(-A(1,2), A(0,2), -A(0,1)) / h2;                 // v s.t. A = skew(v)
     const Mat3 hessian = 1.0 / h2 * (S.trace() * Mat3::Identity() - S);
-
-    // eigenvalues
-    // Eigen::EigenSolver<Mat3> solver(hessian);
-    // std ::cout << "Local eigenvalues " << " " << solver.eigenvalues().real().transpose() << std ::endl;
-
-    // SVD
-    // Eigen::Matrix<Scalar, 3, 9> dvecR_dphi = dvecR_dtheta_global(theta0);
-    // Eigen::Matrix<Scalar, 3, 9> dvecR_dtheta = dvecR_dtheta_local(theta0);
-    // Eigen::JacobiSVD<Eigen::Matrix<Scalar,3, 9>> global_svd(dvecR_dphi);
-    // Eigen::JacobiSVD<Eigen::Matrix<Scalar,3, 9>> local_svd(dvecR_dtheta);
-    // std ::cout << "Global SVD" << " " << global_svd.singularValues().transpose() << std ::endl;
-    // std ::cout << "Local SVD" << " " << local_svd.singularValues().transpose() << std ::endl;
-
-    // Mat3 ex, ey, ez;
-    // ex << 0.0, 0.0, 0.0,
-    //       0.0, 0.0,-1.0,
-    //       0.0, 1.0, 0.0;
-
-    // ey <<  0.0, 0.0, 1.0,
-    //        0.0, 0.0, 0.0,
-    //       -1.0, 0.0, 0.0;
-
-    // ez << 0.0,-1.0, 0.0,
-    //       1.0, 0.0, 0.0,
-    //       0.0, 0.0, 0.0;
-
-    // Eigen::EigenSolver<Mat3> solverX(ex * R0);
-    // std ::cout << "Local eigenvalues x" << " " << solverX.eigenvalues().transpose() << std ::endl;
-    // std ::cout << "Local eigenvalues x magnitude" << " " << solverX.eigenvalues().norm() << std ::endl;
-    // std ::cout << "Local eigenvalues x sum" << " " << solverX.eigenvalues().sum() << std ::endl;
-    // std ::cout << "Local trace" << " " << -2 * sinc(theta0.norm()) * theta0.x() << std ::endl;
-    // std ::cout << "Eigenvalues?" << " (" << -std::cos(theta0.norm()) * theta0.normalized().x() << ", " << -std::sin(theta0.norm()) * theta0.normalized().x() << ")" << " ";
-    // std::cout << " (" << -std::cos(-theta0.norm()) * theta0.normalized().x() << ", " << -std::sin(-theta0.norm()) * theta0.normalized().x() << ")";
-    // std::cout << std::endl;
 
     // Add the energy derivatives to the global structure
     // ---------------------------------------------------------------
@@ -218,6 +219,37 @@ Scalar RotationalInertiaGlobal::compute_energy(Scalar TimeStep, const PhysicsSta
     const RotationalInertia i = RotationalInertia(rb);
     Scalar energy = i.compute_energy(TimeStep, state, state0);
     return energy;
+}
+
+void RotationalInertiaGlobal::compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const {
+    // Get the relevant sate
+    // ---------------------------------------------------------------
+    const Mat3 inertia_tensor = rb.J_inertia_tensor0;
+    const Vec3 phi = rb.get_axis_angle(state.x);
+    const Vec3 theta0 = rb.get_axis_angle(state0.x);
+    const Vec3 omega0 = rb.get_axis_angle(state0.v);
+
+    const Mat3 R0 = compute_rotation_matrix_rodrigues(theta0);
+    const Mat3 R0old = compute_rotation_matrix_rodrigues(theta0 - omega0 * TimeStep);
+    const Mat3 R_guess = (R0 + (R0 - R0old)); // x0 + h* v0
+
+    const Mat3 rot_inertia = inertia_tensor * R_guess.transpose();
+    const Mat3 A = rot_inertia.transpose() - rot_inertia;
+    const Mat3 S = (rot_inertia + rot_inertia.transpose()) / 2.0;
+    const Mat3 SS = (S.trace()* Mat3::Identity() - S);
+    const Vec3 v = Vec3(A(1,2), -A(0,2), A(0,1));
+    const Scalar phi_norm = phi.norm();
+    const Scalar sinc_phi_2 = sinc(phi_norm/2);
+    const Scalar one_over_2h2 = 1.0 / (2.0 * TimeStep * TimeStep);
+
+    const Vec3 gradient = (
+        2.0 * grad_sinc(phi) * v.dot(phi)
+        + 2.0 * sinc(phi_norm) * v
+        + sinc_phi_2 * grad_sinc(phi/2) * phi.transpose() * SS * phi
+        + 2.0 * sinc_phi_2 * sinc_phi_2 * SS * phi
+        ) * one_over_2h2;
+
+    grad.segment<3>(rb.index+3) += gradient;
 }
 
 void RotationalInertiaGlobal::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {

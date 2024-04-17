@@ -157,26 +157,43 @@ Vec3 compute_COM_position_UNIFORM_VOLUME(const std::vector<unsigned int>& indice
  * Result = Ra * Rb
 */
 Vec3 compose_axis_angle(const Vec3& a, const Vec3& b) {
-    const Scalar a_angle = a.norm();
-    if (a_angle < 1e-8) return b;
-    const Vec3 a_axis = a / a_angle;
-
+    const Scalar tol = 1e-8;
     const Scalar b_angle = b.norm();
-    if (b_angle < 1e-8) {
-        Scalar a_angle_bounded = std::fmod(a_angle, 2.0 * M_PI);
-        if (a_angle_bounded > M_PI) {
-            a_angle_bounded -= 2*M_PI;
+    const Scalar a_angle = a.norm();
+    if (b_angle < tol) {
+        if (a_angle > M_PI) {
+            const Scalar a_angle_bounded = std::fmod(a_angle, 2.0 * M_PI) - 2 * M_PI;
+            return b + a_angle_bounded * a / a_angle;
         }
-        return a_angle_bounded * a_axis;
+        return b + a;
     }
     const Vec3 b_axis = b / b_angle;
 
-    // https://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
-    const Scalar sin_a_angle2 = std::sin(a_angle / 2);
-    const Scalar cos_a_angle2 = std::cos(a_angle / 2);
-    const Scalar sin_b_angle2 = std::sin(b_angle / 2);
-    const Scalar cos_b_angle2 = std::cos(b_angle / 2);
+    const Scalar sin_b_angle2 = std::sin(b_angle / 2.0);
+    const Scalar cos_b_angle2 = std::cos(b_angle / 2.0);
 
+    if (a_angle < tol) {
+        Scalar new_angle = 2.0 * std::acos(cos_b_angle2 - 0.5 * sin_b_angle2 * a.dot(b_axis));
+
+        const Vec3 new_axis = 1.0 / std::sin(new_angle/2.0) * (
+            0.5 * cos_b_angle2 * a
+            +  sin_b_angle2 * b_axis
+            + 0.5 * sin_b_angle2 * cross(a, b_axis));
+
+        new_angle = std::fmod(new_angle, 2.0 * M_PI);
+        if (new_angle > M_PI) {
+            new_angle -= 2*M_PI;
+        }
+        return new_angle * new_axis;
+    }
+
+
+    const Scalar sin_a_angle2 = std::sin(a_angle / 2.0);
+    const Scalar cos_a_angle2 = std::cos(a_angle / 2.0);
+
+    const Vec3 a_axis = a / a_angle;
+
+    // https://math.stackexchange.com/questions/382760/composition-of-two-axis-angle-rotations
     Scalar new_angle = 2.0 * std::acos(cos_a_angle2 * cos_b_angle2
                                       - sin_a_angle2 * sin_b_angle2 * b_axis.dot(a_axis));
 

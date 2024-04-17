@@ -41,6 +41,22 @@ Scalar ParticleSpring::compute_energy(Scalar TimeStep, const PhysicsState& state
     return  energy;
 }
 
+void ParticleSpring::compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, Vec& grad) const {
+    // Get the relevant sate
+    // ---------------------------------------------------------------
+    const Vec3 x1 = p1.get_position(state);
+    const Vec3 x2 = p2.get_position(state);
+    const Vec3 v1 = p1.get_velocity(state);
+    const Vec3 v2 = p2.get_velocity(state);
+    const Scalar epsilon = 1e-8;
+    const Scalar L = (x1 - x2).norm() + epsilon; // Avoid division by zero
+
+    const Vec3 gradient = get_particle_spring_energy_gradient(parameters, x1, x2, v1, v2, L);
+
+    grad.segment<3>(p1.index) += gradient;
+    grad.segment<3>(p2.index) += -gradient;
+}
+
 void ParticleSpring::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const {
     // Get the relevant sate
     // ---------------------------------------------------------------
@@ -149,6 +165,28 @@ Scalar RigidBodySpring::compute_energy(Scalar TimeStep, const PhysicsState& stat
     const Scalar L = (worldA - worldB).norm();
     const Scalar energy = get_rigid_body_spring_energy(parameters, L);
     return energy;
+}
+
+void RigidBodySpring::compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, Vec& grad) const {
+    // Get the relevant sate
+    // ---------------------------------------------------------------
+    const Vec3 comA = rbA.get_COM_position(state.x);
+    const Vec3 comB = rbB.get_COM_position(state.x);
+    const Mat3 RA = rbA.compute_rotation_matrix(state.x);
+    const Mat3 RB = rbB.compute_rotation_matrix(state.x);
+
+    // Avoid repeated computations
+    // ---------------------------------------------------------------
+    const Vec3 worldA = RA * posA + comA;
+    const Vec3 worldB = RB * posB + comB;
+    const Scalar L = (worldA - worldB).norm();
+    const Vec3 u = (worldA - worldB) / L;
+
+    const Vec6 gradA = get_rigid_body_spring_gradientA(parameters, u, posA, RA, L);
+    const Vec6 gradB = get_rigid_body_spring_gradientA(parameters, -u, posB, RB, L);
+
+    grad.segment<6>(rbA.index) += gradA;
+    grad.segment<6>(rbB.index) += gradB;
 }
 
 void RigidBodySpring::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const {

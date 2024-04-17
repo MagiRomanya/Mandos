@@ -55,6 +55,28 @@ Scalar compute_energy(Scalar TimeStep, const Energies& energies, const PhysicsSt
         return phi;
 }
 
+Vec compute_energy_gradient(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0) {
+    // This function is responsible of computing the energy and derivatives for each energy in the simulation.
+    // Here the energies must place the energy, gradient and Hessians to the correct place in the global energy and derivative structure
+    Vec grad = Vec::Zero(state.get_nDoF());
+#define X(type, energy) \
+    for (size_t i = 0; i < energies.energy.size(); i++) { \
+        energies.energy[i].compute_energy_gradient(TimeStep, state, state0, grad); \
+    }
+    INERTIAL_ENERGY_MEMBERS
+#undef X
+
+#define MAT(type, name) X(std::vector<FEM_Element3D<type>>, fem_elements_##name)
+#define X(type, energy) \
+    for (size_t i = 0; i < energies.energy.size(); i++) { \
+        energies.energy[i].compute_energy_gradient(TimeStep, state, grad); \
+    }
+    POTENTIAL_ENERGY_MEMBERS
+#undef X
+#undef MAT
+    return grad;
+}
+
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out) {
     // Energy and derivatives computation
     const unsigned int nDoF = static_cast<unsigned int>(simulation.initial_state.x.size());
@@ -65,7 +87,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     // Initial guess for our energy minimization
     // state =  PhysicsState(state0.x + simulation.TimeStep * state0.v, state0.v);
 
-    const unsigned int maxIter = 10;
+    const unsigned int maxIter = 5;
     // const Scalar reductionThreshold = 1e-4;
     // Scalar lastGradNorm = 1e9;
     for (unsigned int i = 0; i < maxIter; i++) {
@@ -78,8 +100,8 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         {
             Clock clock(compute_energies_time);
             compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
-            const Scalar gradNorm = f.gradient.norm();
-            DEBUG_LOG(gradNorm);
+            // compute_energy_and_derivatives_finite(simulation.TimeStep, simulation.energies, state, state0, f);
+            // const Scalar gradNorm = f.gradient.norm();
             // if (lastGradNorm - gradNorm < reductionThreshold) continue;
             // lastGradNorm = gradNorm;
         }
@@ -120,7 +142,6 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
             lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
         }
     }
-    DEBUG_LOG("---------------------------------------");
     // Output energy derivatives
     out = f;
 }
@@ -159,9 +180,10 @@ inline Vec compute_energy_gradient_finite(Scalar E0, Scalar dx, Scalar TimeStep,
     const unsigned int nDoF = state.get_nDoF();
     Vec gradient = Vec::Zero(nDoF);
     for (unsigned int i = 0; i < nDoF; i++) {
+        Vec dx_vec = Vec::Zero(nDoF);
+        dx_vec[i] = dx;
         PhysicsState dstate = state;
-        dstate.x[i] += dx;
-        dstate.v[i] += dx / TimeStep;
+        update_simulation_state(TimeStep, energies, dx_vec, dstate, state0);
 
         const Scalar dE = compute_energy(TimeStep, energies, dstate, state0);
         gradient[i] = (dE - E0) / dx;
@@ -174,9 +196,10 @@ inline Mat compute_energy_hessian_finite(Scalar E0, Scalar dx, Scalar TimeStep, 
     Mat hessian = Mat::Zero(nDoF, nDoF);
     const Vec grad0 = compute_energy_gradient_finite(E0, dx, TimeStep, energies, state, state0);
     for (unsigned int i = 0; i < nDoF; i++) {
+        Vec dx_vec = Vec::Zero(nDoF);
+        dx_vec[i] = dx;
         PhysicsState dstate = state;
-        dstate.x[i] += dx;
-        dstate.v[i] += dx / TimeStep;
+        update_simulation_state(TimeStep, energies, dx_vec, dstate, state0);
 
         const Scalar dE = compute_energy(TimeStep, energies, dstate, state0);
         const Vec grad = compute_energy_gradient_finite(dE, dx, TimeStep, energies, dstate, state0);
@@ -186,7 +209,7 @@ inline Mat compute_energy_hessian_finite(Scalar E0, Scalar dx, Scalar TimeStep, 
 }
 
 void compute_energy_and_derivatives_finite(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out) {
-    const Scalar dx = 1e-8;
+    const Scalar dx = 1e-7;
     const unsigned int nDoF = state.get_nDoF();
 
     out.energy = compute_energy(TimeStep, energies, state, state0);
