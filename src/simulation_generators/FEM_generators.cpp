@@ -5,10 +5,11 @@
 #include "../simulation.hpp"
 
 template <typename MaterialType>
-SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus) {
+SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar TotalMass, Scalar poisson_ratio, Scalar young_modulus) {
   // Add 3 dimensions per particle to the degrees of freedom
   const unsigned int index = simulation.initial_state.x.size();
   const unsigned int nDoF = 12;
+  const Scalar node_mass = TotalMass / 4.0;
   simulation.initial_state.add_size(nDoF);
 
   // Create particle simulables
@@ -55,13 +56,14 @@ FEM_MATERIAL_MEMBERS
 #undef MAT
 
 template <typename MaterialType>
-SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,
+SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Scalar TotalMass, Scalar poisson_ratio, Scalar young_modulus,
                                                      const std::vector<unsigned int>& tet_indices, const std::vector<Scalar>& tet_vertices) {
   const unsigned int index = static_cast<unsigned int>(simulation.initial_state.x.size());
   const unsigned int particle_index = static_cast<unsigned int>(simulation.simulables.particles.size());
   const unsigned int nDoF = static_cast<unsigned int>(tet_vertices.size());
   const unsigned int n_particles = nDoF / 3;
   const unsigned int n_tets = static_cast<unsigned int>(tet_indices.size()) / 4;
+  const Scalar node_mass = TotalMass / n_particles;
 
   // Allocate space for the simualtion state
   simulation.initial_state.add_size(nDoF);

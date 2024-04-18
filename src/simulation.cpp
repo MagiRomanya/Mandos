@@ -77,10 +77,9 @@ Vec compute_energy_gradient(Scalar TimeStep, const Energies& energies, const Phy
     return grad;
 }
 
-void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out) {
+void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& f) {
     // Energy and derivatives computation
     const unsigned int nDoF = static_cast<unsigned int>(simulation.initial_state.x.size());
-    EnergyAndDerivatives f(0);
 
     // The state at the beginning of the step (x0, v0)
     const PhysicsState state0 = state;
@@ -94,7 +93,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
 
         // Compute energy and derivatives
         // -----------------------------------------------------------------------------------------
-        f = EnergyAndDerivatives(nDoF);
+        f.clear(nDoF);
         std::vector<ContactEvent> events;
         double compute_energies_time;
         {
@@ -142,8 +141,6 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
             lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
         }
     }
-    // Output energy derivatives
-    out = f;
 }
 
 void simulation_step(const Simulation& simulation, PhysicsState& state) {

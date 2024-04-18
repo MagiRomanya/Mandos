@@ -152,6 +152,7 @@ PYBIND11_MODULE(pymandos, m) {
         .def("freeze_particles", &FEMHandle::freeze_particles)
         .def("get_n_particles", &FEMHandle::get_n_particles)
         .def("add_gravity", &FEMHandle::add_gravity)
+        .def("set_com_position", &FEMHandle::set_com_position)
         ;
 
     py::class_<RodSegmentParameters>(m, "RodParameters")
@@ -202,7 +203,9 @@ PYBIND11_MODULE(pymandos, m) {
         .def_readwrite("loss_parameter_partial_derivative", &LossFunctionAndDerivatives::loss_parameter_partial_derivative)
         ;
 
-    m.def("compute_loss_function_gradient_backpropagation", &compute_loss_function_gradient_backpropagation);
+    m.def("compute_loss_function_gradient_backpropagation", &compute_loss_function_gradient_backpropagation,
+          "A function that computes the loss function gradient with respect to parameters using back propagation of gradients.",
+          py::arg("simulation"), py::arg("trajectory"), py::arg("loss"), py::arg("dx0_dp"), py::arg("dv0_dp"), py::arg("") = 0);
 
     m.def("compute_loss_function_gradient_backpropagation_1_step_position", &compute_loss_function_gradient_backpropagation_1_step_position);
 

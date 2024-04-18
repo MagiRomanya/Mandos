@@ -261,6 +261,13 @@ FEMHandle FEMHandle::add_gravity(Scalar gravity) const {
     return *this;
 }
 
+FEMHandle FEMHandle::set_com_position(Vec3 position) const {
+    for (unsigned int i = 0; i < bounds.n_particles; i++) {
+        simulation.initial_state.x.segment<3>(bounds.dof_index + 3*i) += position;
+    }
+    return *this;
+}
+
 ParticleHandle get_particle_handle(Simulation& sim, unsigned int particle_index) {
     Particle p = sim.simulables.particles[particle_index];
     return ParticleHandle(sim, p, particle_index);

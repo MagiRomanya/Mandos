@@ -19,7 +19,13 @@ struct PhysicsState {
 };
 
 struct EnergyAndDerivatives {
+    EnergyAndDerivatives() {}
     EnergyAndDerivatives(unsigned int nDoF) {
+        energy = 0;
+        gradient.setZero(nDoF);
+        hessian_triplets.clear();
+    }
+    inline void clear(unsigned int nDoF) {
         energy = 0;
         gradient.setZero(nDoF);
         hessian_triplets.clear();

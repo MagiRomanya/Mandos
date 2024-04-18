@@ -1,7 +1,9 @@
+#include <Eigen/Dense> // For inverse matrix
+
 #include "rod_segment.hpp"
+
 #include "linear_algebra.hpp"
 #include "utility_functions.hpp"
-#include <cassert>
 
 inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local_matrix(const Mat3& R) {
     return vectorized_levi_civita() * block_matrix<3,3>(R);
@@ -58,28 +60,29 @@ RodSegmentPrecomputedValues::RodSegmentPrecomputedValues(Scalar L0, Scalar TimeS
                                                          const Vec3& x1, const Vec3& x2,
                                                          const Vec3& v1, const Vec3& v2,
                                                          const Mat3& R1, const Mat3& R2,
-                                                         const Mat3& R_dot1, const Mat3& R_dot2) {
-    one_over_L0 = 1.0 / L0;
-    one_over_h = 1.0 / TimeStep;
+                                                         const Mat3& R_dot1, const Mat3& R_dot2)
+{
+    this->one_over_L0 = 1.0 / L0;
+    this->one_over_h = 1.0 / TimeStep;
     this->x1 = x1;
     this->x2 = x2;
     this->v1 = v1;
     this->v2 = v2;
-    deltaX = x1 - x2;
-    L = deltaX.norm();
-    one_over_L = 1.0 / L;
-    darboux_vector = compute_darboux_vector(L0, R1, R2);
-    darboux_vector_derivativeA = compute_darboux_vector_local_derivative(L0, R1, R2);
-    darboux_vector_derivativeB = - compute_darboux_vector_local_derivative(L0, R2, R1);
-    u = deltaX * one_over_L;
-    uut = u * u.transpose();
-    v_rel = u * (v1 - v2).dot(u) * one_over_L0;
+    this->deltaX = x1 - x2;
+    this->L = deltaX.norm();
+    this->one_over_L = 1.0 / L;
+    this->darboux_vector = compute_darboux_vector(L0, R1, R2);
+    this->darboux_vector_derivativeA = compute_darboux_vector_local_derivative(L0, R1, R2);
+    this->darboux_vector_derivativeB = - compute_darboux_vector_local_derivative(L0, R2, R1);
+    this->u = deltaX * one_over_L;
+    this->uut = u * u.transpose();
+    this->v_rel = u * (v1 - v2).dot(u) * one_over_L0;
     this->R1 = R1;
     this->R2 = R2;
     this->R_dot1 = R_dot1;
     this->R_dot2 = R_dot2;
-    R = 0.5 * (R1 + R2);
-    C = (u - R.col(2));
+    this->R = 0.5 * (R1 + R2);
+    this->C = (u - R.col(2));
 }
 
 Scalar RodSegmentParameters::compute_energy(const RodSegmentPrecomputedValues& values) const {
@@ -218,6 +221,19 @@ Mat6 RodSegmentParameters::compute_energy_hessian_B(const RodSegmentPrecomputedV
     H.block<3,3>(0, 3) = hessEp_dxdtheta;
     H.block<3,3>(3, 0) = hessEp_dxdtheta.transpose();
     H.block<3,3>(3, 3) = hessVb + hessDr + hessEp_dtheta2;
+
+
+    // const Eigen::SelfAdjointEigenSolver<Mat6> eigs(H);
+    // Vec6 eigenvalues = eigs.eigenvalues();
+    // Mat6 eigenvectors = eigs.eigenvectors();
+    // DEBUG_LOG(eigenvalues.transpose());
+    // for (int i = 0; i < 6; i++) {
+    //     if (eigenvalues(i) < 0.0) {
+    //         eigenvalues(i) = 0.0;
+    //     }
+    // }
+
+    // H = eigenvectors.transpose() * eigenvalues.asDiagonal() * eigenvectors.inverse();
 
     return H;
 }

@@ -13,7 +13,8 @@ struct LossFunctionAndDerivatives {
 Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
                                                    const std::vector<PhysicsState>& trajectory,
                                                    const LossFunctionAndDerivatives& loss,
-                                                   const Mat& dx0_dp, const Mat& dv0_dp);
+                                                   const Mat& dx0_dp, const Mat& dv0_dp,
+                                                   const unsigned int maxIterations = 0);
 
 Vec compute_loss_function_gradient_backpropagation_1_step_velocity(const Simulation& simulation,
                                                                    const PhysicsState state0,

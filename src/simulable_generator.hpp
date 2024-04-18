@@ -46,7 +46,7 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
  * @param poisson_ratio, young_modulus Elasticity parameters of the soft body.
  */
 template <typename MaterialType>
-SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus);
+SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar TotalMass, Scalar poisson_ratio, Scalar young_modulus);
 
 /**
  * Initializes a FEM soft body from a tetrahedron mesh.
@@ -61,7 +61,7 @@ SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar node_m
  * @param tet_indices, tet_vertices Description of the tetrahedron indexed mesh.
  */
 template <typename MaterialType>
-SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,
+SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Scalar TotalMass, Scalar poisson_ratio, Scalar young_modulus,
                                                      const std::vector<unsigned int>& tet_indices, const std::vector<Scalar>& tet_vertices);
 
 

@@ -39,7 +39,9 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/nativefiledialog-extended/)
 
 set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_BUILD_TYPE Release)
+# add_compile_options(-fno-omit-frame-pointer) # for profiling
 
 find_package(OpenMP)
 
@@ -74,6 +76,7 @@ target_link_libraries(libmandos
   raylib_imgui
   tetgen
   nfd
+  # profiler
   # OpenMP::OpenMP_CXX
 )
 

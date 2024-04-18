@@ -168,6 +168,8 @@ class FEMHandle {
 
         FEMHandle add_gravity(Scalar gravity) const;
 
+        FEMHandle set_com_position(Vec3 position) const;
+
         inline unsigned int get_n_particles() const { return bounds.n_particles; }
 
         const Scalar TotalMass;

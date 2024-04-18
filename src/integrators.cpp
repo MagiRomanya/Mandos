@@ -1,4 +1,3 @@
-#include <iostream>
 #include <thread>
 #include <vector>
 #include <Eigen/SparseCore>

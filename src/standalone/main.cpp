@@ -82,6 +82,7 @@ int main(void) {
     SkinnedRodGPU rodGPU = SkinnedRodGPU(rodMesh, rod1.get_n_rigid_bodies() - 1);
     bool simulation_paused = true;
     Scalar time = 0.0;
+    EnergyAndDerivatives f;
     while (not viewer.window_should_close()) {
 
         // Interaction with the simulaiton
@@ -90,7 +91,7 @@ int main(void) {
         }
 
         if (viewer.is_key_pressed(Key_G)) {
-            simulation_step(simulation, state);
+            simulation_step(simulation, state, f);
             time += simulation.TimeStep;
         }
 
@@ -100,7 +101,6 @@ int main(void) {
         }
 
         if (not simulation_paused) {
-            EnergyAndDerivatives f = EnergyAndDerivatives(0);
             simulation_step(simulation, state, f);
             time += simulation.TimeStep;
             DEBUG_LOG(f.energy);

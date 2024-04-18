@@ -165,7 +165,8 @@ void compute_simulation_global_to_local_jacobian(const Simulables& simulables, c
 Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
                                                    const std::vector<PhysicsState>& trajectory,
                                                    const LossFunctionAndDerivatives& loss,
-                                                   const Mat& dx0_dp, const Mat& dv0_dp)
+                                                   const Mat& dx0_dp, const Mat& dv0_dp,
+                                                   const unsigned int maxIterations)
 {
     const unsigned int nParameters = static_cast<unsigned int>(loss.loss_parameter_partial_derivative.size());
     const unsigned int nDoF = static_cast<unsigned int>(trajectory.at(0).x.size());
@@ -212,32 +213,36 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
 
         Vec h_grad = equation_vector;
 
-        const Scalar dx = 1e-7;
-        const unsigned int maxIterations = 10;
+        const Scalar dx = 1e-6;
         Vec z = solver.solve(equation_vector);
+
         for (unsigned int j = 0; j < maxIterations; j++) {
+            // Compute Hz with finite differences
             PhysicsState diff_state = state;
-            // diff_state.x += dx * z;
-            // diff_state.v = (diff_state.x - state0.x) / simulation.TimeStep;
             update_simulation_state(simulation.TimeStep, simulation.energies, dx * z, diff_state, state0);
             Vec diff_grad = compute_energy_gradient(simulation.TimeStep, simulation.energies,
                                                     diff_state, state0);
-            h_grad = (- (diff_grad - grad0) / dx) + equation_vector;
+            Vec Hz = (diff_grad - grad0) / dx;
+            Scalar h = 0.5 * z.transpose() * Hz - equation_vector.dot(z);
+            // DEBUG_LOG(h);
+
+            // Evaluate the gradient
+            h_grad = - Hz + equation_vector;
             DEBUG_LOG(h_grad.norm());
+
             // Solve the system
             Vec dz = solver.solve(h_grad);
+
             z += dz;
 
-            // Update z
-            // for (unsigned int pi = 0; pi < simulation.energies.linear_inertias.size(); pi++) {
-            //     const LinearInertia& linear = simulation.energies.linear_inertias[pi];
-            //     z.segment<3>(linear.p.index) += dz.segment<3>(linear.p.index);
-            // }
-            // for (unsigned int rbi = 0; rbi < simulation.energies.rotational_inertias.size(); rbi++) {
-            //     const RotationalInertia& rotational = simulation.energies.rotational_inertias[rbi];
-            //     const unsigned int index = rotational.rb.index+3;
-            //     z.segment<3>(index) = compose_axis_angle(dz.segment<3>(index), z.segment<3>(index));
-            // }
+            // Line search
+            diff_state = state;
+            update_simulation_state(simulation.TimeStep, simulation.energies, dx * z, diff_state, state0);
+            diff_grad = compute_energy_gradient(simulation.TimeStep, simulation.energies,
+                                                diff_state, state0);
+            Hz = (diff_grad - grad0) / dx;
+            Scalar h_new = 0.5 * z.transpose() * Hz - equation_vector.dot(z);
+            DEBUG_LOG(h - h_new);
         }
         DEBUG_LOG("-------------");
 
