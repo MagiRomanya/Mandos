@@ -392,6 +392,8 @@ void RenderState::deinitialize() {
     delete tetLines;
     delete tetVis;
 
+    free(base_material.maps);
+
     // Unload shaders
 #define SHADER(var, vspath, fspath) UnloadShader(var);
     SHADER_LIST
@@ -1067,6 +1069,7 @@ void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState
 
     matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RED;
     DrawMeshInstanced(renderState->spring_model.meshes[0], matInstances, transforms.data(), transforms.size());
+    free(matInstances.maps);
 }
 
 void MandosViewer::draw_particles(const Simulation& simulation, const PhysicsState& state) {
@@ -1208,9 +1211,7 @@ void MandosViewer::draw_FEM_tetrahedrons(const Simulation& simulation, const Phy
     mat.shader = renderState->bling_phong_shader;
     DrawMesh(tetMesh, mat, MatrixIdentity());
 #undef MAT
-
-    // Update GPU data and update the tetrahedron mesh
-    // ----------------------------------------------------
+    free(mat.maps);
 }
 
 void MandosViewer::draw_particle_indices(const Simulation& simulation, const PhysicsState& state) {
@@ -1273,6 +1274,7 @@ void MandosViewer::draw_rigid_bodies(const Simulation& simulation, const Physics
     matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RB_COLOR;
     // DrawMeshInstanced(renderState->sphere_mesh, matInstances, transforms.data(), transforms.size());
     DrawMeshInstanced(renderState->axis3D_model.meshes[0], matInstances, transforms.data(), transforms.size());
+    free(matInstances.maps);
 }
 
 
@@ -1300,6 +1302,7 @@ void MandosViewer::draw_rods(const Simulation& simulation, const PhysicsState& s
     matInstances.shader = renderState->instancing_shader;
     matInstances.maps[MATERIAL_MAP_DIFFUSE].color = RODS_COLOR;
     DrawMeshInstanced(renderState->cylinder_model.meshes[0], matInstances, transforms.data(), transforms.size());
+    free(matInstances.maps);
 }
 
 void MandosViewer::draw_colliders(const Simulation& simulation) {
@@ -1419,4 +1422,5 @@ void MandosViewer::draw_rod(const RodHandle& rod, const PhysicsState& state, con
     material.shader = renderState->rod_skinning_shader;
     material.maps[MATERIAL_MAP_DIFFUSE].color = RODS_COLOR;
     DrawSkinnedRodGPU(rodGPU, material, transforms);
+    free(material.maps);
 }
