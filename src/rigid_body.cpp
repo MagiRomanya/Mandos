@@ -169,12 +169,11 @@ Vec3 compose_axis_angle(const Vec3& a, const Vec3& b) {
     }
     const Vec3 b_axis = b / b_angle;
 
-    const Scalar sin_b_angle2 = std::sin(b_angle / 2.0);
-    const Scalar cos_b_angle2 = std::cos(b_angle / 2.0);
+    const Scalar sin_b_angle2 = std::sin(b_angle * 0.5);
+    const Scalar cos_b_angle2 = std::cos(b_angle * 0.5);
 
     if (fabs(a_angle) < tol) {
-        Scalar new_angle = 2.0 * std::acos(cos_b_angle2 - 0.5 * sin_b_angle2 * a.dot(b_axis));
-
+        Scalar new_angle = b_angle + a.dot(b_axis);
         const Vec3 new_axis = 1.0 / std::sin(new_angle/2.0) * (
             0.5 * cos_b_angle2 * a
             + sin_b_angle2 * b_axis
