@@ -115,7 +115,7 @@ void join_rigid_body_with_rod_segment(Simulation& simulation, RigidBodyHandle& r
     const Vec3 comA = rbA.rb.get_COM_position(simulation.initial_state.x);
     const Vec3 comB = rbB.rb.get_COM_position(simulation.initial_state.x);
     const Scalar distance = (comA - comB).norm();
-    const Vec3 u = (comA - comB) / distance;
+    const Vec3 u = (comB - comA) / distance;
     const Vec3 axis_angle = compute_axis_angle_from_direction(u);
     rbA.set_initial_orientation(axis_angle);
     rbB.set_initial_orientation(axis_angle);
@@ -314,7 +314,7 @@ RodHandle RodHandle::set_initial_rod_position(const Vec3& origin) const {
     return *this;
 }
 
-RodHandle RodHandle::set_initial_rigid_body_position(const Scalar s, const Vec3& x) const {
+RodHandle RodHandle::set_rigid_body_initial_position(const Scalar s, const Vec3& x) const {
     assert(s >= 0 && s <= 1.0);
     const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb));
     const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + index];
@@ -322,11 +322,26 @@ RodHandle RodHandle::set_initial_rigid_body_position(const Scalar s, const Vec3&
     return *this;
 }
 
-RodHandle RodHandle::set_initial_rigid_body_velocity(const Scalar s, const Vec3& v) const {
+RodHandle RodHandle::set_rigid_body_initial_velocity(const Scalar s, const Vec3& v) const {
     assert(s >= 0 && s <= 1.0);
     const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb - 1));
     const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + index];
     simulation.initial_state.v.segment<3>(rb.index) = v;
+    return *this;
+}
+
+RodHandle RodHandle::set_rigid_body_initial_orientation(const Scalar s, const Vec3& x) const {
+    assert(s >= 0 && s <= 1.0);
+    const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb - 1));
+    const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + index];
+    simulation.initial_state.x.segment<3>(rb.index+3) = x;
+    return *this;
+}
+RodHandle RodHandle::set_rigid_body_initial_angular_velocity(const Scalar s, const Vec3& v) const {
+    assert(s >= 0 && s <= 1.0);
+    const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb - 1));
+    const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + index];
+    simulation.initial_state.v.segment<3>(rb.index+3) = v;
     return *this;
 }
 

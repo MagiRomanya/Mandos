@@ -161,6 +161,14 @@ void compute_simulation_global_to_local_jacobian(const Simulables& simulables, c
     ptm.setFromTriplets(jac_triplets.begin(), jac_triplets.end());
 }
 
+inline Vec approximate_Hz_finite_diff(const Simulation& simulation, const PhysicsState& state, const PhysicsState& state0,
+                                      const Vec& grad0, const Vec& z, Scalar dx) {
+    PhysicsState diff_state = state;
+    update_simulation_state(simulation.TimeStep, simulation.energies, dx * z, diff_state, state0);
+    Vec diff_grad = compute_energy_gradient(simulation.TimeStep, simulation.energies,
+                                            diff_state, state0);
+    return (diff_grad - grad0) / dx;
+}
 
 Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
                                                    const std::vector<PhysicsState>& trajectory,
@@ -215,36 +223,38 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
 
         const Scalar dx = 1e-6;
         Vec z = solver.solve(equation_vector);
+        Vec dz = Vec::Zero(nDoF);
 
         for (unsigned int j = 0; j < maxIterations; j++) {
             // Compute Hz with finite differences
-            PhysicsState diff_state = state;
-            update_simulation_state(simulation.TimeStep, simulation.energies, dx * z, diff_state, state0);
-            Vec diff_grad = compute_energy_gradient(simulation.TimeStep, simulation.energies,
-                                                    diff_state, state0);
-            Vec Hz = (diff_grad - grad0) / dx;
+            Vec Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z, dx);
             Scalar h = 0.5 * z.transpose() * Hz - equation_vector.dot(z);
             // DEBUG_LOG(h);
 
             // Evaluate the gradient
             h_grad = - Hz + equation_vector;
-            DEBUG_LOG(h_grad.norm());
+            // DEBUG_LOG(h_grad.norm());
+            // DEBUG_LOG(h);
 
             // Solve the system
-            Vec dz = solver.solve(h_grad);
-
-            z += dz;
+            dz = solver.solve(h_grad);
 
             // Line search
-            diff_state = state;
-            update_simulation_state(simulation.TimeStep, simulation.energies, dx * z, diff_state, state0);
-            diff_grad = compute_energy_gradient(simulation.TimeStep, simulation.energies,
-                                                diff_state, state0);
-            Hz = (diff_grad - grad0) / dx;
-            Scalar h_new = 0.5 * z.transpose() * Hz - equation_vector.dot(z);
-            DEBUG_LOG(h - h_new);
+            Vec z_line_search = z + dz;
+            Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z_line_search, dx);
+            Scalar h_new = 0.5 * z_line_search.transpose() * Hz - equation_vector.dot(z_line_search);
+            Scalar alpha = 1.0;
+            // DEBUG_LOG(h_new - h);
+            // while (h_new > h) {
+            //     alpha /= 2.0;
+            //     z_line_search = z + alpha * dz;
+            //     Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z_line_search, dx);
+            //     h_new = 0.5 * z_line_search.transpose() * Hz - equation_vector.dot(z_line_search);
+            // }
+            // DEBUG_LOG(alpha);
+            z += alpha * dz;
         }
-        DEBUG_LOG("-------------");
+        // DEBUG_LOG("-------------");
 
         // Update the loss function gradients
         // -------------------------------------------------------------------------

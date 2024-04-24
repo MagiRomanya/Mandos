@@ -36,7 +36,8 @@ SimulableBounds generate_rod(Simulation& simulation,
     // Generate the rigid bodies
     // ---------------------------------------------------------------------------------
     const unsigned int rigid_body_index = static_cast<unsigned int>(simulation.simulables.rigid_bodies.size());
-    const Mat3& rod_inertia_tensor = rb_mass * 10.0 * Vec3(1.0, 1.0, 2.0).asDiagonal();
+    const Mat3 rod_inertia_tensor = rb_mass * 10.0 * Vec3(1.0, 1.0, 2.0).asDiagonal();
+    // const Mat3 rod_inertia_tensor =  Mat3::Identity();
     for (unsigned int i = 0; i < nDoF; i+=6) {
         RigidBody rb = RigidBody(index + i, rb_mass, rod_inertia_tensor);
         add_rigid_body_to_simulation(simulation, rb);
@@ -64,7 +65,8 @@ SimulableBounds generate_rod(Simulation& simulation,
         const RigidBody& rbA = simulation.simulables.rigid_bodies[rigid_body_index + i];
         const RigidBody& rbB = simulation.simulables.rigid_bodies[rigid_body_index + i + 1];
 
-        simulation.energies.rod_segments.emplace_back(rbB, rbA, param);
+        // simulation.energies.rod_segments.emplace_back(rbB, rbA, param);
+        simulation.energies.rod_segments.emplace_back(rbA, rbB, param);
     }
 
     // Compute bounds
@@ -156,8 +158,9 @@ SimulableBounds generate_rod(Simulation& simulation,
         RodSegmentParameters param = rod_parameters;
         const PhysicsState& i_state = simulation.initial_state;
         param.L0 = (rbA.get_COM_position(i_state.x) - rbB.get_COM_position(i_state.x)).norm();
-        param.intrinsic_darboux = compute_darboux_vector(param.L0, rbB.compute_rotation_matrix(i_state.x), rbA.compute_rotation_matrix(i_state.x));
-        simulation.energies.rod_segments.emplace_back(rbB, rbA, param);
+        param.intrinsic_darboux = compute_darboux_vector(param.L0, rbA.compute_rotation_matrix(i_state.x), rbB.compute_rotation_matrix(i_state.x));
+        // simulation.energies.rod_segments.emplace_back(rbB, rbA, param);
+        simulation.energies.rod_segments.emplace_back(rbA, rbB, param);
     }
 
     // Compute bounds

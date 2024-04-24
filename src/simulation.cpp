@@ -95,24 +95,14 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         // -----------------------------------------------------------------------------------------
         f.clear(nDoF);
         std::vector<ContactEvent> events;
-        double compute_energies_time;
-        {
-            Clock clock(compute_energies_time);
-            compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
-            // compute_energy_and_derivatives_finite(simulation.TimeStep, simulation.energies, state, state0, f);
-            // const Scalar gradNorm = f.gradient.norm();
-            // if (lastGradNorm - gradNorm < reductionThreshold) continue;
-            // lastGradNorm = gradNorm;
-        }
+        compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
+        // compute_energy_and_derivatives_finite(simulation.TimeStep, simulation.energies, state, state0, f);
+        // const Scalar gradNorm = f.gradient.norm();
+        // if (lastGradNorm - gradNorm < reductionThreshold) continue;
+        // lastGradNorm = gradNorm;
+        find_point_particle_contact_events(simulation.colliders, simulation.simulables, state, events);
+        compute_contact_events_energy_and_derivatives(simulation.TimeStep, events, state, f);
 
-        double compute_contact_time;
-        {
-            Clock clock(compute_contact_time);
-            find_point_particle_contact_events(simulation.colliders, simulation.simulables, state, events);
-            compute_contact_events_energy_and_derivatives(simulation.TimeStep, events, state, f);
-        }
-        // DEBUG_LOG(compute_energies_time);
-        // DEBUG_LOG(compute_contact_time);
         const Scalar energy0 = f.energy;
 
         // Integration step
@@ -130,6 +120,8 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
         const bool enableLineSearch = false;
         if (not enableLineSearch) continue;
         Scalar lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
+        DEBUG_LOG(energy0);
+        DEBUG_LOG(lineSearchEnergy);
         Scalar alpha = 1.0f;
         const Scalar alpha_min_threshold = 1e-7;
         while (lineSearchEnergy > energy0) {

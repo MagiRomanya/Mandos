@@ -11,7 +11,7 @@ inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local_matrix(const Mat3& R) {
 
 Vec3 compute_darboux_vector(const Scalar L0, const Mat3& R1, const Mat3& R2) {
     const Mat3 dR_dx = (R2 - R1) / L0;
-    const Mat3 R = (R2 + R1) / 2.0;
+    const Mat3 R = (R1 + R2) / 2.0;
     const Mat3 skew_u = dR_dx * R.transpose();
     const Vec3 u = 0.5 * vectorized_levi_civita() * vectorize_matrix<3>(skew_u);
     return R.transpose() * u;
@@ -53,8 +53,34 @@ Mat3 compute_darboux_vector_local_derivative(const Scalar L0, const Mat3& R1, co
 
     // Final derivative
     Mat3 result = dRTu_dtheta + R.transpose() * du_dtheta;
+
+    // const Mat3 du_dtheta2 = -1.0 / L0 * Mat3::Identity() - 0.5 * skew_u;
+    // std ::cout << "result"
+    //            << "\n" << result << std ::endl;
+    // std ::cout << "du_dtheta2"
+    //            << "\n" << du_dtheta2 << std ::endl;
     return result;
 }
+
+Mat3 compute_darboux_vector_local_derivative2(const Scalar L0, const Mat3& R1, const Mat3& R2) {
+    // const Mat3 dR_dx = (R2 - R1) / L0;
+    // const Mat3 R = (R2 + R1) / 2;
+    const Mat3 dR_dx = (R2 - R1) / L0;
+    const Mat3 R = (R1 + R2) / 2.0;
+    const Mat3 skew_u = dR_dx * R.transpose();
+
+
+    const Mat3 du_dtheta = -1.0 / L0 * Mat3::Identity() - 0.5 * skew_u;
+
+    // Compute the effect of rotating the darboux with R^T
+    Mat3 dRTu_dtheta = 0.5 * R1.transpose() * skew_u; // Derivative of R^T u wrt theta with u constant
+
+    // Final derivative
+    Mat3 result = dRTu_dtheta + R.transpose() * du_dtheta;
+
+    return result;
+}
+
 
 RodSegmentPrecomputedValues::RodSegmentPrecomputedValues(Scalar L0, Scalar TimeStep,
                                                          const Vec3& x1, const Vec3& x2,
@@ -72,8 +98,8 @@ RodSegmentPrecomputedValues::RodSegmentPrecomputedValues(Scalar L0, Scalar TimeS
     this->L = deltaX.norm();
     this->one_over_L = 1.0 / L;
     this->darboux_vector = compute_darboux_vector(L0, R1, R2);
-    this->darboux_vector_derivativeA = compute_darboux_vector_local_derivative(L0, R1, R2);
-    this->darboux_vector_derivativeB = - compute_darboux_vector_local_derivative(L0, R2, R1);
+    this->darboux_vector_derivativeA = compute_darboux_vector_local_derivative2(L0, R1, R2);
+    this->darboux_vector_derivativeB = - compute_darboux_vector_local_derivative2(L0, R2, R1);
     this->u = deltaX * one_over_L;
     this->uut = u * u.transpose();
     this->v_rel = u * (v1 - v2).dot(u) * one_over_L0;
@@ -82,7 +108,7 @@ RodSegmentPrecomputedValues::RodSegmentPrecomputedValues(Scalar L0, Scalar TimeS
     this->R_dot1 = R_dot1;
     this->R_dot2 = R_dot2;
     this->R = 0.5 * (R1 + R2);
-    this->C = (u - R.col(2));
+    this->C = (-u - R.col(2));
 }
 
 Scalar RodSegmentParameters::compute_energy(const RodSegmentPrecomputedValues& values) const {
@@ -117,7 +143,7 @@ Vec3 RodSegmentParameters::compute_energy_linear_gradient(const RodSegmentPrecom
     const Vec3 gradDt = translational_damping * values.uut * (values.v1 - values.v2);
 
     // Constraint energy
-    const Mat3 dL_dx = (Mat3::Identity() - values.uut) * values.one_over_L;
+    const Mat3 dL_dx = - (Mat3::Identity() - values.uut) * values.one_over_L;
     const Vec3 gradEp_dx = constraint_stiffness * L0 * values.C.transpose() * dL_dx;
 
     return gradVs + gradDt + gradEp_dx;
@@ -174,7 +200,7 @@ Mat6 RodSegmentParameters::compute_energy_hessian_A(const RodSegmentPrecomputedV
     const Mat3 hessDr = Mat3::Zero();
 
     // Constraint energy
-    const Mat3 dL_dx = (Mat3::Identity() - values.uut) * values.one_over_L;
+    const Mat3 dL_dx = - (Mat3::Identity() - values.uut) * values.one_over_L;
     const Mat3 dd3_dtheta = - skew(0.5 * values.R1.col(2));
     const Mat3 hessEp_dx2 = constraint_stiffness * L0 * dL_dx.transpose() * dL_dx;
     const Mat3 hessEp_dtheta2 = constraint_stiffness * L0 * dd3_dtheta.transpose() * dd3_dtheta;
@@ -208,7 +234,7 @@ Mat6 RodSegmentParameters::compute_energy_hessian_B(const RodSegmentPrecomputedV
     const Mat3 hessDr = Mat3::Zero();
 
     // Constraint energy
-    const Mat3 dL_dx = - (Mat3::Identity() - values.uut) * values.one_over_L;
+    const Mat3 dL_dx = (Mat3::Identity() - values.uut) * values.one_over_L;
     const Mat3 dd3_dtheta = skew(-0.5 * values.R2 * Vec3(0,0,1));
     const Mat3 hessEp_dx2 = constraint_stiffness * L0 * dL_dx.transpose() * dL_dx;
     const Mat3 hessEp_dtheta2 = constraint_stiffness * L0 * dd3_dtheta.transpose() * dd3_dtheta;
@@ -221,19 +247,6 @@ Mat6 RodSegmentParameters::compute_energy_hessian_B(const RodSegmentPrecomputedV
     H.block<3,3>(0, 3) = hessEp_dxdtheta;
     H.block<3,3>(3, 0) = hessEp_dxdtheta.transpose();
     H.block<3,3>(3, 3) = hessVb + hessDr + hessEp_dtheta2;
-
-
-    // const Eigen::SelfAdjointEigenSolver<Mat6> eigs(H);
-    // Vec6 eigenvalues = eigs.eigenvalues();
-    // Mat6 eigenvectors = eigs.eigenvectors();
-    // DEBUG_LOG(eigenvalues.transpose());
-    // for (int i = 0; i < 6; i++) {
-    //     if (eigenvalues(i) < 0.0) {
-    //         eigenvalues(i) = 0.0;
-    //     }
-    // }
-
-    // H = eigenvectors.transpose() * eigenvalues.asDiagonal() * eigenvectors.inverse();
 
     return H;
 }
@@ -257,7 +270,7 @@ Mat6 RodSegmentParameters::compute_energy_hessian_AB(const RodSegmentPrecomputed
     const Mat3 hessDr = Mat3::Zero();
 
     // Constraint energy
-    const Mat3 dL_dxA = (Mat3::Identity() - values.uut) / values.L;
+    const Mat3 dL_dxA = - (Mat3::Identity() - values.uut) / values.L;
     const Mat3 dL_dxB = - dL_dxA;
     const Mat3 dd3_dthetaA = skew(-0.5 * values.R1.col(2));
     const Mat3 dd3_dthetaB = skew(-0.5 * values.R2.col(2));

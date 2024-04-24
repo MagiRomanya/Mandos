@@ -157,11 +157,11 @@ Vec3 compute_COM_position_UNIFORM_VOLUME(const std::vector<unsigned int>& indice
  * Result = Ra * Rb
 */
 Vec3 compose_axis_angle(const Vec3& a, const Vec3& b) {
-    const Scalar tol = 1e-8;
+    const Scalar tol = 1e-7;
     const Scalar b_angle = b.norm();
     const Scalar a_angle = a.norm();
-    if (b_angle < tol) {
-        if (a_angle > M_PI) {
+    if (std::fabs(b_angle) < tol) {
+        if (std::fabs(a_angle) > M_PI) {
             const Scalar a_angle_bounded = std::fmod(a_angle, 2.0 * M_PI) - 2 * M_PI;
             return b + a_angle_bounded * a / a_angle;
         }
@@ -172,12 +172,12 @@ Vec3 compose_axis_angle(const Vec3& a, const Vec3& b) {
     const Scalar sin_b_angle2 = std::sin(b_angle / 2.0);
     const Scalar cos_b_angle2 = std::cos(b_angle / 2.0);
 
-    if (a_angle < tol) {
+    if (fabs(a_angle) < tol) {
         Scalar new_angle = 2.0 * std::acos(cos_b_angle2 - 0.5 * sin_b_angle2 * a.dot(b_axis));
 
         const Vec3 new_axis = 1.0 / std::sin(new_angle/2.0) * (
             0.5 * cos_b_angle2 * a
-            +  sin_b_angle2 * b_axis
+            + sin_b_angle2 * b_axis
             + 0.5 * sin_b_angle2 * cross(a, b_axis));
 
         new_angle = std::fmod(new_angle, 2.0 * M_PI);

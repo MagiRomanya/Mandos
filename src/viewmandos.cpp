@@ -1011,6 +1011,8 @@ inline Mat3 rotation_from_vector(const Vec3& vec, const Vec3& up) {
     const Vec3 v = vec.normalized();
     const Vec3 nup = up.normalized();
     const Vec3 tangent = cross(v, nup).normalized();
+    rotation *= vec.dot(up);
+    rotation(0,0) = 1.0;
     if (tangent.squaredNorm() > 1e-4) {
         const Vec3 bitangent = cross(v, tangent).normalized();
         rotation.col(0) = tangent;
@@ -1028,7 +1030,7 @@ inline Matrix compute_transform_from_two_points(const Vec3& x1, const Vec3& x2) 
     Mat3 Rotation = rotation_from_vector(align_axis, up);
     Matrix transform = MatrixTranslate(center.x(), center.y(), center.z());
     const Matrix rotation4 = matrix_eigen_to_raylib(Rotation);
-    const Matrix rotateX = MatrixRotateX(PI / 2);
+    const Matrix rotateX = MatrixRotateX(-PI / 2);
     transform = MatrixMultiply(rotation4, transform);
     transform = MatrixMultiply(rotateX, transform);
     const Matrix scale = MatrixScale(1, length, 1);
@@ -1279,10 +1281,7 @@ void MandosViewer::draw_rigid_bodies(const Simulation& simulation, const Physics
 
 
 void MandosViewer::draw_vector(const Vec3& vector, const Vec3& origin) {
-    const Vec3 up = Vec3(0, 1, 0);
-    const Mat3 rotation = rotation_from_vector(vector, up);
-    const Mat3 scale = Mat3::Identity() * vector.norm() / 10.0;
-    const Matrix transform = raylib_transform_matrix(rotation, scale, origin);
+    Matrix transform = compute_transform_from_two_points(origin - 0.5*vector, origin + 0.5*vector);
     DrawMesh(renderState->vector_model.meshes[0], renderState->base_material, transform);
 }
 

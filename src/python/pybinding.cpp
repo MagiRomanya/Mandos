@@ -169,8 +169,10 @@ PYBIND11_MODULE(pymandos, m) {
         .def(py::init<Simulation&, const std::vector<Scalar>&, Scalar, RodSegmentParameters>())
         .def("compute_center_of_mass", &RodHandle::compute_center_of_mass)
         .def("add_gravity", &RodHandle::add_gravity)
-        .def("set_initial_rigid_body_position", &RodHandle::set_initial_rigid_body_position)
-        .def("set_initial_rigid_body_velocity", &RodHandle::set_initial_rigid_body_velocity)
+        .def("set_rigid_body_initial_position", &RodHandle::set_rigid_body_initial_position)
+        .def("set_rigid_body_initial_velocity", &RodHandle::set_rigid_body_initial_velocity)
+        .def("set_rigid_body_initial_orientation", &RodHandle::set_rigid_body_initial_orientation)
+        .def("set_rigid_body_initial_angular_velocity", &RodHandle::set_rigid_body_initial_angular_velocity)
         .def("set_initial_rod_position", &RodHandle::set_initial_rod_position)
         .def("freeze_rigid_body", &RodHandle::freeze_rigid_body)
         ;
@@ -242,6 +244,7 @@ PYBIND11_MODULE(pymandos, m) {
         .def("draw_FEM_tetrahedrons", &MandosViewer::draw_FEM_tetrahedrons_lines)
         // .def("draw_particle_indices", &MandosViewer::draw_particle_indices)
         .def("draw_simulation_state", &MandosViewer::draw_simulation_state)
+        .def("draw_vector", &MandosViewer::draw_vector)
         ;
 
 }
