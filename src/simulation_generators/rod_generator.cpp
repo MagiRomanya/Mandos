@@ -17,6 +17,21 @@ Vec3 compute_axis_angle_from_direction(const Vec3& direction) {
     return Vec3(0.0, 0.0, 0.0);
 }
 
+Mat3 compute_rotation_matrix_from_direction(const Vec3& direction) {
+    const Vec3 normalized_direction = direction.normalized();
+
+    // Compute initial rotation
+    if (not normalized_direction.isApprox(Vec3(0.0, 0.0, 1.0), 1e-6)) {
+        const Vec3 tangent = cross(normalized_direction, Vec3(0.0, 1.0, 0.0)).normalized();
+        const Vec3 bitangent = cross(normalized_direction, tangent).normalized();
+        Mat3 rotation;
+        rotation << tangent, bitangent, normalized_direction;
+        return rotation;
+    }
+
+    return Mat3::Identity();
+}
+
 
 SimulableBounds generate_rod(Simulation& simulation,
                              unsigned int segments, Scalar TotalMass,
@@ -82,6 +97,19 @@ SimulableBounds generate_rod(Simulation& simulation,
     return bounds;
 }
 
+Mat3 parallel_transport(const Vec3& v1, const Vec3& v2) {
+    const Vec3 cross_v1v2 = cross(v1, v2);
+    const Scalar cross_norm = cross_v1v2.norm();
+    const Vec3 axis = cross_v1v2 / cross_norm;
+    const Scalar angle = std::atan2(cross_norm, v1.dot(v2));
+    return compute_rotation_matrix_rodrigues(axis * angle);
+}
+
+Vec3 rotation_matrix_to_axis_angle(const Mat3& R) {
+    Eigen::AngleAxis<Scalar> result = Eigen::AngleAxis<Scalar>(R);
+    return result.axis() * result.angle();
+}
+
 SimulableBounds generate_rod(Simulation& simulation,
                              std::vector<Scalar> vertices,
                              Scalar TotalMass,
@@ -118,7 +146,8 @@ SimulableBounds generate_rod(Simulation& simulation,
     const Vec3 v0 = Vec3(vertices[0], vertices[1], vertices[2]);
     const Vec3 v1 = Vec3(vertices[3], vertices[4], vertices[5]);
     const Vec3 direction0 = v1 - v0;
-    const Vec3 axis_angle0 = compute_axis_angle_from_direction(direction0);
+    const Mat3 rotation0 = compute_rotation_matrix_from_direction(direction0);
+    const Vec3 axis_angle0 = rotation_matrix_to_axis_angle(rotation0);
     simulation.initial_state.x.segment<3>(index) = v0;
     simulation.initial_state.x.segment<3>(index+3) = axis_angle0;
     simulation.initial_state.v.segment<3>(index) = Vec3::Zero();
@@ -135,6 +164,8 @@ SimulableBounds generate_rod(Simulation& simulation,
     simulation.initial_state.v.segment<3>(index + nDoF - 6) = Vec3::Zero();
     simulation.initial_state.v.segment<3>(index + nDoF - 6 + 3) = Vec3::Zero();
 
+    Vec3 last_direction = direction0.normalized();
+    Mat3 last_rotation = rotation0;
     for (unsigned int i = 1; i < nSegments; i++) {
         const Vec3 vA = Vec3(vertices[3*(i-1)+0], vertices[3*(i-1)+1], vertices[3*(i-1)+2]);
         const Vec3 vB = Vec3(vertices[3*(i+0)+0], vertices[3*(i+0)+1], vertices[3*(i+0)+2]);
@@ -142,8 +173,11 @@ SimulableBounds generate_rod(Simulation& simulation,
 
         const Vec3 AB = (vB - vA);
         const Vec3 BC = (vC - vB);
-        const Vec3 direction = 0.5 * (AB + BC);
-        const Vec3 axis_angle = compute_axis_angle_from_direction(direction);
+        const Vec3 direction = (0.5 * (AB + BC)).normalized();
+        const Mat3 rotation = parallel_transport(last_direction, direction) * last_rotation;
+        const Vec3 axis_angle = rotation_matrix_to_axis_angle(rotation);
+        last_rotation = rotation;
+        last_direction = direction;
 
         simulation.initial_state.x.segment<3>(index + 6 * i) = vB;
         simulation.initial_state.x.segment<3>(index + 6 * i + 3) = axis_angle;

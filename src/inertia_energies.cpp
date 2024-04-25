@@ -210,6 +210,12 @@ void RotationalInertia::update_state(const Scalar TimeStep, const Vec& dx, Physi
     const Vec3 dtheta = rb.get_axis_angle(dx);
 
     const Vec3 new_theta = compose_axis_angle(dtheta, theta);
+    if (new_theta.hasNaN()) {
+        DEBUG_LOG(dtheta.transpose());
+        DEBUG_LOG(theta.transpose());
+        DEBUG_LOG(new_theta.transpose());
+        std::cin.get();
+    }
     state.x.segment<3>(rb.index+3) = new_theta; // x_new
     const Vec3 delta_theta = new_theta - theta0;
     state.v.segment<3>(rb.index+3) = (delta_theta) / TimeStep; // v_new
