@@ -1,6 +1,9 @@
 #ifndef VIEWMANDOS_H_
 #define VIEWMANDOS_H_
 
+#include "mandos_config.hpp"
+#ifdef USE_VISUALIZER
+
 #include "../src/linear_algebra.hpp"
 #include "mandos.hpp"
 #include "../src/mesh.hpp"
@@ -134,6 +137,8 @@ struct SkinnedRodGPU {
     unsigned int VAO, posVBO, normalVBO, uvVBO, tangentVBO, idVBO, weightVBO;
     RenderMesh mesh;
     SkinnedRodGPU(const RenderMesh& mesh, const unsigned int segments);
+    SkinnedRodGPU(const RenderMesh& mesh, const RodHandle& rod);
+    void Initialize(const RenderMesh& mesh, const unsigned int segments);
     ~SkinnedRodGPU();
 };
 
@@ -222,5 +227,8 @@ private:
 void compute_rod_skinning_weights(const std::vector<Scalar>& vertices, const unsigned int segments,
                                   Eigen::Matrix<Scalar,2,Eigen::Dynamic>& boneWeights,
                                   Eigen::Matrix<unsigned int, 2, Eigen::Dynamic>& boneIDs);
+
+
+#endif // USE_VISUALIZER
 
 #endif // VIEWMANDOS_H_

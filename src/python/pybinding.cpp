@@ -216,12 +216,14 @@ PYBIND11_MODULE(pymandos, m) {
 
     // RENDERING
     // -----------------------------------------------------------------------------
+#ifdef USE_VISUALIZER
     py::class_<MeshGPU>(m, "MeshGPU")
         .def(py::init<const RenderMesh&>())
         .def("updateData", &MeshGPU::updateData)
         ;
     py::class_<SkinnedRodGPU>(m, "SkinnedRodGPU")
         .def(py::init<const RenderMesh&, const unsigned int>())
+        .def(py::init<const RenderMesh&, const RodHandle&>())
         ;
 
     py::class_<MandosViewer>(m, "MandosViewer")
@@ -247,4 +249,5 @@ PYBIND11_MODULE(pymandos, m) {
         .def("draw_vector", &MandosViewer::draw_vector)
         ;
 
+#endif // USE_VISUALIZER
 }

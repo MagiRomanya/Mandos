@@ -1,10 +1,10 @@
 #ifndef GL_EXTENSIONS_H_
 #define GL_EXTENSIONS_H_
 
-#include "mesh.hpp"
-#include "raylib.h"
-#include "viewmandos.hpp"
 #include <vector>
+#include <raylib.h>
+
+#include "viewmandos.hpp"
 
 /**
  * Creates a FBO with multisampled color and depth textures.

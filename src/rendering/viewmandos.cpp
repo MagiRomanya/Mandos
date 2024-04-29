@@ -21,17 +21,17 @@
 #include <rlgl.h>
 #include <rcamera.h>
 
-#include "colliders.hpp"
-#include "fem_element.hpp"
-#include "linear_algebra.hpp"
+#include "../colliders.hpp"
+#include "../fem_element.hpp"
+#include "../linear_algebra.hpp"
 #include "mandos.hpp"
-#include "memory_pool.hpp"
-#include "mesh.hpp"
-#include "rigid_body.hpp"
-#include "rod_segment.hpp"
-#include "spring.hpp"
+#include "../memory_pool.hpp"
+#include "../mesh.hpp"
+#include "../rigid_body.hpp"
+#include "../rod_segment.hpp"
+#include "../spring.hpp"
 #include "viewmandos.hpp"
-#include "utility_functions.hpp"
+#include "../utility_functions.hpp"
 #include "gl_extensions.hpp"
 
 Color RB_COLOR = YELLOW;

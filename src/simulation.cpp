@@ -86,7 +86,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     // Initial guess for our energy minimization
     // state =  PhysicsState(state0.x + simulation.TimeStep * state0.v, state0.v);
 
-    const unsigned int maxIter = 5;
+    const unsigned int maxIter = 8;
     // const Scalar reductionThreshold = 1e-4;
     // Scalar lastGradNorm = 1e9;
     for (unsigned int i = 0; i < maxIter; i++) {

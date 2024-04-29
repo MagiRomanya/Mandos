@@ -100,6 +100,7 @@ SimulableBounds generate_rod(Simulation& simulation,
 Mat3 parallel_transport(const Vec3& v1, const Vec3& v2) {
     const Vec3 cross_v1v2 = cross(v1, v2);
     const Scalar cross_norm = cross_v1v2.norm();
+    if (cross_norm < 1e-8) return Mat3::Identity();
     const Vec3 axis = cross_v1v2 / cross_norm;
     const Scalar angle = std::atan2(cross_norm, v1.dot(v2));
     return compute_rotation_matrix_rodrigues(axis * angle);

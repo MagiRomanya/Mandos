@@ -1,0 +1,2 @@
+#cmakedefine USE_VISUALIZER
+#cmakedefine USE_PYTHON_LIBRARY

@@ -5,6 +5,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(mandos)
 
+option(USE_VISUALIZER "Compile the built in simulation visualizer alongside the simulation" ON)
+option(USE_PYTHON_LIBRARY "Generate the python bindings for using the simulation library" ON)
+
 # Submodules
 find_package(Git)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -21,32 +24,47 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     endif()
 endif()
 
+# Configure file
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/mandos_config.hpp.in
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/mandos_config.hpp
+)
+
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/eigen/CMakeLists.txt")
     message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
 endif()
+
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON) # Necessary for pybind11 dynamic lib
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/)
+if (USE_VISUALIZER)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/nativefiledialog-extended/)
+endif()
+if (USE_PYTHON_LIBRARY)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/)
+endif()
+
+set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_BUILD_TYPE RelWithDebInfo)
+set(CMAKE_BUILD_TYPE Release)
+# add_compile_options(-fno-omit-frame-pointer) # for profiling
+find_package(OpenMP)
 
 file(GLOB SOURCE_FILES
   src/*.cpp
   src/simulation_generators/*.cpp
 )
 
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON) # Necessary for pybind11 dynamic lib
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/nativefiledialog-extended/)
+if (USE_VISUALIZER)
+  file(GLOB RENDERING_SOURCE_FILES
+    src/rendering/*.cpp
+  )
+endif()
 
-set(CMAKE_BUILD_TYPE Debug)
-# set(CMAKE_BUILD_TYPE RelWithDebInfo)
-set(CMAKE_BUILD_TYPE Release)
-# add_compile_options(-fno-omit-frame-pointer) # for profiling
+add_library(libmandos STATIC ${SOURCE_FILES} ${RENDERING_SOURCE_FILES})
+set_target_properties(libmandos PROPERTIES OUTPUT_NAME ${CMAKE_PROJECT_NAME})
 
-find_package(OpenMP)
-
-add_library(libmandos STATIC ${SOURCE_FILES})
-set_target_properties(libmandos PROPERTIES OUTPUT_NAME mandos)
 # Link time optimization support
 include(CheckIPOSupported)
 check_ipo_supported(RESULT link_time_optimization_support)
@@ -54,37 +72,51 @@ if(link_time_optimization_support)
   set_target_properties(libmandos PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-
-add_executable(${PROJECT_NAME} src/standalone/main.cpp)
-add_executable(mandos2 src/standalone/main2.cpp)
-
 target_include_directories(libmandos PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/
-  ${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/
-  ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/eigen/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/tinyobj/
-  ${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/src/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/tetgen/
-  ${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/include/
-  ${CMAKE_CURRENT_SOURCE_DIR}/external/nativefiledialog-extended/src/include/
   ${CMAKE_CURRENT_SOURCE_DIR}/external/TriangleMeshDistance/TriangleMeshDistance/include/
 )
 
 target_link_libraries(libmandos
-  raylib
-  raylib_imgui
   tetgen
-  nfd
   # profiler
   # OpenMP::OpenMP_CXX
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC libmandos)
-target_link_libraries(mandos2 PUBLIC libmandos)
 
-# Creating the pyhon library
-find_package(Python 3.6 COMPONENTS Interpreter Development REQUIRED)
-pybind11_add_module(pymandos ${CMAKE_CURRENT_SOURCE_DIR}/src/python/pybinding.cpp)
-target_link_libraries(pymandos PUBLIC libmandos ${PYTHON_LIBRARIES})
-include_directories(pymandos PUBLIC ${PYTHON_INCLUDE_DIRS})
+if (USE_VISUALIZER)
+  target_include_directories(libmandos PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/raylib_imgui/
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/raylib/src/
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/nativefiledialog-extended/src/include/
+  )
+
+  target_link_libraries(libmandos
+    raylib
+    raylib_imgui
+    nfd
+  )
+endif()
+
+# Build the main executables if the visualizer is shipped with the library
+if (USE_VISUALIZER)
+  add_executable(${PROJECT_NAME} src/standalone/main.cpp)
+  add_executable(mandos2 src/standalone/main2.cpp)
+
+  target_link_libraries(${PROJECT_NAME} PUBLIC libmandos)
+  target_link_libraries(mandos2 PUBLIC libmandos)
+endif()
+
+if (USE_PYTHON_LIBRARY)
+  # Creating the pyhon library
+  find_package(Python 3.6 COMPONENTS Interpreter Development REQUIRED)
+  pybind11_add_module(pymandos ${CMAKE_CURRENT_SOURCE_DIR}/src/python/pybinding.cpp)
+  target_link_libraries(pymandos PUBLIC libmandos ${PYTHON_LIBRARIES})
+  include_directories(pymandos PUBLIC ${PYTHON_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/pybind11/include/
+  )
+endif()

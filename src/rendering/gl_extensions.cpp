@@ -6,7 +6,6 @@
 #include "gl_extensions.hpp"
 #include "raylib.h"
 #include "raymath.h"
-#include "utility_functions.hpp"
 #include "viewmandos.hpp"
 #include <rlgl.h>
 
@@ -256,7 +255,16 @@ inline std::vector<float> static_cast_vector_to_float(const std::vector<Scalar>&
     return out;
 }
 
+SkinnedRodGPU::SkinnedRodGPU(const RenderMesh& mesh, const RodHandle& rod)
+{
+    Initialize(mesh, rod.bounds.n_rb - 1);
+}
+
 SkinnedRodGPU::SkinnedRodGPU(const RenderMesh& mesh, const unsigned int segments) {
+    Initialize(mesh, segments);
+}
+
+void SkinnedRodGPU::Initialize(const RenderMesh& mesh, const unsigned int segments) {
     this->mesh = mesh;
     // Compute skinning weights
     Eigen::Matrix<Scalar, 2, Eigen::Dynamic> weightsMat;
