@@ -57,6 +57,8 @@ struct Simulation {
 
     // Integration settings
     Scalar TimeStep = 0.1;
+    unsigned int MaxNewtonIterations = 1;
+    bool enable_line_search = false;
 
     // Boundary conditions
     PhysicsState initial_state;

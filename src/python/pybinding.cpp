@@ -20,6 +20,8 @@ PYBIND11_MODULE(pymandos, m) {
         .def(py::init())
         .def_readwrite("initial_state", &Simulation::initial_state)
         .def_readwrite("TimeStep", &Simulation::TimeStep)
+        .def_readwrite("MaxNewtonIterations", &Simulation::MaxNewtonIterations)
+        .def_readwrite("enable_line_search", &Simulation::enable_line_search)
         .def("copy",  [](const Simulation &self) {
             return Simulation(self);
         })

@@ -86,7 +86,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     // Initial guess for our energy minimization
     // state =  PhysicsState(state0.x + simulation.TimeStep * state0.v, state0.v);
 
-    const unsigned int maxIter = 8;
+    const unsigned int maxIter = simulation.MaxNewtonIterations;
     // const Scalar reductionThreshold = 1e-4;
     // Scalar lastGradNorm = 1e9;
     for (unsigned int i = 0; i < maxIter; i++) {
@@ -117,7 +117,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
 
         // Line search
         // -----------------------------------------------------------------------------------------
-        const bool enableLineSearch = false;
+        const bool enableLineSearch = simulation.enable_line_search;
         if (not enableLineSearch) continue;
         Scalar lineSearchEnergy = compute_energy(simulation.TimeStep, simulation.energies, state, state0);
         DEBUG_LOG(energy0);
