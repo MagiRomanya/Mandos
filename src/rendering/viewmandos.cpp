@@ -78,13 +78,15 @@ inline Vector3 vector3_eigen_to_raylib(const Vec3& v) {
     return Vector3{(float) v.x(), (float) v.y(), (float) v.z()};
 }
 
+static float camera_starting_y = 5.0f;
+static float camera_starting_distance = 20.0f;
 Camera3D create_camera() {
     Camera3D camera = {};
-    camera.position = Vector3( 0.0f, 5.0f, 20.0f );  // Camera position
-    camera.target = Vector3( 0.0f, 0.0f, 0.0f );      // Camera looking at point
-    camera.up = Vector3( 0.0f, 1.0f, 0.0f );          // Camera up vector (rotation towards target)
-    camera.fovy = 45.0f;                                // Camera field-of-view Y
-    camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
+    camera.position = Vector3( 0.0f, camera_starting_y, camera_starting_distance);
+    camera.target = Vector3( 0.0f, 0.0f, 0.0f );
+    camera.up = Vector3( 0.0f, 1.0f, 0.0f );
+    camera.fovy = 45.0f;
+    camera.projection = CAMERA_PERSPECTIVE;
     return camera;
 }
 
@@ -631,7 +633,8 @@ void myUpdateCamera(Camera3D& camera) {
         }
     }
     // Zoom target distance
-    CameraMoveToTarget(&camera, -GetMouseWheelMove());
+    const float wheel_sensitivity = 1.5;
+    CameraMoveToTarget(&camera, -wheel_sensitivity * GetMouseWheelMove());
 }
 
 void MandosViewer::drawSimulationVisualizationWindow() {
@@ -743,20 +746,20 @@ void MandosViewer::drawGUI() {
             if (ImGui::BeginMenu("Camera")) {
                 renderState->cameraFrameOpen = true;
                 if (ImGui::MenuItem("Look towards X")) {
-                    renderState->camera.position = Vector3( -20.0f, 5.0f, 0.0f );
+                    renderState->camera.position = Vector3( -camera_starting_distance, camera_starting_y, 0.0f );
                     renderState->camera.target = Vector3(0,0,0);
                 }
                 if (ImGui::MenuItem("Look towards -X")) {
-                    renderState->camera.position = Vector3( 20.0f, 5.0f, 0.0f );
+                    renderState->camera.position = Vector3( camera_starting_distance, camera_starting_y, 0.0f );
                     renderState->camera.target = Vector3(0,0,0);
                 }
 
                 if (ImGui::MenuItem("Look towards Z")) {
-                    renderState->camera.position = Vector3( 0.0f, 5.0f, -20.0f );
+                    renderState->camera.position = Vector3( 0.0f, camera_starting_y, -camera_starting_distance );
                     renderState->camera.target = Vector3(0,0,0);
                 }
                 if (ImGui::MenuItem("Look towards -Z")) {
-                    renderState->camera.position = Vector3( 0.0f, 5.0f, 20.0f );
+                    renderState->camera.position = Vector3( 0.0f, camera_starting_y, camera_starting_distance );
                     renderState->camera.target = Vector3(0,0,0);
                 }
                 ImGui::EndMenu();
@@ -1376,9 +1379,6 @@ void compute_rod_skinning_weights(const std::vector<Scalar>& vertices, const uns
         boneIDs(0, i) = current_segment;
         if (segment_rel_pos < MERGE_REGION && current_segment != 0) {
             const Scalar proximity = segment_rel_pos / MERGE_REGION;
-            // DEBUG_LOG(proximity);
-            // DEBUG_LOG(segment_rel_pos);
-            // DEBUG_LOG(MERGE_REGION);
             boneWeights(0, i) = 0.5 * proximity + 0.5;
             boneWeights(1, i) = 1.0 - boneWeights(0, i);
             boneIDs(1, i) = current_segment - 1;
@@ -1407,11 +1407,6 @@ void MandosViewer::draw_rod(const RodHandle& rod, const PhysicsState& state, con
         const Vec3 pos = 0.5 * (posA + posB);
         const Mat3 rot = 0.5 * (compute_rotation_matrix_rodrigues(thetaA) + compute_rotation_matrix_rodrigues(thetaB));
 
-        // const Vec3 pos = posA;
-        // const Mat3 rot = compute_rotation_matrix_rodrigues(thetaA);
-
-        // const Vec3 pos = Vec3(0.0, i, i);
-        // const Mat3 rot = Mat3::Identity();
         Matrix transform = raylib_transform_matrix(rot, Mat3::Identity(), pos);
 
         transforms.push_back(transform);

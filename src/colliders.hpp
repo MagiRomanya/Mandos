@@ -32,8 +32,8 @@ struct PlaneCollider {
 
 struct SDFCollider {
     SDFCollider();
-    SDFCollider(const SDFCollider &other);
-    SDFCollider(const SimulationMesh &mesh);
+    SDFCollider(const SDFCollider& other); // copy constructor
+    SDFCollider(const SimulationMesh& mesh);
     ~SDFCollider();
 
     SimulationMesh mesh;

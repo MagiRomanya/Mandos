@@ -1,4 +1,5 @@
 #include <Eigen/Dense> // For inverse matrix
+#include <cmath>
 
 #include "rod_segment.hpp"
 
@@ -14,8 +15,13 @@ Vec3 compute_darboux_vector(const Scalar L0, const Mat3& R1, const Mat3& R2) {
     const Mat3 R = (R1 + R2) / 2.0;
     const Mat3 skew_u = dR_dx * R.transpose();
     const Vec3 u = 0.5 * vectorized_levi_civita() * vectorize_matrix<3>(skew_u);
-    return R.transpose() * u;
-    // return u;
+    const Vec3 rot_u = R.transpose() * u;
+    if (rot_u.squaredNorm() >= M_PI * M_PI) {
+        const Scalar norm = rot_u.norm();
+        const Scalar clamped_angle = std::fmod(norm, 2.0 * M_PI) - 2.0 * M_PI;
+        return rot_u / norm * clamped_angle;
+    }
+    return rot_u;
 }
 
 Mat3 compute_darboux_vector_local_finite_derivative(const Scalar L0, const Mat3& R1, const Mat3& R2) {
@@ -34,37 +40,6 @@ Mat3 compute_darboux_vector_local_finite_derivative(const Scalar L0, const Mat3&
 }
 
 Mat3 compute_darboux_vector_local_derivative(const Scalar L0, const Mat3& R1, const Mat3& R2) {
-    const Mat3 dR_dx = (R2 - R1) / L0;
-    const Mat3 R = (R2 + R1) / 2;
-
-    Eigen::Matrix<Scalar,3,9> dvecR_dtheta = 0.5 * dvecR_dtheta_local_matrix(R1);
-    const Eigen::Matrix<Scalar,3,9> dvecRx_dtheta = -dvecR_dtheta_local_matrix(R1) / L0;
-
-    // Compute the derivative of non rotated darboux vector
-    const Eigen::Matrix<Scalar,9,3> dvec_skewU_dtheta =
-        block_matrix<3,3>(R) * dvecRx_dtheta.transpose()                                            // d(dR_dx)/dtheta RT
-        + transpose_vectorized_matrix_N<9,3>(block_matrix<3,3>(dR_dx) * dvecR_dtheta.transpose())   // dR/dx (dRT/dtheta)
-        ;
-    const Mat3 du_dtheta = 0.5 * vectorized_levi_civita() * dvec_skewU_dtheta;
-
-    // Compute the effect of rotating the darboux with R^T
-    const Mat3 skew_u = dR_dx * R.transpose();
-    Mat3 dRTu_dtheta = 0.5 * R1.transpose() * skew_u; // Derivative of R^T u wrt theta with u constant
-
-    // Final derivative
-    Mat3 result = dRTu_dtheta + R.transpose() * du_dtheta;
-
-    // const Mat3 du_dtheta2 = -1.0 / L0 * Mat3::Identity() - 0.5 * skew_u;
-    // std ::cout << "result"
-    //            << "\n" << result << std ::endl;
-    // std ::cout << "du_dtheta2"
-    //            << "\n" << du_dtheta2 << std ::endl;
-    return result;
-}
-
-Mat3 compute_darboux_vector_local_derivative2(const Scalar L0, const Mat3& R1, const Mat3& R2) {
-    // const Mat3 dR_dx = (R2 - R1) / L0;
-    // const Mat3 R = (R2 + R1) / 2;
     const Mat3 dR_dx = (R2 - R1) / L0;
     const Mat3 R = (R1 + R2) / 2.0;
     const Mat3 skew_u = dR_dx * R.transpose();
@@ -98,8 +73,8 @@ RodSegmentPrecomputedValues::RodSegmentPrecomputedValues(Scalar L0, Scalar TimeS
     this->L = deltaX.norm();
     this->one_over_L = 1.0 / L;
     this->darboux_vector = compute_darboux_vector(L0, R1, R2);
-    this->darboux_vector_derivativeA = compute_darboux_vector_local_derivative2(L0, R1, R2);
-    this->darboux_vector_derivativeB = - compute_darboux_vector_local_derivative2(L0, R2, R1);
+    this->darboux_vector_derivativeA = compute_darboux_vector_local_derivative(L0, R1, R2);
+    this->darboux_vector_derivativeB = - compute_darboux_vector_local_derivative(L0, R2, R1);
     this->u = deltaX * one_over_L;
     this->uut = u * u.transpose();
     this->v_rel = u * (v1 - v2).dot(u) * one_over_L0;

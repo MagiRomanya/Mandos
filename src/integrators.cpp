@@ -27,6 +27,9 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
 
     equation_matrix = copuling_jacobian_t * equation_matrix * copuling_jacobian;
     equation_vector = copuling_jacobian_t * equation_vector;
+    if (equation_vector.hasNaN()) {
+        std::cout << "WARNING::INTEGRATE_IMPLICIT_EULER: Equation vector has NaN" << std::endl;
+    }
     // ----------------------------------------------------------------------------------
 
     // Solving the system of equations
@@ -43,6 +46,9 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
         dx = copuling_jacobian * solver.solve(equation_vector);
     }
     // DEBUG_LOG(integration_solve_time);
+    if (dx.hasNaN()) {
+        std::cout << "WARNING::INTEGRATE_IMPLICIT_EULER: The dx step has NaN" << std::endl;
+    }
 }
 
 struct FrozenDoFPredicate {

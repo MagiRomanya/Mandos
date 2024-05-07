@@ -1,9 +1,11 @@
-#include "colliders.hpp"
-#include "simulation.hpp"
-#include "utility_functions.hpp"
 #include <memory>
 #include <tmd/TriangleMeshDistance.h>
 #include <clock.hpp>
+
+
+#include "colliders.hpp"
+#include "simulation.hpp"
+#include "utility_functions.hpp"
 
 void SphereCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out) const {
     const Vec3 delta = point - center;

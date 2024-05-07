@@ -231,6 +231,7 @@ void LinesGPU::drawLines(Material material, const std::vector<float>& vertices) 
     rlEnableVertexAttribute(material.shader.locs[SHADER_LOC_VERTEX_POSITION]);
 
     // Draw the Lines
+    GL_CALL(glLineWidth(1.5));
     GL_CALL(glBindVertexArray(VAO));
     GL_CALL(glDrawArrays(GL_LINES, 0, vertices.size() / 3));
 

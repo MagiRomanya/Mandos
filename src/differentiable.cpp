@@ -227,6 +227,7 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
 
         for (unsigned int j = 0; j < maxIterations; j++) {
             // Compute Hz with finite differences
+
             Vec Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z, dx);
             Scalar h = 0.5 * z.transpose() * Hz - equation_vector.dot(z);
             // DEBUG_LOG(h);
@@ -238,21 +239,25 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
 
             // Solve the system
             dz = solver.solve(h_grad);
-
             // Line search
             Vec z_line_search = z + dz;
             Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z_line_search, dx);
             Scalar h_new = 0.5 * z_line_search.transpose() * Hz - equation_vector.dot(z_line_search);
             Scalar alpha = 1.0;
-            // DEBUG_LOG(h_new - h);
-            // while (h_new > h) {
-            //     alpha /= 2.0;
-            //     z_line_search = z + alpha * dz;
-            //     Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z_line_search, dx);
-            //     h_new = 0.5 * z_line_search.transpose() * Hz - equation_vector.dot(z_line_search);
-            // }
+            while (h_new > h) {
+                alpha /= 2.0;
+                z_line_search = z + alpha * dz;
+                Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z_line_search, dx);
+                h_new = 0.5 * z_line_search.transpose() * Hz - equation_vector.dot(z_line_search);
+            }
             // DEBUG_LOG(alpha);
             z += alpha * dz;
+            // z += dz;
+            if (h_grad.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: h_grad has NaN" << std::endl;
+            if (equation_vector.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: equation_vector has NaN" << std::endl;
+            if (Hz.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: Hz has NaN" << std::endl;
+            if (dz.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: dz has NaN" << std::endl;
+            if (z.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: z has NaN" << std::endl;
         }
         // DEBUG_LOG("-------------");
 
