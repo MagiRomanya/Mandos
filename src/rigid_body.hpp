@@ -76,18 +76,21 @@ inline Vec3 compute_principal_moments_of_inertia_from_J(const Mat3& J) {
 Vec3 compose_axis_angle(const Vec3& a, const Vec3& b);
 
 struct RigidBody {
-    RigidBody(unsigned int index, Scalar mass, Mat3 inertia_tensor0)
-        : index(index), mass(mass), J_inertia_tensor0(compute_J_inertia_tensor(inertia_tensor0)) {}
+  RigidBody(unsigned int index, Scalar mass, Mat3 inertia_tensor0)
+      : index(index), mass(mass),
+        J_inertia_tensor0(compute_J_inertia_tensor(inertia_tensor0)) {}
 
-    const unsigned int index;
-    const Scalar mass;
-    const Mat3 J_inertia_tensor0;
+  unsigned int index;
+  Scalar mass;
+  Mat3 J_inertia_tensor0;
 
-    Vec3 get_COM_position(const Vec& x) const;
-    Vec3 get_axis_angle(const Vec& x) const;
-    Vec3 compute_angular_momentum(Scalar TimeStep, const PhysicsState& state) const;
-    Mat3 compute_rotation_matrix(const Vec& x) const;
-    Mat3 compute_rotation_velocity_matrix(const Scalar TimeStep, const PhysicsState& state) const;
+  Vec3 get_COM_position(const Vec &x) const;
+  Vec3 get_axis_angle(const Vec &x) const;
+  Vec3 compute_angular_momentum(Scalar TimeStep,
+                                const PhysicsState &state) const;
+  Mat3 compute_rotation_matrix(const Vec &x) const;
+  Mat3 compute_rotation_velocity_matrix(const Scalar TimeStep,
+                                        const PhysicsState &state) const;
 };
 
 Mat3 compute_global_to_local_axis_angle_jacobian(const Vec3& phi);

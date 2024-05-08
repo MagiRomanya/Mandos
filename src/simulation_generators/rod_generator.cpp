@@ -81,7 +81,7 @@ SimulableBounds generate_rod(Simulation& simulation,
         const RigidBody& rbB = simulation.simulables.rigid_bodies[rigid_body_index + i + 1];
 
         // simulation.energies.rod_segments.emplace_back(rbB, rbA, param);
-        simulation.energies.rod_segments.emplace_back(rbA, rbB, param);
+        simulation.energies.potential_energies.rod_segments.emplace_back(rbA, rbB, param);
     }
 
     // Compute bounds
@@ -195,7 +195,7 @@ SimulableBounds generate_rod(Simulation& simulation,
         param.L0 = (rbA.get_COM_position(i_state.x) - rbB.get_COM_position(i_state.x)).norm();
         param.intrinsic_darboux = compute_darboux_vector(param.L0, rbA.compute_rotation_matrix(i_state.x), rbB.compute_rotation_matrix(i_state.x));
         // simulation.energies.rod_segments.emplace_back(rbB, rbA, param);
-        simulation.energies.rod_segments.emplace_back(rbA, rbB, param);
+        simulation.energies.potential_energies.rod_segments.emplace_back(rbA, rbB, param);
     }
 
     // Compute bounds

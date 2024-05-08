@@ -4,9 +4,8 @@
 #include "linear_algebra.hpp"
 #include "utility_functions.hpp"
 
-#define MAT(type, name) template struct FEM_Element3D<type>;
-FEM_MATERIAL_MEMBERS
-#undef MAT
+template struct FEM_Element3D<FEM_LinearMaterial>;
+template struct FEM_Element3D<FEM_NeoHookeanMaterial>;
 
 // F == deformation tensor / deformation gradient
 // epsilon == strain tensor

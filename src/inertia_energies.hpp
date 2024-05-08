@@ -9,8 +9,8 @@
 struct LinearInertia {
     LinearInertia(Particle p) : Mass(Mat3::Identity() * p.mass), p(p) {}
 
-    const Mat3 Mass;
-    const Particle p;
+    Mat3 Mass;
+    Particle p;
 
     Scalar compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const;
     void compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const;
@@ -23,7 +23,7 @@ struct LinearInertia {
 
 struct RotationalInertia {
     RotationalInertia(RigidBody rb) : rb(rb) {}
-    const RigidBody rb;
+    RigidBody rb;
 
     Scalar compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const;
     void compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const;
@@ -33,7 +33,7 @@ struct RotationalInertia {
 
 struct RotationalInertiaGlobal {
     RotationalInertiaGlobal(RigidBody rb) : rb(rb) {}
-    const RigidBody rb;
+    RigidBody rb;
 
     Scalar compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const;
     void compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const;

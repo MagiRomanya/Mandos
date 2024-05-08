@@ -3,7 +3,6 @@
 
 #include "clock.hpp"
 #include "colliders.hpp"
-#include "fem_element.hpp"
 #include "simulation.hpp"
 #include "integrators.hpp"
 #include "linear_algebra.hpp"
@@ -15,65 +14,26 @@ void compute_energy_and_derivatives_finite(Scalar TimeStep, const Energies& ener
 void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out) {
     // This function is responsible of computing the energy and derivatives for each energy in the simulation.
     // Here the energies must place the energy, gradient and Hessians to the correct place in the global energy and derivative structure
-
-#define X(type, energy) \
-    for (size_t i = 0; i < energies.energy.size(); i++) { \
-        energies.energy[i].compute_energy_and_derivatives(TimeStep, state, state0, out); \
-    }
-    INERTIAL_ENERGY_MEMBERS
-#undef X
-
-#define MAT(type, name) X(std::vector<FEM_Element3D<type>>, fem_elements_##name)
-#define X(type, energy) \
-    for (size_t i = 0; i < energies.energy.size(); i++) { \
-        energies.energy[i].compute_energy_and_derivatives(TimeStep, state, out); \
-    }
-    POTENTIAL_ENERGY_MEMBERS
-#undef X
-#undef MAT
+    energies.inertial_energies.for_each(ComputeInertialEnergyAndDerivativesVisitor(TimeStep, state, state0, out));
+    energies.potential_energies.for_each(ComputePotentialEnergyAndDerivativesVisitor(TimeStep, state, out));
 }
 
 Scalar compute_energy(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0) {
     // This function is responsible of computing the energy and derivatives for each energy in the simulation.
     // Here the energies must place the energy, gradient and Hessians to the correct place in the global energy and derivative structure
     Scalar phi = 0;
-#define X(type, energy) \
-    for (size_t i = 0; i < energies.energy.size(); i++) { \
-        phi += energies.energy[i].compute_energy(TimeStep, state, state0); \
-    }
-    INERTIAL_ENERGY_MEMBERS
-#undef X
-
-#define MAT(type, name) X(std::vector<FEM_Element3D<type>>, fem_elements_##name)
-#define X(type, energy) \
-    for (size_t i = 0; i < energies.energy.size(); i++) { \
-        phi += energies.energy[i].compute_energy(TimeStep, state); \
-    }
-    POTENTIAL_ENERGY_MEMBERS
-#undef X
-#undef MAT
-        return phi;
+    energies.inertial_energies.for_each(ComputeInertialEnergyVisitor(TimeStep, state, state0, phi));
+    energies.potential_energies.for_each(ComputePotentialEnergyVisitor(TimeStep, state, phi));
+    return phi;
 }
 
 Vec compute_energy_gradient(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0) {
     // This function is responsible of computing the energy and derivatives for each energy in the simulation.
     // Here the energies must place the energy, gradient and Hessians to the correct place in the global energy and derivative structure
     Vec grad = Vec::Zero(state.get_nDoF());
-#define X(type, energy) \
-    for (size_t i = 0; i < energies.energy.size(); i++) { \
-        energies.energy[i].compute_energy_gradient(TimeStep, state, state0, grad); \
-    }
-    INERTIAL_ENERGY_MEMBERS
-#undef X
+    energies.inertial_energies.for_each(ComputeInertialEnergyGradientVisitor(TimeStep, state, state0, grad));
+    energies.potential_energies.for_each(ComputePotentialEnergyGradientVisitor(TimeStep, state, grad));
 
-#define MAT(type, name) X(std::vector<FEM_Element3D<type>>, fem_elements_##name)
-#define X(type, energy) \
-    for (size_t i = 0; i < energies.energy.size(); i++) { \
-        energies.energy[i].compute_energy_gradient(TimeStep, state, grad); \
-    }
-    POTENTIAL_ENERGY_MEMBERS
-#undef X
-#undef MAT
     return grad;
 }
 
@@ -141,28 +101,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state) {
 }
 
 void update_simulation_state(const Scalar TimeStep, const Energies& energies, const Vec& dx, PhysicsState& state, const PhysicsState& state0) {
-#define X(type, energy) \
-    for (size_t i = 0; i < energies.energy.size(); i++) { \
-        energies.energy[i].update_state(TimeStep, dx, state, state0); \
-    }
-    INERTIAL_ENERGY_MEMBERS
-#undef X
-}
-
-#define MAT(type, name) template void add_FEM_element(Energies& energies, FEM_Element3D<type> element);
-FEM_MATERIAL_MEMBERS
-#undef MAT
-
-template <typename MaterialType>
-void add_FEM_element(Energies& energies, FEM_Element3D<MaterialType> element) {
-#define MAT(type, name)                                     \
-        if constexpr (std::is_same<MaterialType, type>()) { \
-            energies.fem_elements_##name.push_back(element); \
-        }
-
-    FEM_MATERIAL_MEMBERS
-
-#undef MAT
+    energies.inertial_energies.for_each(UpdateSimulationStateVisitor(TimeStep, dx, state, state0));
 }
 
 inline Vec compute_energy_gradient_finite(Scalar E0, Scalar dx, Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0) {

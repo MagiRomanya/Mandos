@@ -2,6 +2,7 @@
 #include <Eigen/SparseLU>
 #include <Eigen/Dense> // For inverse
 #include "differentiable.hpp"
+#include "energies.hpp"
 #include "inertia_energies.hpp"
 #include "linear_algebra.hpp"
 #include "physics_state.hpp"
@@ -78,8 +79,8 @@ void compute_gradient_partial_derivatives(Scalar TimeStep, const Energies& energ
     // Linear inertias
     // ----------------------------------------------------------------------------------------------------
     const Scalar one_over_h2 = 1.0f / (TimeStep * TimeStep);
-    for (unsigned int i = 0; i < energies.linear_inertias.size(); i++) {
-        LinearInertia e = energies.linear_inertias[i];
+    for (unsigned int i = 0; i < energies.inertial_energies.linear_inertias.size(); i++) {
+        LinearInertia e = energies.inertial_energies.linear_inertias[i];
         const Mat3 dgradE_dx = one_over_h2 * e.Mass;
         const Mat3 dgradE_dx0 = - dgradE_dx;
         const Mat3 dgradE_dv0 = - TimeStep * dgradE_dx;
@@ -95,8 +96,8 @@ void compute_gradient_partial_derivatives(Scalar TimeStep, const Energies& energ
 
     // Rotational inertias
     // ----------------------------------------------------------------------------------------------------
-    for (unsigned int i = 0; i < energies.rotational_inertias.size(); i++) {
-        const RotationalInertia& e = energies.rotational_inertias[i];
+    for (unsigned int i = 0; i < energies.inertial_energies.rotational_inertias.size(); i++) {
+        const RotationalInertia& e = energies.inertial_energies.rotational_inertias[i];
         const Mat3 J_inertia_tensor = e.rb.J_inertia_tensor0;
         const Vec3 theta = e.rb.get_axis_angle(state.x);
         const Vec3 theta0 = e.rb.get_axis_angle(state0.x);
@@ -121,14 +122,8 @@ void compute_gradient_partial_derivatives(Scalar TimeStep, const Energies& energ
 
     // Potential energies
     // ---------------------------------------------------------------------------------
-#define MAT(type, name) X(std::vector<FEM_Element3D<type>>, fem_elements_##name)
-#define X(type, energy) \
-    for (size_t i = 0; i < energies.energy.size(); i++) { \
-        energies.energy[i].compute_energy_and_derivatives(TimeStep, state, f); \
-    }
-    POTENTIAL_ENERGY_MEMBERS
-#undef X
-#undef MAT
+
+    energies.potential_energies.for_each(ComputePotentialEnergyAndDerivativesVisitor(TimeStep, state, f));
 
 
     // NOTE: IGNORING POTENTIALS WITH VELOCITY DEPENDENCE

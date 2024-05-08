@@ -51,9 +51,8 @@ SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar TotalM
 }
 
 
-#define MAT(type, name) template SimulableBounds generate_FEM3D_from_tetrahedron_mesh<type>(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,const std::vector<unsigned int>& tet_indices, const std::vector<Scalar>& tet_vertices);
-FEM_MATERIAL_MEMBERS
-#undef MAT
+template SimulableBounds generate_FEM3D_from_tetrahedron_mesh<FEM_LinearMaterial>(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,const std::vector<unsigned int>& tet_indices, const std::vector<Scalar>& tet_vertices);
+template SimulableBounds generate_FEM3D_from_tetrahedron_mesh<FEM_NeoHookeanMaterial>(Simulation& simulation, Scalar node_mass, Scalar poisson_ratio, Scalar young_modulus,const std::vector<unsigned int>& tet_indices, const std::vector<Scalar>& tet_vertices);
 
 template <typename MaterialType>
 SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Scalar TotalMass, Scalar poisson_ratio, Scalar young_modulus,

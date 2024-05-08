@@ -341,14 +341,14 @@ void RotationalInertiaGlobal::update_state(const Scalar TimeStep, const Vec& dx,
 
 void add_particle_to_simulation(Simulation& simulation, const Particle& p) {
     simulation.simulables.particles.push_back(p);
-    simulation.energies.linear_inertias.emplace_back(p);
+    simulation.energies.inertial_energies.linear_inertias.emplace_back(p);
 }
 
 void add_rigid_body_to_simulation(Simulation& simulation, const RigidBody& rb, const bool global) {
     simulation.simulables.rigid_bodies.emplace_back(rb);
-    simulation.energies.linear_inertias.emplace_back(Particle(rb.mass, rb.index));
+    simulation.energies.inertial_energies.linear_inertias.emplace_back(Particle(rb.mass, rb.index));
     if (global)
-        simulation.energies.rotational_global_inertias.emplace_back(rb);
+        simulation.energies.inertial_energies.rotational_global_inertias.emplace_back(rb);
     else
-        simulation.energies.rotational_inertias.emplace_back(rb);
+        simulation.energies.inertial_energies.rotational_inertias.emplace_back(rb);
 }

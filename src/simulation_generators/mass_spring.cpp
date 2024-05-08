@@ -46,13 +46,14 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
 
     unsigned int n_flex = static_cast<unsigned int>(internalEdges.size()) / 2 + static_cast<unsigned int>(externalEdges.size());
     unsigned int n_bend = static_cast<unsigned int>(internalEdges.size()) / 2;
-    simulation.energies.particle_springs.reserve(simulation.energies.particle_springs.size() + n_flex + n_bend);
+    std::vector<ParticleSpring>& particle_springs = simulation.energies.potential_energies.particle_springs;
+    particle_springs.reserve(particle_springs.size() + n_flex + n_bend);
 
     for (size_t i = 0; i < externalEdges.size(); i++) {
         Edge &e = externalEdges[i];
         Scalar L0 = distance(vertices, e.a, e.b);
         SpringParameters param = {k_tension, L0, damping};
-        simulation.energies.particle_springs.push_back(ParticleSpring(particles[particle_index + e.a], particles[particle_index + e.b], param));
+        particle_springs.push_back(ParticleSpring(particles[particle_index + e.a], particles[particle_index + e.b], param));
     }
 
     for (size_t i = 0; i < internalEdges.size(); i += 2) {
@@ -61,12 +62,12 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
         Scalar L0 = distance(vertices, e1.a, e1.b);
         // Normal spring
         SpringParameters param = {k_tension, L0, damping};
-        simulation.energies.particle_springs.push_back(ParticleSpring(particles[particle_index + e1.a], particles[particle_index + e1.b], param));
+        particle_springs.push_back(ParticleSpring(particles[particle_index + e1.a], particles[particle_index + e1.b], param));
 
         // Bend spring
         L0 = distance(vertices, e1.opposite, e2.opposite);
         param = {k_bending, L0, damping};
-        simulation.energies.particle_springs.push_back(ParticleSpring(particles[particle_index + e1.opposite], particles[particle_index + e2.opposite], param));
+        particle_springs.push_back(ParticleSpring(particles[particle_index + e1.opposite], particles[particle_index + e2.opposite], param));
     }
 
     return SimulableBounds{.dof_index = index,

@@ -50,23 +50,22 @@ struct SDFCollider {
 //     void compute_contact_geometry(const Vec3& point, ContactEvent& out);
 // };
 
-#define COLLIDER_MEMBERS \
-    COL(std::vector<SphereCollider>, sphere_colliders) \
-    COL(std::vector<PlaneCollider>, plane_colliders) \
-    COL(std::vector<SDFCollider>, sdf_colliders)
-    // COL(std::vector<CapsuleCollider>, caplule_colliders) \
-
-#define COL(type, name) type name;
-
 struct Colliders {
-    COLLIDER_MEMBERS
-};
+    std ::vector<SphereCollider> sphere_colliders;
+    std ::vector<PlaneCollider> plane_colliders;
+    std ::vector<SDFCollider> sdf_colliders;
 
-#undef COL
+    template <typename Visitor>
+    inline void for_each(Visitor visitor) const {
+        visitor(sphere_colliders);
+        visitor(plane_colliders);
+        visitor(sdf_colliders);
+    }
+};
 
 struct Simulables;
 void find_point_particle_contact_events(const Colliders& colliders, const Simulables& simulables, const PhysicsState& state, std::vector<ContactEvent>& events);
 
 void compute_contact_events_energy_and_derivatives(const Scalar TimeStep, const std::vector<ContactEvent>& events, const PhysicsState state, EnergyAndDerivatives& out);
 
-#endif // COLLIDEEnergyAndDerivativesEner
+#endif // COLLIDERS_H_

@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <stdlib.h>
 #include <vector>
@@ -634,7 +635,7 @@ void myUpdateCamera(Camera3D& camera) {
     }
     // Zoom target distance
     const float wheel_sensitivity = 1.5;
-    CameraMoveToTarget(&camera, -wheel_sensitivity * GetMouseWheelMove());
+    CameraMoveToTarget(&camera, - wheel_sensitivity * GetMouseWheelMove());
 }
 
 void MandosViewer::drawSimulationVisualizationWindow() {
@@ -991,8 +992,9 @@ void MandosViewer::draw_mesh(const Mat4& transform, const MeshGPU& mesh) {
 
 void MandosViewer::draw_springs_lines(const Simulation& simulation, const PhysicsState& state) {
     std::vector<float> vertices;
-    for (size_t i = 0; i < simulation.energies.particle_springs.size(); i++) {
-        ParticleSpring s = simulation.energies.particle_springs[i];
+    const std::vector<ParticleSpring>& particle_springs = simulation.energies.potential_energies.particle_springs;
+    for (size_t i = 0; i < particle_springs.size(); i++) {
+        ParticleSpring s = particle_springs[i];
         Vec3 x1 = s.p1.get_position(state);
         Vec3 x2 = s.p2.get_position(state);
         vertices.push_back(x1.x());
@@ -1043,10 +1045,11 @@ inline Matrix compute_transform_from_two_points(const Vec3& x1, const Vec3& x2) 
 
 void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState& state) {
     std::vector<Matrix> transforms;
-    transforms.reserve(simulation.energies.particle_springs.size());
+    const std::vector<ParticleSpring>& particle_springs = simulation.energies.potential_energies.particle_springs;
+    transforms.reserve(particle_springs.size());
 
-    for (size_t i = 0; i < simulation.energies.particle_springs.size(); i++) {
-        ParticleSpring s = simulation.energies.particle_springs[i];
+    for (size_t i = 0; i < particle_springs.size(); i++) {
+        ParticleSpring s = particle_springs[i];
         const Vec3 x1 = s.p1.get_position(state);
         const Vec3 x2 = s.p2.get_position(state);
         const Matrix transform = compute_transform_from_two_points(x1, x2);
@@ -1059,8 +1062,9 @@ void MandosViewer::draw_springs(const Simulation& simulation, const PhysicsState
     DrawMeshInstanced(renderState->spring_model.meshes[0], matInstances, transforms.data(), transforms.size());
 
     transforms.clear();
-    for (size_t i = 0; i < simulation.energies.rigid_body_springs.size(); i++) {
-        RigidBodySpring s = simulation.energies.rigid_body_springs[i];
+    const std::vector<RigidBodySpring>& rigid_body_springs = simulation.energies.potential_energies.rigid_body_springs;
+    for (size_t i = 0; i < rigid_body_springs.size(); i++) {
+        RigidBodySpring s = rigid_body_springs[i];
         const Vec3 x1 = s.rbA.get_COM_position(state.x);
         const Vec3 x2 = s.rbB.get_COM_position(state.x);
         const Mat3 R1 = s.rbA.compute_rotation_matrix(state.x);
@@ -1129,31 +1133,33 @@ void MandosViewer::draw_MassSpring(const MassSpringHandle& mass_spring, const Ph
 }
 
 
+template <typename T>
+void draw_FEM_tetrahedrons_template(std::vector<T> tets, const PhysicsState& state, std::vector<float>& vertices) {
+    for (unsigned int i = 0; i < tets.size(); i++) { \
+        const T& e = tets[i];
+        const Vector3 x1 = vector3_eigen_to_raylib(e.p1.get_position(state));
+        const Vector3 x2 = vector3_eigen_to_raylib(e.p2.get_position(state));
+        const Vector3 x3 = vector3_eigen_to_raylib(e.p3.get_position(state));
+        const Vector3 x4 = vector3_eigen_to_raylib(e.p4.get_position(state));
+        vertices.insert(vertices.end(), {x1.x, x1.y, x1.z});
+        vertices.insert(vertices.end(), {x2.x, x2.y, x2.z});
+        vertices.insert(vertices.end(), {x1.x, x1.y, x1.z});
+        vertices.insert(vertices.end(), {x3.x, x3.y, x3.z});
+        vertices.insert(vertices.end(), {x1.x, x1.y, x1.z});
+        vertices.insert(vertices.end(), {x4.x, x4.y, x4.z});
+        vertices.insert(vertices.end(), {x2.x, x2.y, x2.z});
+        vertices.insert(vertices.end(), {x4.x, x4.y, x4.z});
+        vertices.insert(vertices.end(), {x2.x, x2.y, x2.z});
+        vertices.insert(vertices.end(), {x3.x, x3.y, x3.z});
+        vertices.insert(vertices.end(), {x3.x, x3.y, x3.z});
+        vertices.insert(vertices.end(), {x4.x, x4.y, x4.z});
+    }
+}
+
 void MandosViewer::draw_FEM_tetrahedrons_lines(const Simulation& simulation, const PhysicsState& state) {
     std::vector<float> vertices;
-
-#define MAT(type, name) \
-    for (unsigned int i = 0; i < simulation.energies.fem_elements_##name.size(); i++) { \
-        const FEM_Element3D<type>& e = simulation.energies.fem_elements_##name[i]; \
-        const Vector3 x1 = vector3_eigen_to_raylib(e.p1.get_position(state));  \
-        const Vector3 x2 = vector3_eigen_to_raylib(e.p2.get_position(state));  \
-        const Vector3 x3 = vector3_eigen_to_raylib(e.p3.get_position(state));  \
-        const Vector3 x4 = vector3_eigen_to_raylib(e.p4.get_position(state));  \
-        vertices.insert(vertices.end(), {x1.x, x1.y, x1.z}); \
-        vertices.insert(vertices.end(), {x2.x, x2.y, x2.z}); \
-        vertices.insert(vertices.end(), {x1.x, x1.y, x1.z}); \
-        vertices.insert(vertices.end(), {x3.x, x3.y, x3.z}); \
-        vertices.insert(vertices.end(), {x1.x, x1.y, x1.z}); \
-        vertices.insert(vertices.end(), {x4.x, x4.y, x4.z}); \
-        vertices.insert(vertices.end(), {x2.x, x2.y, x2.z}); \
-        vertices.insert(vertices.end(), {x4.x, x4.y, x4.z}); \
-        vertices.insert(vertices.end(), {x2.x, x2.y, x2.z}); \
-        vertices.insert(vertices.end(), {x3.x, x3.y, x3.z}); \
-        vertices.insert(vertices.end(), {x3.x, x3.y, x3.z}); \
-        vertices.insert(vertices.end(), {x4.x, x4.y, x4.z}); \
-    }
-    FEM_MATERIAL_MEMBERS
-#undef MAT
+    draw_FEM_tetrahedrons_template(simulation.energies.potential_energies.fem_elements_linearMat, state, vertices);
+    draw_FEM_tetrahedrons_template(simulation.energies.potential_energies.fem_elements_neoHookMat, state, vertices);
 
     Material material = createMaterialFromShader(renderState->solid_shader);
     material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
@@ -1162,26 +1168,32 @@ void MandosViewer::draw_FEM_tetrahedrons_lines(const Simulation& simulation, con
     free(material.maps);
 }
 
+template <typename T>
+void construct_tet_indices(std::vector<T> tets, std::vector<unsigned int>& tet_indices, unsigned int& min_index) {
+    for (unsigned int i = 0; i < tets.size(); i++) {
+        const T& e = tets[i];
+        const unsigned int a = e.p1.index;
+        const unsigned int b = e.p2.index;
+        const unsigned int c = e.p3.index;
+        const unsigned int d = e.p4.index;
+        tet_indices.insert(tet_indices.end(), {a, b, c, d});
+        if (a < min_index) min_index = a;
+        if (b < min_index) min_index = b;
+        if (c < min_index) min_index = c;
+        if (d < min_index) min_index = d;
+    }
+}
+
 void MandosViewer::draw_FEM_tetrahedrons(const Simulation& simulation, const PhysicsState& state) {
 #define MAT(type, name) \
-    for (unsigned int i = 0; i < simulation.energies.fem_elements_##name.size(); i++) { \
-        const FEM_Element3D<type>& e = simulation.energies.fem_elements_##name[i]; \
-        const unsigned int a = e.p1.index; \
-        const unsigned int b = e.p2.index; \
-        const unsigned int c = e.p3.index; \
-        const unsigned int d = e.p4.index; \
-        tet_indices.insert(tet_indices.end(), {a, b, c, d}); \
-        if (a < min_index) min_index = a; \
-        if (b < min_index) min_index = b; \
-        if (c < min_index) min_index = c; \
-        if (d < min_index) min_index = d; \
-    }
+
     // Compute the tetrahedron mesh indices if they are not already computed
     // ----------------------------------------------------
     if (!renderState->tetVis) {
         std::vector<unsigned int> tet_indices;
-        unsigned int min_index = 1000000000;
-        FEM_MATERIAL_MEMBERS
+        unsigned int min_index = std::numeric_limits<unsigned int>().max();
+        construct_tet_indices(simulation.energies.potential_energies.fem_elements_linearMat, tet_indices, min_index);
+        construct_tet_indices(simulation.energies.potential_energies.fem_elements_neoHookMat, tet_indices, min_index);
 
         for (unsigned int i = 0; i < tet_indices.size(); i++) {
             tet_indices[i] -= min_index;
@@ -1290,10 +1302,11 @@ void MandosViewer::draw_vector(const Vec3& vector, const Vec3& origin) {
 
 void MandosViewer::draw_rods(const Simulation& simulation, const PhysicsState& state) {
     std::vector<Matrix> transforms;
-    transforms.reserve(simulation.energies.rod_segments.size());
+    const std::vector<RodSegment>& rod_segments = simulation.energies.potential_energies.rod_segments;
+    transforms.reserve(rod_segments.size());
 
-    for (size_t i = 0; i < simulation.energies.rod_segments.size(); i++) {
-        RodSegment s = simulation.energies.rod_segments[i];
+    for (size_t i = 0; i < rod_segments.size(); i++) {
+        RodSegment s = rod_segments[i];
         const Vec3 x1 = s.rbA.get_COM_position(state.x);
         const Vec3 x2 = s.rbB.get_COM_position(state.x);
         const Matrix transform = compute_transform_from_two_points(x1, x2);

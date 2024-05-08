@@ -7,8 +7,8 @@
 struct Particle {
     Particle(Scalar mass, unsigned int index) : index(index), mass(mass) {}
 
-    const unsigned int index;
-    const Scalar mass;
+    unsigned int index;
+    Scalar mass;
 
     inline Vec3 get_position(const PhysicsState& state) const { return state.x.segment<3>(index); }
 

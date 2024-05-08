@@ -3,7 +3,17 @@
 #include "viewmandos.hpp"
 #include "../rod_segment.hpp"
 
+// struct InertiaEnergyPrinter {
+//     template<typename T>
+//     void operator()(const std::vector<T>& energies) {
+//         for (int i = 0; i < energies.size(); i++) {
+//             DEBUG_LOG(i);
+//         }
+//     }
+// };
+
 int main(void) {
+
     // Simulation description
     Simulation simulation;
 
@@ -55,8 +65,6 @@ int main(void) {
         .set_initial_rod_position(Vec3(1, 0, -1).normalized() * (-length * 0.5) + Vec3(0,height,0))
         .add_gravity(gravity)
         ;
-
-
 
     // std::vector<Scalar> spring_curve;
     // LoadCurveTinyObj("resources/obj/spring-curve.obj", spring_curve);

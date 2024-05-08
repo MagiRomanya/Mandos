@@ -23,12 +23,6 @@ Eigen::Matrix<Scalar,4,3> compute_shape_function_derivative(const Vec3& x1, cons
  */
 Mat3 compute_deformation_tensor(const Eigen::Matrix<Scalar,9,12>& dvecF_dx, const Vec3& x1, const Vec3& x2, const Vec3& x3, const Vec3& x4); // F
 
-/**
- * X Macro for FEM materials
- */
-#define FEM_MATERIAL_MEMBERS \
-    MAT(FEM_LinearMaterial, linearMat) \
-    MAT(FEM_NeoHookeanMaterial, neoHookMat)
 
 // FEM Materials
 // Materials are structures that can compute their energy, energy gradient and hessian.

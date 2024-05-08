@@ -46,33 +46,44 @@ void SDFCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out)
     out.normal = normal;
 }
 
+struct ComputePointParticleEventVisitor {
+    ComputePointParticleEventVisitor(const Vec3& point, unsigned int index, Scalar particle_radius, std::vector<ContactEvent>& events)
+        :point(point), index(index), particle_radius(particle_radius), events(events)
+    {}
+    const Vec3& point;
+    const unsigned int index;
+    const Scalar particle_radius;
+    std::vector<ContactEvent>& events;
+
+    template<typename T>
+    void operator()(const std::vector<T>& colliders) {
+        ContactEvent event;
+        for (unsigned int j = 0; j < colliders.size(); j++) {
+            colliders[j].compute_contact_geometry(point, event);
+            event.index = index;
+            if ( event.s_distance < particle_radius ) {
+                event.s_distance -= particle_radius;
+                events.push_back(event);
+            }
+        }
+    }
+};
+
 void find_point_particle_contact_events(const Colliders& colliders, const Simulables& simulables, const PhysicsState& state, std::vector<ContactEvent>& events) {
     const Scalar particle_radius = 0.4;
-#define COL(type, name)                                               \
-    for (unsigned int j = 0; j < colliders.name.size(); j++) {        \
-        colliders.name[j].compute_contact_geometry(point, event);     \
-        event.index = index;                                          \
-        if ( event.s_distance < particle_radius ) {                   \
-            event.s_distance -= particle_radius;                      \
-            events.push_back(event);                                  \
-        }                                                             \
-    }
 
     for (unsigned int i = 0; i < simulables.particles.size(); i++) {
         const Vec3 point = simulables.particles[i].get_position(state);
         const unsigned int index = simulables.particles[i].index;
-        ContactEvent event;
-        COLLIDER_MEMBERS
+        colliders.for_each(ComputePointParticleEventVisitor(point, index, particle_radius, events));
     }
 
+#pragma omp parallel for
     for (unsigned int i = 0; i < simulables.rigid_bodies.size(); i++) {
         const Vec3 point = simulables.rigid_bodies[i].get_COM_position(state.x);
         const unsigned int index = simulables.rigid_bodies[i].index;
-        ContactEvent event;
-        COLLIDER_MEMBERS
+        colliders.for_each(ComputePointParticleEventVisitor(point, index, particle_radius, events));
     }
-
-#undef COL
 }
 
 void compute_contact_events_energy_and_derivatives(const Scalar TimeStep, const std::vector<ContactEvent>& events, const PhysicsState state, EnergyAndDerivatives& out) {

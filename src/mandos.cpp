@@ -56,7 +56,7 @@ RigidBodyHandle RigidBodyHandle::set_initial_angular_velocity(Vec3 omega) const 
 }
 
 RigidBodyHandle RigidBodyHandle::add_gravity(Scalar gravity) const {
-    simulation.energies.gravities.emplace_back(rb.index+1, GravityParameters(gravity));
+    simulation.energies.potential_energies.gravities.emplace_back(rb.index+1, GravityParameters(gravity));
     return *this;
 }
 
@@ -93,7 +93,7 @@ void join_rigid_body_com_with_spring(Simulation& simulation, const RigidBodyHand
     const Vec3 x1 = pA.get_position(simulation.initial_state);
     const Vec3 x2 = pB.get_position(simulation.initial_state);
     const Scalar distance = (x1 -x2).norm();
-    simulation.energies.particle_springs.emplace_back(pA, pB, SpringParameters{.k = k, .L0 = distance, .damping = damping});
+    simulation.energies.potential_energies.particle_springs.emplace_back(pA, pB, SpringParameters{.k = k, .L0 = distance, .damping = damping});
 }
 
 void join_rigid_body_with_spring(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping) {
@@ -108,7 +108,7 @@ void join_rigid_body_with_spring(Simulation& simulation, const RigidBodyHandle& 
 
     const Scalar distance = (xA -xB).norm();
     const SpringParameters parameters = {.k = k, .L0 = distance, .damping = damping};
-    simulation.energies.rigid_body_springs.emplace_back(rbA.rb, rbB.rb, pA, pB, parameters);
+    simulation.energies.potential_energies.rigid_body_springs.emplace_back(rbA.rb, rbB.rb, pA, pB, parameters);
 }
 
 void join_rigid_body_with_rod_segment(Simulation& simulation, RigidBodyHandle& rbA, RigidBodyHandle& rbB, RodSegmentParameters parameters) {
@@ -120,7 +120,7 @@ void join_rigid_body_with_rod_segment(Simulation& simulation, RigidBodyHandle& r
     rbA.set_initial_orientation(axis_angle);
     rbB.set_initial_orientation(axis_angle);
     parameters.L0 = distance;
-    simulation.energies.rod_segments.emplace_back(rbA.rb, rbB.rb, parameters);
+    simulation.energies.potential_energies.rod_segments.emplace_back(rbA.rb, rbB.rb, parameters);
 }
 
 
@@ -167,7 +167,7 @@ MassSpringHandle MassSpringHandle::freeze_particles(const std::vector<unsigned i
 
 MassSpringHandle MassSpringHandle::add_gravity(Scalar gravity) const {
     for (unsigned int i = 0; i <bounds.nDoF/3; i++) {
-        simulation.energies.gravities.push_back(Gravity(bounds.dof_index+3*i+1, GravityParameters(gravity)));
+        simulation.energies.potential_energies.gravities.push_back(Gravity(bounds.dof_index+3*i+1, GravityParameters(gravity)));
     }
     return *this;
 }
@@ -203,7 +203,7 @@ ParticleHandle ParticleHandle::set_initial_velocity(Vec3 velocity) const {
 }
 
 ParticleHandle ParticleHandle::add_gravity(Scalar gravity) const {
-    simulation.energies.gravities.push_back(Gravity(particle.index+1, GravityParameters(gravity)));
+    simulation.energies.potential_energies.gravities.push_back(Gravity(particle.index+1, GravityParameters(gravity)));
     return *this;
 }
 
@@ -219,7 +219,7 @@ void join_particles_with_spring(Simulation& simulation, const ParticleHandle& p1
     const Vec3 x1 = p1.particle.get_position(simulation.initial_state);
     const Vec3 x2 = p2.particle.get_position(simulation.initial_state);
     const Scalar distance = (x1 -x2).norm();
-    simulation.energies.particle_springs.emplace_back(p1.particle, p2.particle,
+    simulation.energies.potential_energies.particle_springs.emplace_back(p1.particle, p2.particle,
                                                       SpringParameters{.k = k, .L0 = distance, .damping = damping});
 }
 
@@ -256,7 +256,7 @@ FEMHandle FEMHandle::freeze_particles(const std::vector<unsigned int>& particle_
 
 FEMHandle FEMHandle::add_gravity(Scalar gravity) const {
     for (unsigned int i = 0; i <bounds.nDoF/3; i++) {
-        simulation.energies.gravities.push_back(Gravity(bounds.dof_index+3*i+1, GravityParameters(gravity)));
+        simulation.energies.potential_energies.gravities.push_back(Gravity(bounds.dof_index+3*i+1, GravityParameters(gravity)));
     }
     return *this;
 }
@@ -300,7 +300,7 @@ Vec3 RodHandle::compute_center_of_mass(const PhysicsState& state) const {
 RodHandle RodHandle::add_gravity(Scalar gravity) const {
     for (unsigned int i = 0; i < bounds.n_rb; i++) {
         const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + i];
-        simulation.energies.gravities.emplace_back(rb.index + 1, GravityParameters(gravity));
+        simulation.energies.potential_energies.gravities.emplace_back(rb.index + 1, GravityParameters(gravity));
     }
 
     return *this;
