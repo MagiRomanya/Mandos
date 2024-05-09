@@ -6,7 +6,7 @@
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
 
-struct LinearInertia {
+struct LinearInertia : InertialEnergy {
     LinearInertia(Particle p) : Mass(Mat3::Identity() * p.mass), p(p) {}
 
     Mat3 Mass;
@@ -15,29 +15,32 @@ struct LinearInertia {
     Scalar compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const;
     void compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const;
     void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const;
+
     inline void update_state(const Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0) const {
         state.x.segment<3>(p.index) += dx.segment<3>(p.index);
         state.v.segment<3>(p.index) = (state.x.segment<3>(p.index) - state0.x.segment<3>(p.index)) / TimeStep;
     }
 };
 
-struct RotationalInertia {
+struct RotationalInertia : InertialEnergy {
     RotationalInertia(RigidBody rb) : rb(rb) {}
     RigidBody rb;
 
     Scalar compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const;
     void compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const;
     void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const;
+
     void update_state(const Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0) const;
 };
 
-struct RotationalInertiaGlobal {
+struct RotationalInertiaGlobal : InertialEnergy {
     RotationalInertiaGlobal(RigidBody rb) : rb(rb) {}
     RigidBody rb;
 
     Scalar compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const;
     void compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const;
     void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const;
+
     void update_state(const Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0) const;
 };
 

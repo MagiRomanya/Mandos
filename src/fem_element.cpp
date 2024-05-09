@@ -83,7 +83,7 @@ Scalar FEM_NeoHookeanMaterial::get_phi(const Mat3& F) const {
   return phi;
 }
 
-template <FEM_Material_Type Material>
+template <typename Material>
 Vec9 compute_phi_gradinet_finite(const Material& mat, Scalar dx, const Mat3& F) {
   const Scalar phi0 = mat.get_phi(F);
   Vec9 grad;
@@ -98,7 +98,7 @@ Vec9 compute_phi_gradinet_finite(const Material& mat, Scalar dx, const Mat3& F) 
   return grad;
 }
 
-template <FEM_Material_Type Material>
+template <typename Material>
 Mat9 compute_phi_hess_finite(const Material& mat, Scalar dx, const Mat3& F) {
   const Vec9 grad0 = compute_phi_gradinet_finite(mat, dx, F);
   Mat9 hess;
@@ -174,16 +174,19 @@ Mat9 FEM_NeoHookeanMaterial::get_phi_hessian(const Mat3& F) const {
 }
 
 // NOTE We have to transpose the ds_dx matrix before making it a block matrix
-template <FEM_Material_Type T>
+template <typename T>
 FEM_Element3D<T>::FEM_Element3D(Particle p1,Particle p2, Particle p3, Particle p4, Eigen::Matrix<Scalar, 4, 3> ds_dx, T material)
-  : p1(p1), p2(p2), p3(p3), p4(p4), material(material), dvecF_dx(block_matrix<3,4>(ds_dx.transpose())) {}
+  : p1(p1), p2(p2), p3(p3), p4(p4), material(material), dvecF_dx(block_matrix<3,4>(ds_dx.transpose()))
+{
+  static_assert(std::is_base_of<FEM_Material, T>());
+}
 
-template <FEM_Material_Type T>
+template <typename T>
 Scalar FEM_Element3D<T>::compute_volume(const Vec3& x1, const Vec3& x2, const Vec3& x3, const Vec3& x4) const {
   return compute_tetrahedron_volume(x2-x1, x3-x1, x4-x1);
 }
 
-template <FEM_Material_Type T>
+template <typename T>
 Scalar FEM_Element3D<T>::compute_energy(Scalar TimeStep, const PhysicsState& state) const {
   // Get the relevant sate
   // ---------------------------------------------------------------
@@ -201,7 +204,7 @@ Scalar FEM_Element3D<T>::compute_energy(Scalar TimeStep, const PhysicsState& sta
   return energy;
 }
 
-template <FEM_Material_Type T>
+template <typename T>
 void FEM_Element3D<T>::compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, Vec& grad) const {
   // Get the relevant sate
   // ---------------------------------------------------------------
@@ -226,7 +229,7 @@ void FEM_Element3D<T>::compute_energy_gradient(Scalar TimeStep, const PhysicsSta
 
 }
 
-template <FEM_Material_Type T>
+template <typename T>
 void FEM_Element3D<T>::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const {
   // Get the relevant sate
   // ---------------------------------------------------------------

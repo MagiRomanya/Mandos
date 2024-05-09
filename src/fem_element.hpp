@@ -31,11 +31,18 @@ Mat3 compute_deformation_tensor(const Eigen::Matrix<Scalar,9,12>& dvecF_dx, cons
 // The energy derivatives are computed with respect to the vectorized deformation tensor vecF.
 // To compute the derivatives with respect to the vertices, one must use the jacobian dvecF_dx.
 // ----------------------------------------------------------------------------------------
-template <typename T>
-concept FEM_Material_Type = requires(T Object) {
-  Object.get_phi(Mat3::Identity());
-  Object.get_phi_gradient(Mat3::Identity());
-  Object.get_phi_hessian(Mat3::Identity());
+
+/**
+ * FEM Material
+ *
+ * Virtual class exposing the mandatory API that each material must implement.
+ * Note that this virtual class is never instantiated at runtime, and only exists
+ * for nicer compilation time errors.
+ */
+struct FEM_Material {
+    virtual Scalar get_phi(const Mat3& F) const = 0;
+    virtual Vec9 get_phi_gradient(const Mat3& F) const = 0;
+    virtual Mat9 get_phi_hessian(const Mat3& F) const = 0;
 };
 
 /**
@@ -47,7 +54,7 @@ concept FEM_Material_Type = requires(T Object) {
  *
  * @param mu, lambda Material's Lamé coefficients
  */
-struct FEM_LinearMaterial {
+struct FEM_LinearMaterial : FEM_Material {
     FEM_LinearMaterial(Scalar mu, Scalar lambda);
 
     // Lame coefficients
@@ -66,7 +73,7 @@ struct FEM_LinearMaterial {
  *
  * @param mu, lambda Material's Lamé coefficients
  */
-struct FEM_NeoHookeanMaterial {
+struct FEM_NeoHookeanMaterial : FEM_Material {
     FEM_NeoHookeanMaterial(Scalar mu, Scalar lambda);
 
     // Lame coefficients
@@ -78,8 +85,8 @@ struct FEM_NeoHookeanMaterial {
 };
 // ----------------------------------------------------------------------------------------
 
-template <FEM_Material_Type MaterialType>
-struct FEM_Element3D {
+template <typename MaterialType>
+struct FEM_Element3D : PotentialEnergy {
     FEM_Element3D(Particle p1,Particle p2, Particle p3, Particle p4, Eigen::Matrix<Scalar, 4, 3> ds_dx, MaterialType material);
 
     const Particle p1, p2, p3, p4;

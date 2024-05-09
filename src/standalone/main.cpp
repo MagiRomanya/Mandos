@@ -3,17 +3,38 @@
 #include "viewmandos.hpp"
 #include "../rod_segment.hpp"
 
-// struct InertiaEnergyPrinter {
-//     template<typename T>
-//     void operator()(const std::vector<T>& energies) {
-//         for (int i = 0; i < energies.size(); i++) {
-//             DEBUG_LOG(i);
-//         }
-//     }
-// };
+struct my_type {
+  int a;
+  float b;
+  std::string c;
+};
+
+template <typename V>
+void visit(const my_type & my_struct, V && v) {
+  v("a", my_struct.a);
+  v("b", my_struct.b);
+  v("c", my_struct.c);
+}
+
+template <typename T>
+void log_func(const char * name, const T & value) {
+  std::cerr << name << ": " << value << std::endl;
+}
+
 
 int main(void) {
+    // my_type my_struct = {0};
+    // // visit(my_struct, log_func);
+    // int hello = 69;
+    // int hello2 = 69;
+    // visit(my_struct,
+    //       [](const char * name, const auto & value) {
+    //           std::cerr << name << ": " << value << std::endl;
+    //       });
 
+    // // visit(my_struct, log_func);
+
+    // return 0;
     // Simulation description
     Simulation simulation;
 

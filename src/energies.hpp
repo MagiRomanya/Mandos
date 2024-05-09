@@ -13,7 +13,7 @@ struct InertialEnergies {
     std::vector<RotationalInertiaGlobal> rotational_global_inertias;
 
     template<typename Visitor>
-    void for_each(Visitor visitor) const {
+    void for_each(Visitor && visitor) const {
         visitor(linear_inertias);
         visitor(rotational_inertias);
         visitor(rotational_global_inertias);
@@ -29,7 +29,7 @@ struct PotentialEnergies {
     std ::vector<Gravity> gravities;
 
     template<typename Visitor>
-    void for_each(Visitor visitor) const {
+    void for_each(Visitor && visitor) const {
         visitor(gravities);
         visitor(particle_springs);
         visitor(rigid_body_springs);
@@ -64,68 +64,6 @@ inline void add_FEM_element(Energies& energies, FEM_Element3D<MaterialType> elem
 ////////////////////////////// ENERGY VISITORS////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-struct ComputeInertialEnergyVisitor {
-    ComputeInertialEnergyVisitor(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Scalar& out)
-        : TimeStep(TimeStep), state(state), state0(state0), out(out) {}
-    Scalar TimeStep;
-    const PhysicsState& state;
-    const PhysicsState& state0;
-    Scalar& out;
-
-    template <typename T>
-    void operator()(const std::vector<T>& energies) {
-        for (unsigned int i = 0; i < energies.size(); i++) {
-            out += energies[i].compute_energy(TimeStep, state, state0);
-        }
-    }
-};
-
-struct ComputePotentialEnergyVisitor {
-    ComputePotentialEnergyVisitor(Scalar TimeStep, const PhysicsState& state, Scalar& out)
-        : TimeStep(TimeStep), state(state), out(out) {}
-    Scalar TimeStep;
-    const PhysicsState& state;
-    Scalar& out;
-
-    template <typename T>
-    void operator()(const std::vector<T>& energies) {
-        for (unsigned int i = 0; i < energies.size(); i++) {
-            out += energies[i].compute_energy(TimeStep, state);
-        }
-    }
-};
-
-struct ComputeInertialEnergyGradientVisitor {
-    ComputeInertialEnergyGradientVisitor(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& out)
-        : TimeStep(TimeStep), state(state), state0(state0), out(out) {}
-    Scalar TimeStep;
-    const PhysicsState& state;
-    const PhysicsState& state0;
-    Vec& out;
-
-    template <typename T>
-    void operator()(const std::vector<T>& energies) {
-        for (unsigned int i = 0; i < energies.size(); i++) {
-            energies[i].compute_energy_gradient(TimeStep, state, state0, out);
-        }
-    }
-};
-
-struct ComputePotentialEnergyGradientVisitor {
-    ComputePotentialEnergyGradientVisitor(Scalar TimeStep, const PhysicsState& state, Vec& out)
-        : TimeStep(TimeStep), state(state), out(out) {}
-    Scalar TimeStep;
-    const PhysicsState& state;
-    Vec& out;
-
-    template <typename T>
-    void operator()(const std::vector<T>& energies) {
-        for (unsigned int i = 0; i < energies.size(); i++) {
-            energies[i].compute_energy_gradient(TimeStep, state, out);
-        }
-    }
-};
-
 struct ComputeInertialEnergyAndDerivativesVisitor {
     ComputeInertialEnergyAndDerivativesVisitor(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out)
         : TimeStep(TimeStep), state(state), state0(state0), out(out) {}
@@ -136,6 +74,7 @@ struct ComputeInertialEnergyAndDerivativesVisitor {
 
     template <typename T>
     void operator()(const std::vector<T>& energies) {
+        static_assert(std::is_base_of<InertialEnergy, T>());
         for (unsigned int i = 0; i < energies.size(); i++) {
             energies[i].compute_energy_and_derivatives(TimeStep, state, state0, out);
         }
@@ -151,25 +90,9 @@ struct ComputePotentialEnergyAndDerivativesVisitor {
 
     template <typename T>
     void operator()(const std::vector<T>& energies) {
+        static_assert(std::is_base_of<PotentialEnergy, T>());
         for (unsigned int i = 0; i < energies.size(); i++) {
             energies[i].compute_energy_and_derivatives(TimeStep, state, out);
-            // DEBUG_LOG(out.energy);
-        }
-    }
-};
-
-struct UpdateSimulationStateVisitor {
-    UpdateSimulationStateVisitor(Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0)
-        : TimeStep(TimeStep), dx(dx), state(state), state0(state0) {}
-    Scalar TimeStep;
-    const Vec& dx;
-    PhysicsState& state;
-    const PhysicsState& state0;
-
-    template <typename T>
-    void operator()(const std::vector<T>& energies) {
-        for (unsigned int i = 0; i < energies.size(); i++) {
-            energies[i].update_state(TimeStep, dx, state, state0);
         }
     }
 };

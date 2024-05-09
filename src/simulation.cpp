@@ -19,11 +19,17 @@ void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, c
 }
 
 Scalar compute_energy(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0) {
-    // This function is responsible of computing the energy and derivatives for each energy in the simulation.
-    // Here the energies must place the energy, gradient and Hessians to the correct place in the global energy and derivative structure
     Scalar phi = 0;
-    energies.inertial_energies.for_each(ComputeInertialEnergyVisitor(TimeStep, state, state0, phi));
-    energies.potential_energies.for_each(ComputePotentialEnergyVisitor(TimeStep, state, phi));
+    energies.inertial_energies.for_each([&](const auto& energies) {
+        for (unsigned int i = 0; i < energies.size(); i++) {
+            phi += energies[i].compute_energy(TimeStep, state, state0);
+        }
+    });
+    energies.potential_energies.for_each([&](const auto& energies) {
+        for (unsigned int i = 0; i < energies.size(); i++) {
+            phi += energies[i].compute_energy(TimeStep, state);
+        }
+    });
     return phi;
 }
 
@@ -31,8 +37,16 @@ Vec compute_energy_gradient(Scalar TimeStep, const Energies& energies, const Phy
     // This function is responsible of computing the energy and derivatives for each energy in the simulation.
     // Here the energies must place the energy, gradient and Hessians to the correct place in the global energy and derivative structure
     Vec grad = Vec::Zero(state.get_nDoF());
-    energies.inertial_energies.for_each(ComputeInertialEnergyGradientVisitor(TimeStep, state, state0, grad));
-    energies.potential_energies.for_each(ComputePotentialEnergyGradientVisitor(TimeStep, state, grad));
+    energies.inertial_energies.for_each([&](const auto& energies){
+        for (unsigned int i = 0; i < energies.size(); i++) {
+            energies[i].compute_energy_gradient(TimeStep, state, state0, grad);
+        }
+    });
+    energies.potential_energies.for_each([&](const auto& energies){
+        for (unsigned int i = 0; i < energies.size(); i++) {
+            energies[i].compute_energy_gradient(TimeStep, state, grad);
+        }
+    });
 
     return grad;
 }
@@ -101,7 +115,11 @@ void simulation_step(const Simulation& simulation, PhysicsState& state) {
 }
 
 void update_simulation_state(const Scalar TimeStep, const Energies& energies, const Vec& dx, PhysicsState& state, const PhysicsState& state0) {
-    energies.inertial_energies.for_each(UpdateSimulationStateVisitor(TimeStep, dx, state, state0));
+    energies.inertial_energies.for_each([&](const auto& energies){
+        for (unsigned int i = 0; i < energies.size(); i++) {
+            energies[i].update_state(TimeStep, dx, state, state0);
+        }
+    });
 }
 
 inline Vec compute_energy_gradient_finite(Scalar E0, Scalar dx, Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0) {

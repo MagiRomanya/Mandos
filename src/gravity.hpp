@@ -9,7 +9,7 @@ struct GravityParameters {
   Scalar intensity;
 };
 
-struct Gravity {
+struct Gravity : PotentialEnergy {
   Gravity(unsigned int index, GravityParameters params)
     : parameters(params), index(index) {}
 
