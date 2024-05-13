@@ -9,7 +9,6 @@ set(HEADERS
   inertia_energies.hpp
   integrators.hpp
   linear_algebra.hpp
-  memory_pool.hpp
   mesh.hpp
   particle.hpp
   particle_rigid_body_copuling.hpp
