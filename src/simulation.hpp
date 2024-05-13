@@ -5,7 +5,7 @@
 
 #include "colliders.hpp"
 #include "linear_algebra.hpp"
-#include "particle_rigid_body_copuling.hpp"
+#include "particle_rigid_body_coupling.hpp"
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
 #include "particle.hpp"
@@ -30,7 +30,7 @@ struct Simulation {
     // Boundary conditions
     PhysicsState initial_state;
     std::vector<unsigned int> frozen_dof;
-    Copulings copulings;
+    Couplings couplings;
 };
 
 Scalar compute_energy(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0);

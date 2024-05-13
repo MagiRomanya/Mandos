@@ -13,7 +13,7 @@ struct InertialEnergies {
     std::vector<RotationalInertiaGlobal> rotational_global_inertias;
 
     template<typename Visitor>
-    void for_each(Visitor && visitor) const {
+    constexpr inline void for_each(Visitor && visitor) const {
         visitor(linear_inertias);
         visitor(rotational_inertias);
         visitor(rotational_global_inertias);
@@ -29,7 +29,7 @@ struct PotentialEnergies {
     std ::vector<Gravity> gravities;
 
     template<typename Visitor>
-    void for_each(Visitor && visitor) const {
+    constexpr inline void for_each(Visitor && visitor) const {
         visitor(gravities);
         visitor(particle_springs);
         visitor(rigid_body_springs);
@@ -38,6 +38,9 @@ struct PotentialEnergies {
         visitor(fem_elements_neoHookMat);
     }
 };
+
+CHECK_WETHER_COMPOSITE_IS_VALID(PotentialEnergies, PotentialEnergy);
+CHECK_WETHER_COMPOSITE_IS_VALID(InertialEnergies, InertialEnergy);
 
 struct Energies {
     InertialEnergies inertial_energies;
@@ -74,7 +77,6 @@ struct ComputeInertialEnergyAndDerivativesVisitor {
 
     template <typename T>
     void operator()(const std::vector<T>& energies) {
-        static_assert(std::is_base_of<InertialEnergy, T>());
         for (unsigned int i = 0; i < energies.size(); i++) {
             energies[i].compute_energy_and_derivatives(TimeStep, state, state0, out);
         }
@@ -90,7 +92,6 @@ struct ComputePotentialEnergyAndDerivativesVisitor {
 
     template <typename T>
     void operator()(const std::vector<T>& energies) {
-        static_assert(std::is_base_of<PotentialEnergy, T>());
         for (unsigned int i = 0; i < energies.size(); i++) {
             energies[i].compute_energy_and_derivatives(TimeStep, state, out);
         }

@@ -2,6 +2,7 @@
 #define UTILITY_FUNCTIONS_H_
 
 #include <string>
+#include <type_traits>
 #include <vector>
 #include <iostream>
 #include "linear_algebra.hpp"
@@ -46,5 +47,35 @@ inline Vec3 cross(const Vec3& v, const Vec3& u) {
                 v.z() * u.x() - v.x() * u.z(),
                 v.x() * u.y() - v.y() * u.x());
 }
+
+template <typename T>
+constexpr size_t sizeof_composite() {
+    size_t size = 0;
+    T instance;
+    instance.for_each([&](const auto& members){
+        size += sizeof(members);
+    });
+    return size;
+}
+
+template <typename T, typename P>
+constexpr bool is_base_of_composite() {
+    T instance;
+    bool result = true;
+    instance.for_each([&](auto vectors){
+        using vector_value_type = typename decltype(vectors)::value_type;
+        static_assert(std::is_base_of<P, vector_value_type>::value);
+        if constexpr (not std::is_base_of<P, vector_value_type>::value) {
+            result = false;
+        }
+    });
+    return result;
+}
+
+#define CHECK_WETHER_COMPOSITE_IS_VALID(composite_type, abstract_type) \
+    static_assert(sizeof_composite<composite_type>() == sizeof(composite_type), \
+                  "The for_each method in" #composite_type " does not consider all members."); \
+    static_assert(is_base_of_composite<composite_type, abstract_type>(), \
+                  "Not all types in the composite " #composite_type " inherit from the abstract type " #abstract_type);
 
 #endif // UTILITY_FUNCTIONS_H_

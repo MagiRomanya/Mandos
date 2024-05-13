@@ -6,7 +6,7 @@
 #include "inertia_energies.hpp"
 #include "rigid_body.hpp"
 #include "gravity.hpp"
-#include "particle_rigid_body_copuling.hpp"
+#include "particle_rigid_body_coupling.hpp"
 #include "rod_segment.hpp"
 #include "simulable_generator.hpp"
 #include "spring.hpp"
@@ -274,8 +274,8 @@ ParticleHandle get_particle_handle(Simulation& sim, unsigned int particle_index)
 }
 
 void join_rigid_body_with_particle(Simulation& sim, RigidBodyHandle rb, ParticleHandle p) {
-    ParticleRigidBodyCopuling copuling = ParticleRigidBodyCopuling(rb.rb, p.particle, p.particle.get_position(sim.initial_state));
-    sim.copulings.add_copuling(copuling);
+    ParticleRigidBodyCouplings coupling = ParticleRigidBodyCouplings(rb.rb, p.particle, p.particle.get_position(sim.initial_state));
+    sim.couplings.add_coupling(coupling);
 }
 
 RodHandle::RodHandle(Simulation& simulation, unsigned int segments, const Vec3& rod_vector, Scalar TotalMass, const RodSegmentParameters& parameters)

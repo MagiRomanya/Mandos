@@ -178,7 +178,7 @@ template <typename T>
 FEM_Element3D<T>::FEM_Element3D(Particle p1,Particle p2, Particle p3, Particle p4, Eigen::Matrix<Scalar, 4, 3> ds_dx, T material)
   : p1(p1), p2(p2), p3(p3), p4(p4), material(material), dvecF_dx(block_matrix<3,4>(ds_dx.transpose()))
 {
-  static_assert(std::is_base_of<FEM_Material, T>());
+  static_assert(std::is_base_of<FEM_Material, T>::value);
 }
 
 template <typename T>

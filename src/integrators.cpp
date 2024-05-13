@@ -6,10 +6,9 @@
 #include "linear_algebra.hpp"
 
 #include "integrators.hpp"
-#include "particle_rigid_body_copuling.hpp"
+#include "particle_rigid_body_coupling.hpp"
 #include "physics_state.hpp"
 #include "simulation.hpp"
-#include "utility_functions.hpp"
 #include "clock.hpp"
 
 void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, Vec& dx) {
@@ -21,12 +20,12 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
 
     handle_frozen_dof(simulation.frozen_dof, &equation_vector, &equation_matrix);
 
-    SparseMat copuling_jacobian;
-    compute_copuling_jacobian(simulation.copulings, state, copuling_jacobian);
-    const SparseMat copuling_jacobian_t = copuling_jacobian.transpose();
+    SparseMat coupling_jacobian;
+    compute_coupling_jacobian(simulation.couplings, state, coupling_jacobian);
+    const SparseMat coupling_jacobian_t = coupling_jacobian.transpose();
 
-    equation_matrix = copuling_jacobian_t * equation_matrix * copuling_jacobian;
-    equation_vector = copuling_jacobian_t * equation_vector;
+    equation_matrix = coupling_jacobian_t * equation_matrix * coupling_jacobian;
+    equation_vector = coupling_jacobian_t * equation_vector;
     if (equation_vector.hasNaN()) {
         std::cout << "WARNING::INTEGRATE_IMPLICIT_EULER: Equation vector has NaN" << std::endl;
     }
@@ -43,7 +42,7 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
         Clock clock(integration_solve_time);
         // solver.setTolerance(tol);
         solver.compute(equation_matrix);
-        dx = copuling_jacobian * solver.solve(equation_vector);
+        dx = coupling_jacobian * solver.solve(equation_vector);
     }
     // DEBUG_LOG(integration_solve_time);
     if (dx.hasNaN()) {
