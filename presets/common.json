@@ -1,0 +1,74 @@
+{
+    "version": 4,
+    "configurePresets": [
+        {
+            "name": ".x86_64-clang-17",
+            "hidden": true,
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "/usr/bin/clang-17",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++-17"
+            },
+            "environment": {
+                "_CONAN_PROFILE_INSTALL_DIR": "${sourceDir}/build/x86_64-clang-17"
+            }
+        },
+        {
+            "name": ".debug",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            },
+            "toolchainFile": "$env{_CONAN_PROFILE_INSTALL_DIR}/Debug/generators/conan_toolchain.cmake"
+        },
+        {
+            "name": ".release",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            },
+            "toolchainFile": "$env{_CONAN_PROFILE_INSTALL_DIR}/Release/generators/conan_toolchain.cmake"
+        },
+        {
+            "name": ".relwithdebinfo",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            },
+            "toolchainFile": "$env{_CONAN_PROFILE_INSTALL_DIR}/RelWithDebInfo/generators/conan_toolchain.cmake"
+        },
+        {
+            "name": ".tests",
+            "hidden": true,
+            "cacheVariables": {
+                "BUILD_TESTING": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        },
+        {
+            "name": ".default-buildir",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}"
+            }
+        },
+        {
+            "name": ".base",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "inherits": [
+                ".default-buildir",
+                ".x86_64-clang-17"
+            ],
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        }
+    ]
+}

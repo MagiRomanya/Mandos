@@ -1,16 +1,16 @@
 #include <Eigen/Geometry>
 
-#include "mandos.hpp"
-#include "colliders.hpp"
-#include "fem_element.hpp"
-#include "inertia_energies.hpp"
-#include "rigid_body.hpp"
-#include "gravity.hpp"
-#include "particle_rigid_body_copuling.hpp"
-#include "rod_segment.hpp"
-#include "simulable_generator.hpp"
-#include "spring.hpp"
-#include "utility_functions.hpp"
+#include <Mandos/mandos.hpp>
+// #include <Mandos/colliders.hpp>
+#include <Mandos/fem_element.hpp>
+#include <Mandos/inertia_energies.hpp>
+#include <Mandos/rigid_body.hpp>
+#include <Mandos/gravity.hpp>
+#include <Mandos/particle_rigid_body_copuling.hpp>
+#include <Mandos/rod_segment.hpp>
+#include <Mandos/simulable_generator.hpp>
+#include <Mandos/spring.hpp>
+#include <Mandos/utility_functions.hpp>
 
 RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const std::vector<Scalar> vertices, bool global)
     : rb(simulation.initial_state.get_nDoF(), mass, compute_initial_inertia_tensor_PARTICLES(mass, vertices)),
@@ -384,50 +384,50 @@ RodHandle RodHandle::freeze_rigid_body(Scalar s) const {
 }
 
 
-PlaneColliderHandle::PlaneColliderHandle(Simulation& simulation)
-    :simulation(simulation)
-{
-    PlaneCollider collider;
-    collider.center = Vec3::Zero();
-    collider.normal = Vec3(0.0, 1.0, 0.0);
-    index = simulation.colliders.plane_colliders.size();
-    simulation.colliders.plane_colliders.push_back(collider);
-}
+// PlaneColliderHandle::PlaneColliderHandle(Simulation& simulation)
+//     :simulation(simulation)
+// {
+//     PlaneCollider collider;
+//     collider.center = Vec3::Zero();
+//     collider.normal = Vec3(0.0, 1.0, 0.0);
+//     index = simulation.colliders.plane_colliders.size();
+//     simulation.colliders.plane_colliders.push_back(collider);
+// }
 
-PlaneColliderHandle PlaneColliderHandle::set_origin_position(const Vec3& origin) const {
-    simulation.colliders.plane_colliders[index].center = origin;
-    return *this;
-}
+// PlaneColliderHandle PlaneColliderHandle::set_origin_position(const Vec3& origin) const {
+//     simulation.colliders.plane_colliders[index].center = origin;
+//     return *this;
+// }
 
-PlaneColliderHandle PlaneColliderHandle::set_direction(const Vec3& direction) const {
-    simulation.colliders.plane_colliders[index].normal = direction.normalized();
-    return *this;
-}
+// PlaneColliderHandle PlaneColliderHandle::set_direction(const Vec3& direction) const {
+//     simulation.colliders.plane_colliders[index].normal = direction.normalized();
+//     return *this;
+// }
 
-SphereColliderHandle::SphereColliderHandle(Simulation& simulation)
-    :simulation(simulation)
-{
-    SphereCollider collider;
-    collider.center = Vec3::Zero();
-    collider.radius = 10.0;
-    index = simulation.colliders.sphere_colliders.size();
-    simulation.colliders.sphere_colliders.push_back(collider);
-}
+// SphereColliderHandle::SphereColliderHandle(Simulation& simulation)
+//     :simulation(simulation)
+// {
+//     SphereCollider collider;
+//     collider.center = Vec3::Zero();
+//     collider.radius = 10.0;
+//     index = simulation.colliders.sphere_colliders.size();
+//     simulation.colliders.sphere_colliders.push_back(collider);
+// }
 
-SphereColliderHandle SphereColliderHandle::set_origin_position(const Vec3& origin) const {
-    simulation.colliders.sphere_colliders[index].center = origin;
-    return *this;
-}
+// SphereColliderHandle SphereColliderHandle::set_origin_position(const Vec3& origin) const {
+//     simulation.colliders.sphere_colliders[index].center = origin;
+//     return *this;
+// }
 
-SphereColliderHandle SphereColliderHandle::set_radius(const Scalar& radius) const {
-    simulation.colliders.sphere_colliders[index].radius = radius;
-    return *this;
-}
+// SphereColliderHandle SphereColliderHandle::set_radius(const Scalar& radius) const {
+//     simulation.colliders.sphere_colliders[index].radius = radius;
+//     return *this;
+// }
 
 
-SDFColliderHandle::SDFColliderHandle(Simulation& simulation, const SimulationMesh& sim_mesh)
-    :simulation(simulation)
-{
-    index = simulation.colliders.sdf_colliders.size();
-    simulation.colliders.sdf_colliders.emplace_back(sim_mesh);
-}
+// SDFColliderHandle::SDFColliderHandle(Simulation& simulation, const SimulationMesh& sim_mesh)
+//     :simulation(simulation)
+// {
+//     index = simulation.colliders.sdf_colliders.size();
+//     simulation.colliders.sdf_colliders.emplace_back(sim_mesh);
+// }

@@ -1,13 +1,12 @@
 #include <cmath>
 #include <vector>
 
-#include "clock.hpp"
-#include "colliders.hpp"
-#include "simulation.hpp"
-#include "integrators.hpp"
-#include "linear_algebra.hpp"
-#include "physics_state.hpp"
-#include "utility_functions.hpp"
+#include <Mandos/colliders.hpp>
+#include <Mandos/simulation.hpp>
+#include <Mandos/integrators.hpp>
+#include <Mandos/linear_algebra.hpp>
+#include <Mandos/physics_state.hpp>
+#include <Mandos/utility_functions.hpp>
 
 void compute_energy_and_derivatives_finite(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out);
 

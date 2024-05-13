@@ -4,8 +4,8 @@
 #include <cassert>
 #include <vector>
 
-#include "../src/simulable_generator.hpp"
-#include "../src/simulation.hpp"
+#include <Mandos/simulable_generator.hpp>
+#include <Mandos/simulation.hpp>
 
 /**
  * Here there are the definitions of simulable handles, that are a front end of the simulation for the user to interact with.

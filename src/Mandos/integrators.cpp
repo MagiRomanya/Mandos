@@ -1,16 +1,17 @@
 #include <thread>
 #include <vector>
+
 #include <Eigen/SparseCore>
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/SparseLU>
-#include "linear_algebra.hpp"
 
-#include "integrators.hpp"
-#include "particle_rigid_body_copuling.hpp"
-#include "physics_state.hpp"
-#include "simulation.hpp"
-#include "utility_functions.hpp"
-#include "clock.hpp"
+#include <Mandos/linear_algebra.hpp>
+
+#include <Mandos/integrators.hpp>
+#include <Mandos/particle_rigid_body_copuling.hpp>
+#include <Mandos/physics_state.hpp>
+#include <Mandos/simulation.hpp>
+#include <Mandos/utility_functions.hpp>
 
 void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& state, const EnergyAndDerivatives& f, Vec& dx) {
     const unsigned int nDoF = state.get_nDoF();
@@ -40,12 +41,13 @@ void integrate_implicit_euler(const Simulation& simulation, const PhysicsState& 
     const Scalar tol = 1e-9;
     double integration_solve_time = 0;
     {
-        Clock clock(integration_solve_time);
+        // TODO Use tracy
+        // Clock clock(integration_solve_time);
         // solver.setTolerance(tol);
         solver.compute(equation_matrix);
         dx = copuling_jacobian * solver.solve(equation_vector);
     }
-    // DEBUG_LOG(integration_solve_time);
+
     if (dx.hasNaN()) {
         std::cout << "WARNING::INTEGRATE_IMPLICIT_EULER: The dx step has NaN" << std::endl;
     }

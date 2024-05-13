@@ -34,3 +34,10 @@
 /build/
 /compile_commands.json
 /imgui.ini
+
+# Conan
+.conan2/
+
+# IDEs
+.devcontainer/
+*.code-workspace

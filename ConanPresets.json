@@ -1,0 +1,9 @@
+{
+    "version": 4,
+    "vendor": {
+        "conan": {}
+    },
+    "include": [
+        "/workspace/build/x86_64-clang-17/Release/generators/CMakePresets.json"
+    ]
+}

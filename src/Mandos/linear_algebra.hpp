@@ -1,8 +1,8 @@
-#ifndef LINEAR_ALGEBRA_H_
-#define LINEAR_ALGEBRA_H_
+#ifndef MANDOS_LINEAR_ALGEBRA_H_
+#define MANDOS_LINEAR_ALGEBRA_H_
 
-#include "../external/eigen/Eigen/Core"
-#include "../external/eigen/Eigen/SparseCore"
+#include <Eigen/Core>
+#include <Eigen/SparseCore>
 
 typedef double Scalar;
 
@@ -114,4 +114,4 @@ inline Eigen::Matrix<Scalar, N, M> transpose_vectorized_matrix_M(const Eigen::Ma
 }
 
 
-#endif // LINEAR_ALGEBRA_H_
+#endif // MANDOS_LINEAR_ALGEBRA_H_

@@ -1,0 +1,59 @@
+{
+    "version": 4,
+    "include": [
+        "common.json"
+    ],
+    "configurePresets": [
+        {
+            "name": ".dev-base",
+            "hidden": true,
+            "inherits": [
+                ".base"
+            ]
+        },
+        {
+            "name": "dev-debug",
+            "displayName": "Debug",
+            "description": "Debug",
+            "inherits": [
+                ".debug",
+                ".dev-base"
+            ]
+        },
+        {
+            "name": "dev-release",
+            "displayName": "Release",
+            "description": "Release",
+            "inherits": [
+                ".release",
+                ".dev-base"
+            ]
+        },
+        {
+            "name": "dev-relwithdebinfo",
+            "displayName": "RelWithDebInfo",
+            "description": "RelWithDebInfo",
+            "inherits": [
+                ".relwithdebinfo",
+                ".dev-base"
+            ]
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "dev-debug",
+            "displayName": "Default",
+            "configurePreset": "dev-debug"
+        },
+        {
+            "name": "dev-release",
+            "displayName": "Default",
+            "configurePreset": "dev-release"
+        },
+        {
+            "name": "dev-relwithdebinfo",
+            "displayName": "Default",
+            "configurePreset": "dev-relwithdebinfo"
+        }
+    ]
+}
