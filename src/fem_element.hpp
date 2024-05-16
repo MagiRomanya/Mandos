@@ -86,7 +86,7 @@ struct FEM_NeoHookeanMaterial : FEM_Material {
 // ----------------------------------------------------------------------------------------
 
 template <typename MaterialType>
-struct FEM_Element3D : PotentialEnergy {
+struct FEM_Element3D final : PotentialEnergy {
     FEM_Element3D(Particle p1,Particle p2, Particle p3, Particle p4, Eigen::Matrix<Scalar, 4, 3> ds_dx, MaterialType material);
 
     const Particle p1, p2, p3, p4;

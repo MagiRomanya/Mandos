@@ -18,25 +18,24 @@ struct ContactEvent {
     unsigned int index;
 };
 
-
 struct Collider {
     virtual void compute_contact_geometry(const Vec3& point, ContactEvent& out) const = 0;
 };
 
-struct SphereCollider : Collider {
+struct SphereCollider final : Collider {
     Vec3 center;
     Scalar radius;
 
     void compute_contact_geometry(const Vec3& point, ContactEvent& out) const;
 };
 
-struct PlaneCollider : Collider {
+struct PlaneCollider final : Collider {
     Vec3 center, normal;
 
     void compute_contact_geometry(const Vec3& point, ContactEvent& out) const;
 };
 
-struct SDFCollider : Collider {
+struct SDFCollider final : Collider {
     SDFCollider();
     SDFCollider(const SDFCollider& other); // copy constructor
     SDFCollider(const SimulationMesh& mesh);

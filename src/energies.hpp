@@ -21,21 +21,21 @@ struct InertialEnergies {
 };
 
 struct PotentialEnergies {
-    std ::vector<ParticleSpring> particle_springs;
-    std ::vector<RigidBodySpring> rigid_body_springs;
-    std ::vector<RodSegment> rod_segments;
-    std ::vector<FEM_Element3D<FEM_LinearMaterial>> fem_elements_linearMat;
-    std ::vector<FEM_Element3D<FEM_NeoHookeanMaterial>> fem_elements_neoHookMat;
-    std ::vector<Gravity> gravities;
+    std::vector<ParticleSpring> particle_springs;
+    std::vector<RigidBodySpring> rigid_body_springs;
+    std::vector<RodSegment> rod_segments;
+    std::vector<FEM_Element3D<FEM_LinearMaterial>> fem_elements_linearMat;
+    std::vector<FEM_Element3D<FEM_NeoHookeanMaterial>> fem_elements_neoHookMat;
+    std::vector<Gravity> gravities;
 
     template<typename Visitor>
     constexpr inline void for_each(Visitor && visitor) const {
-        visitor(gravities);
         visitor(particle_springs);
         visitor(rigid_body_springs);
         visitor(rod_segments);
         visitor(fem_elements_linearMat);
         visitor(fem_elements_neoHookMat);
+        visitor(gravities);
     }
 };
 

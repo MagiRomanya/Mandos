@@ -1,4 +1,5 @@
 #include <Eigen/Geometry>
+#include <cassert>
 
 #include "mandos.hpp"
 #include "colliders.hpp"
@@ -10,7 +11,6 @@
 #include "rod_segment.hpp"
 #include "simulable_generator.hpp"
 #include "spring.hpp"
-#include "utility_functions.hpp"
 
 RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const std::vector<Scalar> vertices, bool global)
     : rb(simulation.initial_state.get_nDoF(), mass, compute_initial_inertia_tensor_PARTICLES(mass, vertices)),
@@ -35,7 +35,6 @@ RigidBodyHandle::RigidBodyHandle(Simulation& simulation, Scalar mass, const Mat3
 }
 
 RigidBodyHandle RigidBodyHandle::set_COM_initial_position(Vec3 pos) const {
-    const Vec3 x = rb.get_COM_position(simulation.initial_state.x);
     simulation.initial_state.x.segment<3>(rb.index) = pos;
     return *this;
 }
@@ -123,7 +122,6 @@ void join_rigid_body_with_rod_segment(Simulation& simulation, RigidBodyHandle& r
     simulation.energies.potential_energies.rod_segments.emplace_back(rbA.rb, rbB.rb, parameters);
 }
 
-
 MassSpringHandle::MassSpringHandle(Simulation& simulation,
                                    const std::vector<Scalar>& vertices,
                                    const std::vector<unsigned int>& indices,
@@ -172,7 +170,7 @@ MassSpringHandle MassSpringHandle::add_gravity(Scalar gravity) const {
     return *this;
 }
 
-void MassSpringHandle::get_dof_vector(const PhysicsState& state, std::vector<float>& out_dofs) const {
+void MassSpringHandle::get_dof_vector(const PhysicsState& state, std::vector<Scalar>& out_dofs) const {
     assert(out_dofs.size() == bounds.nDoF);
     for (unsigned int i = 0; i < bounds.nDoF; i++) {
         out_dofs[i] = state.x[i + bounds.dof_index];
@@ -192,7 +190,6 @@ ParticleHandle::ParticleHandle(Simulation& simulation, Scalar mass)
 }
 
 ParticleHandle ParticleHandle::set_initial_position(Vec3 position) const {
-    const Vec3 x = particle.get_position(simulation.initial_state);
     simulation.initial_state.x.segment<3>(particle.index) = position;
     return *this;
 }
@@ -279,13 +276,13 @@ void join_rigid_body_with_particle(Simulation& sim, RigidBodyHandle rb, Particle
 }
 
 RodHandle::RodHandle(Simulation& simulation, unsigned int segments, const Vec3& rod_vector, Scalar TotalMass, const RodSegmentParameters& parameters)
-    : simulation(simulation), TotalMass(TotalMass),
-      bounds(generate_rod(simulation, segments, TotalMass, rod_vector.norm(), Vec3::Zero(), rod_vector.normalized(), parameters))
+    : TotalMass(TotalMass), bounds(generate_rod(simulation, segments, TotalMass, rod_vector.norm(), Vec3::Zero(), rod_vector.normalized(), parameters)),
+      simulation(simulation)
 {}
 
 RodHandle::RodHandle(Simulation& simulation, const std::vector<Scalar>& vertices, Scalar TotalMass, const RodSegmentParameters& parameters)
-    : simulation(simulation), TotalMass(TotalMass),
-      bounds(generate_rod(simulation, vertices, TotalMass, parameters))
+    : TotalMass(TotalMass), bounds(generate_rod(simulation, vertices, TotalMass, parameters)),
+      simulation(simulation)
 {}
 
 Vec3 RodHandle::compute_center_of_mass(const PhysicsState& state) const {

@@ -86,11 +86,9 @@ struct RigidBody {
 
   Vec3 get_COM_position(const Vec &x) const;
   Vec3 get_axis_angle(const Vec &x) const;
-  Vec3 compute_angular_momentum(Scalar TimeStep,
-                                const PhysicsState &state) const;
+  Vec3 compute_angular_momentum(Scalar TimeStep, const PhysicsState &state) const;
   Mat3 compute_rotation_matrix(const Vec &x) const;
-  Mat3 compute_rotation_velocity_matrix(const Scalar TimeStep,
-                                        const PhysicsState &state) const;
+  Mat3 compute_rotation_velocity_matrix(const Scalar TimeStep, const PhysicsState &state) const;
 };
 
 Mat3 compute_global_to_local_axis_angle_jacobian(const Vec3& phi);

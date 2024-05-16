@@ -1,7 +1,6 @@
 #ifndef MANDOS_H_
 #define MANDOS_H_
 
-#include <cassert>
 #include <vector>
 
 #include "../src/simulable_generator.hpp"
@@ -111,7 +110,7 @@ class MassSpringHandle {
 
         inline unsigned int get_n_particles() const { return bounds.n_particles; }
 
-        void get_dof_vector(const PhysicsState& state, std::vector<float>& out_dofs) const;
+        void get_dof_vector(const PhysicsState& state, std::vector<Scalar>& out_dofs) const;
 
         const Scalar TotalMass;
         const SimulableBounds bounds;

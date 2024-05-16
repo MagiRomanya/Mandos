@@ -6,7 +6,7 @@
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
 
-struct LinearInertia : InertialEnergy {
+struct LinearInertia final : InertialEnergy {
     LinearInertia(Particle p) : Mass(Mat3::Identity() * p.mass), p(p) {}
 
     Mat3 Mass;
@@ -22,7 +22,7 @@ struct LinearInertia : InertialEnergy {
     }
 };
 
-struct RotationalInertia : InertialEnergy {
+struct RotationalInertia final : InertialEnergy {
     RotationalInertia(RigidBody rb) : rb(rb) {}
     RigidBody rb;
 
@@ -33,7 +33,7 @@ struct RotationalInertia : InertialEnergy {
     void update_state(const Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0) const;
 };
 
-struct RotationalInertiaGlobal : InertialEnergy {
+struct RotationalInertiaGlobal final : InertialEnergy {
     RotationalInertiaGlobal(RigidBody rb) : rb(rb) {}
     RigidBody rb;
 

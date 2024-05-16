@@ -10,7 +10,7 @@ struct SpringParameters {
     Scalar k, L0, damping;
 };
 
-struct ParticleSpring : PotentialEnergy {
+struct ParticleSpring final : PotentialEnergy {
     ParticleSpring(const Particle p1, const Particle p2, SpringParameters param)
         : p1(p1), p2(p2), parameters(param) {};
 
@@ -22,7 +22,7 @@ struct ParticleSpring : PotentialEnergy {
     void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out) const;
 };
 
-struct RigidBodySpring : PotentialEnergy {
+struct RigidBodySpring final : PotentialEnergy {
     const RigidBody rbA, rbB;
     const Vec3 posA, posB;
     const SpringParameters parameters;

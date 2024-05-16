@@ -53,7 +53,7 @@ struct RodSegmentParameters {
     Mat6 compute_energy_hessian_AB(const RodSegmentPrecomputedValues& values) const;
 };
 
-struct RodSegment : PotentialEnergy {
+struct RodSegment final : PotentialEnergy {
     RodSegment(const RigidBody& rb1,  const RigidBody& rb2, const RodSegmentParameters& parameters)
         : rbA(rb1), rbB(rb2), parameters(parameters) {}
 

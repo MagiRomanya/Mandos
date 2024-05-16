@@ -3,13 +3,12 @@
 
 #include "linear_algebra.hpp"
 #include "physics_state.hpp"
-#include "utility_functions.hpp"
 
 struct GravityParameters {
   Scalar intensity;
 };
 
-struct Gravity : PotentialEnergy {
+struct Gravity final : PotentialEnergy {
   Gravity(unsigned int index, GravityParameters params)
     : parameters(params), index(index) {}
 
