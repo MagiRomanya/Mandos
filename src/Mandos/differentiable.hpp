@@ -1,19 +1,23 @@
-#ifndef DIFFERENTIABLE_H_
-#define DIFFERENTIABLE_H_
+#ifndef MANDOS_DIFFERENTIABLE_H_
+#define MANDOS_DIFFERENTIABLE_H_
 
-#include "simulation.hpp"
+#include <Mandos/simulation.hpp>
+
+namespace mandos
+{
 
 struct LossFunctionAndDerivatives {
-    Scalar loss;                                       // g
-    std::vector<Vec> loss_position_partial_derivative; // dg_dx
-    std::vector<Vec> loss_velocity_partial_derivative; // dg_dv
-    Vec loss_parameter_partial_derivative;             // dg_dp
+    Scalar loss;                                        // g
+    std::vector<Vec> loss_position_partial_derivative;  // dg_dx
+    std::vector<Vec> loss_velocity_partial_derivative;  // dg_dv
+    Vec loss_parameter_partial_derivative;              // dg_dp
 };
 
 Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
                                                    const std::vector<PhysicsState>& trajectory,
                                                    const LossFunctionAndDerivatives& loss,
-                                                   const Mat& dx0_dp, const Mat& dv0_dp,
+                                                   const Mat& dx0_dp,
+                                                   const Mat& dv0_dp,
                                                    const unsigned int maxIterations = 0);
 
 Vec compute_loss_function_gradient_backpropagation_1_step_velocity(const Simulation& simulation,
@@ -28,4 +32,6 @@ Vec compute_loss_function_gradient_backpropagation_1_step_position(const Simulat
                                                                    const Vec dg_dphi,
                                                                    const Vec dg_dphi_dot);
 
-#endif // DIFFERENTIABLE_H_
+}  // namespace mandos
+
+#endif  // MANDOS_DIFFERENTIABLE_H_

@@ -3,15 +3,16 @@
 
 #include <vector>
 
-#include "colliders.hpp"
-#include "linear_algebra.hpp"
-#include "particle_rigid_body_copuling.hpp"
-#include "physics_state.hpp"
-#include "rigid_body.hpp"
-#include "particle.hpp"
-#include "energies.hpp"
+#include <Mandos/colliders.hpp>
+#include <Mandos/linear_algebra.hpp>
+#include <Mandos/particle_rigid_body_coupling.hpp>
+#include <Mandos/physics_state.hpp>
+#include <Mandos/rigid_body.hpp>
+#include <Mandos/particle.hpp>
+#include <Mandos/energies.hpp>
 
-
+namespace mandos
+{
 struct Simulables {
     std::vector<Particle> particles;
     std::vector<RigidBody> rigid_bodies;
@@ -30,19 +31,32 @@ struct Simulation {
     // Boundary conditions
     PhysicsState initial_state;
     std::vector<unsigned int> frozen_dof;
-    Copulings copulings;
+    Couplings couplings;
 };
 
 Scalar compute_energy(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0);
 
-Vec compute_energy_gradient(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0);
+Vec compute_energy_gradient(Scalar TimeStep,
+                            const Energies& energies,
+                            const PhysicsState& state,
+                            const PhysicsState& state0);
 
-void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out);
+void compute_energy_and_derivatives(Scalar TimeStep,
+                                    const Energies& energies,
+                                    const PhysicsState& state,
+                                    const PhysicsState& state0,
+                                    EnergyAndDerivatives& out);
 
 void simulation_step(const Simulation& simulation, PhysicsState& state);
 
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out);
 
-void update_simulation_state(const Scalar TimeStep, const Energies& energies, const Vec& dx, PhysicsState& state, const PhysicsState& state0);
+void update_simulation_state(const Scalar TimeStep,
+                             const Energies& energies,
+                             const Vec& dx,
+                             PhysicsState& state,
+                             const PhysicsState& state0);
+
+}  // namespace mandos
 
 #endif // SIMULABLE_H_

@@ -1,66 +1,79 @@
 #include <memory>
-#include <tmd/TriangleMeshDistance.h>
-
+// #include <tmd/TriangleMeshDistance.h>
 
 #include <Mandos/colliders.hpp>
 #include <Mandos/simulation.hpp>
 #include <Mandos/utility_functions.hpp>
 
-void SphereCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out) const {
+namespace mandos
+{
+
+void SphereCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out) const
+{
     const Vec3 delta = point - center;
     const Scalar distance = delta.norm();
     out.normal = delta / distance;
     out.s_distance = distance - radius;
 }
 
-void PlaneCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out) const {
+void PlaneCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out) const
+{
     out.s_distance = normal.dot(point - center);
     out.normal = normal;
 }
 
-void SDFCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out) const {
-    tmd::Result result = sdf->signed_distance(point);
-    // Compute normal from triangle
-    const int triangle_idx = result.triangle_id;
-    const Vec3 A = Vec3(mesh.vertices[3*mesh.indices[3*triangle_idx + 0] + 0],
-                        mesh.vertices[3*mesh.indices[3*triangle_idx + 0] + 1],
-                        mesh.vertices[3*mesh.indices[3*triangle_idx + 0] + 2]);
+// void SDFCollider::compute_contact_geometry(const Vec3& point, ContactEvent& out) const
+// {
+//     tmd::Result result = sdf->signed_distance(point);
+//     // Compute normal from triangle
+//     const int triangle_idx = result.triangle_id;
+//     const Vec3 A = Vec3(mesh.vertices[3 * mesh.indices[3 * triangle_idx + 0] + 0],
+//                         mesh.vertices[3 * mesh.indices[3 * triangle_idx + 0] + 1],
+//                         mesh.vertices[3 * mesh.indices[3 * triangle_idx + 0] + 2]);
 
-    const Vec3 B = Vec3(mesh.vertices[3*mesh.indices[3*triangle_idx + 1] + 0],
-                        mesh.vertices[3*mesh.indices[3*triangle_idx + 1] + 1],
-                        mesh.vertices[3*mesh.indices[3*triangle_idx + 1] + 2]);
+//     const Vec3 B = Vec3(mesh.vertices[3 * mesh.indices[3 * triangle_idx + 1] + 0],
+//                         mesh.vertices[3 * mesh.indices[3 * triangle_idx + 1] + 1],
+//                         mesh.vertices[3 * mesh.indices[3 * triangle_idx + 1] + 2]);
 
-    const Vec3 C = Vec3(mesh.vertices[3*mesh.indices[3*triangle_idx + 2] + 0],
-                        mesh.vertices[3*mesh.indices[3*triangle_idx + 2] + 1],
-                        mesh.vertices[3*mesh.indices[3*triangle_idx + 2] + 2]);
-    const Vec3 normal = cross(B - A, C - A).normalized();
+//     const Vec3 C = Vec3(mesh.vertices[3 * mesh.indices[3 * triangle_idx + 2] + 0],
+//                         mesh.vertices[3 * mesh.indices[3 * triangle_idx + 2] + 1],
+//                         mesh.vertices[3 * mesh.indices[3 * triangle_idx + 2] + 2]);
+//     const Vec3 normal = cross(B - A, C - A).normalized();
 
-    // const Scalar dx = 1e-3;
-    // const Scalar sx = sdf->signed_distance(point + Vec3(dx, 0.0, 0.0)).distance;
-    // const Scalar sy = sdf->signed_distance(point + Vec3(0.0, dx, 0.0)).distance;
-    // const Scalar sz = sdf->signed_distance(point + Vec3(0.0, 0.0, dx)).distance;
-    // const Vec3 normal = Vec3(sx - result.distance, sy - result.distance, sz - result.distance).normalized();
-    // DEBUG_LOG(normal.transpose());
-    out.s_distance = result.distance;
-    out.normal = normal;
-}
+//     // const Scalar dx = 1e-3;
+//     // const Scalar sx = sdf->signed_distance(point + Vec3(dx, 0.0, 0.0)).distance;
+//     // const Scalar sy = sdf->signed_distance(point + Vec3(0.0, dx, 0.0)).distance;
+//     // const Scalar sz = sdf->signed_distance(point + Vec3(0.0, 0.0, dx)).distance;
+//     // const Vec3 normal = Vec3(sx - result.distance, sy - result.distance, sz - result.distance).normalized();
+//     // DEBUG_LOG(normal.transpose());
+//     out.s_distance = result.distance;
+//     out.normal = normal;
+// }
 
 struct ComputePointParticleEventVisitor {
-    ComputePointParticleEventVisitor(const Vec3& point, unsigned int index, Scalar particle_radius, std::vector<ContactEvent>& events)
-        :point(point), index(index), particle_radius(particle_radius), events(events)
-    {}
+    ComputePointParticleEventVisitor(const Vec3& point,
+                                     unsigned int index,
+                                     Scalar particle_radius,
+                                     std::vector<ContactEvent>& events)
+        : point(point)
+        , index(index)
+        , particle_radius(particle_radius)
+        , events(events)
+    {
+    }
     const Vec3& point;
     const unsigned int index;
     const Scalar particle_radius;
     std::vector<ContactEvent>& events;
 
-    template<typename T>
-    void operator()(const std::vector<T>& colliders) {
+    template <typename T>
+    void operator()(const std::vector<T>& colliders)
+    {
         ContactEvent event;
         for (unsigned int j = 0; j < colliders.size(); j++) {
             colliders[j].compute_contact_geometry(point, event);
             event.index = index;
-            if ( event.s_distance < particle_radius ) {
+            if (event.s_distance < particle_radius) {
                 event.s_distance -= particle_radius;
                 events.push_back(event);
             }
@@ -68,7 +81,11 @@ struct ComputePointParticleEventVisitor {
     }
 };
 
-void find_point_particle_contact_events(const Colliders& colliders, const Simulables& simulables, const PhysicsState& state, std::vector<ContactEvent>& events) {
+void find_point_particle_contact_events(const Colliders& colliders,
+                                        const Simulables& simulables,
+                                        const PhysicsState& state,
+                                        std::vector<ContactEvent>& events)
+{
     const Scalar particle_radius = 0.4;
 
     for (unsigned int i = 0; i < simulables.particles.size(); i++) {
@@ -85,7 +102,11 @@ void find_point_particle_contact_events(const Colliders& colliders, const Simula
     }
 }
 
-void compute_contact_events_energy_and_derivatives(const Scalar TimeStep, const std::vector<ContactEvent>& events, const PhysicsState state, EnergyAndDerivatives& out) {
+void compute_contact_events_energy_and_derivatives(const Scalar TimeStep,
+                                                   const std::vector<ContactEvent>& events,
+                                                   const PhysicsState state,
+                                                   EnergyAndDerivatives& out)
+{
     const Scalar contact_stiffness = 100000.0;
     const Scalar friction_coefficient = 100.0;
     const Scalar contact_damping_coefficient = 1000.0;
@@ -119,24 +140,25 @@ void compute_contact_events_energy_and_derivatives(const Scalar TimeStep, const 
 
         for (unsigned int a = 0; a < 3; a++)
             for (unsigned int b = 0; b < 3; b++)
-                out.hessian_triplets.emplace_back(event.index + a, event.index + b, c_hessian(a,b) + f_hessian(a,b) + d_hessian(a,b));
+                out.hessian_triplets.emplace_back(
+                    event.index + a, event.index + b, c_hessian(a, b) + f_hessian(a, b) + d_hessian(a, b));
     }
 }
 
-SDFCollider::SDFCollider(const SimulationMesh& mesh)
-{
-    this->mesh = mesh;
-    this->sdf = std::make_unique<tmd::TriangleMeshDistance>(mesh.vertices.data(), mesh.vertices.size() / 3,
-                                                            mesh.indices.data(), mesh.indices.size() / 3);
-}
+// SDFCollider::SDFCollider(const SimulationMesh& mesh)
+// {
+//     this->mesh = mesh;
+//     this->sdf = std::make_unique<tmd::TriangleMeshDistance>(mesh.vertices.data(), mesh.vertices.size() / 3,
+//                                                             mesh.indices.data(), mesh.indices.size() / 3);
+// }
 
-
-SDFCollider::SDFCollider(const SDFCollider &other) {
-    this->mesh = other.mesh;
-    this->sdf = std::make_unique<tmd::TriangleMeshDistance>(mesh.vertices.data(), mesh.vertices.size() / 3,
-                                                            mesh.indices.data(), mesh.indices.size() / 3);
-}
+// SDFCollider::SDFCollider(const SDFCollider &other) {
+//     this->mesh = other.mesh;
+//     this->sdf = std::make_unique<tmd::TriangleMeshDistance>(mesh.vertices.data(), mesh.vertices.size() / 3,
+//                                                             mesh.indices.data(), mesh.indices.size() / 3);
+// }
 
 // Define default constructor and destructor where the complete TriangleMeshDistance type is defined
-SDFCollider::SDFCollider() {}
-SDFCollider::~SDFCollider() {}
+// SDFCollider::SDFCollider() {}
+// SDFCollider::~SDFCollider() {}
+}  // namespace mandos

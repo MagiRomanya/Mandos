@@ -1,6 +1,6 @@
 set(HEADERS
   async_simulation_loop.hpp
-#   colliders.hpp
+  colliders.hpp
   differentiable.hpp
   edge.hpp
   energies.hpp
@@ -11,7 +11,7 @@ set(HEADERS
   linear_algebra.hpp
   mesh.hpp
   particle.hpp
-  particle_rigid_body_copuling.hpp
+  particle_rigid_body_coupling.hpp
   physics_state.hpp
   rigid_body.hpp
   rod_segment.hpp
@@ -25,16 +25,16 @@ set(HEADERS
 
 set(SOURCES
   async_simulation_loop.cpp
-#   colliders.cpp
+  colliders.cpp
 #   compute_tetrahedrons.cpp  
   differentiable.cpp
   edge.cpp
   fem_element.cpp
   inertia_energies.cpp
   integrators.cpp
+  linear_algebra.cpp
   mandos.cpp
-  mesh_boundary.cpp
-  particle_rigidbody_copuling.cpp
+  particle_rigidbody_coupling.cpp
   rigid_body.cpp
   rod_segment.cpp
   simulation.cpp
@@ -53,6 +53,7 @@ target_include_directories(Mandos PUBLIC
 target_link_libraries(Mandos 
 PRIVATE 
   Eigen3::Eigen
+  spdlog::spdlog
 )
 
 generate_export_header(Mandos)

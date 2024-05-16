@@ -1,18 +1,22 @@
-#ifndef SIMULABLE_GENERATOR_H_
-#define SIMULABLE_GENERATOR_H_
+#ifndef MANDOS_SIMULABLE_GENERATOR_H_
+#define MANDOS_SIMULABLE_GENERATOR_H_
 
-#include "simulation.hpp"
-#include "linear_algebra.hpp"
+#include <Mandos/simulation.hpp>
+#include <Mandos/linear_algebra.hpp>
+
+namespace mandos
+{
 
 /**
  * Struct which stores indices from different data fields in the Simulation instance.
  *
- * For this to work, the simulable has to have contiguous degrees of freedom, particles and rigid bodies in the respective vectors.
+ * For this to work, the simulable has to have contiguous degrees of freedom, particles and rigid bodies in the
+ * respective vectors.
  */
 struct SimulableBounds {
-    unsigned int dof_index, nDoF; // Starting dof index and total degrees of freedom of the simulable.
-    unsigned int particle_index, n_particles; // Starting particle index and number of particles in the simulable.
-    unsigned int rb_index, n_rb; // Starting rigid body index and number of rigid bodies in the simulable.
+    unsigned int dof_index, nDoF;              // Starting dof index and total degrees of freedom of the simulable.
+    unsigned int particle_index, n_particles;  // Starting particle index and number of particles in the simulable.
+    unsigned int rb_index, n_rb;               // Starting rigid body index and number of rigid bodies in the simulable.
 };
 
 /**
@@ -38,7 +42,8 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
 /**
  * Initializes a single tetrahedron FEM soft body.
  *
- * This is a hard coded example and it is not possible to directly change the positions and velocities nor its rest configuration.
+ * This is a hard coded example and it is not possible to directly change the positions and velocities nor its rest
+ * configuration.
  *
  * @tparam MaterialType Type of FEM material.
  * @param simulation The simulation instance where we want to create the simulable.
@@ -46,7 +51,10 @@ SimulableBounds generate_mass_spring(Simulation& simulation,
  * @param poisson_ratio, young_modulus Elasticity parameters of the soft body.
  */
 template <typename MaterialType>
-SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar TotalMass, Scalar poisson_ratio, Scalar young_modulus);
+SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation,
+                                           Scalar TotalMass,
+                                           Scalar poisson_ratio,
+                                           Scalar young_modulus);
 
 /**
  * Initializes a FEM soft body from a tetrahedron mesh.
@@ -61,9 +69,12 @@ SimulableBounds generate_FEM3D_tetrahedron(Simulation& simulation, Scalar TotalM
  * @param tet_indices, tet_vertices Description of the tetrahedron indexed mesh.
  */
 template <typename MaterialType>
-SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Scalar TotalMass, Scalar poisson_ratio, Scalar young_modulus,
-                                                     const std::vector<unsigned int>& tet_indices, const std::vector<Scalar>& tet_vertices);
-
+SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation,
+                                                     Scalar TotalMass,
+                                                     Scalar poisson_ratio,
+                                                     Scalar young_modulus,
+                                                     const std::vector<unsigned int>& tet_indices,
+                                                     const std::vector<Scalar>& tet_vertices);
 
 /**
  * Initializes a soft Rod from an origin and a given direction.
@@ -77,8 +88,11 @@ SimulableBounds generate_FEM3D_from_tetrahedron_mesh(Simulation& simulation, Sca
  * @param rod_parameters Physical parameters of the rod. (Note that L0 will be overwritten)
  */
 SimulableBounds generate_rod(Simulation& simulation,
-                             unsigned int segments, Scalar mass,
-                             Scalar length, const Vec3 origin, const Vec3 direction,
+                             unsigned int segments,
+                             Scalar mass,
+                             Scalar length,
+                             const Vec3 origin,
+                             const Vec3 direction,
                              const RodSegmentParameters& rod_parameters);
 
 SimulableBounds generate_rod(Simulation& simulation,
@@ -86,6 +100,8 @@ SimulableBounds generate_rod(Simulation& simulation,
                              Scalar TotalMass,
                              const RodSegmentParameters& rod_parameters);
 
-
 Vec3 compute_axis_angle_from_direction(const Vec3& direction);
-#endif // SIMULABLE_GENERATOR_H_
+
+}  // namespace mandos
+
+#endif  // MANDOS_SIMULABLE_GENERATOR_H_

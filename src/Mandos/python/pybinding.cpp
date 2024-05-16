@@ -213,43 +213,6 @@ PYBIND11_MODULE(pymandos, m) {
 
     m.def("compute_loss_function_gradient_backpropagation_1_step_position", &compute_loss_function_gradient_backpropagation_1_step_position);
 
-    m.def("compute_loss_function_gradient_backpropagation_1_step_velocity", &compute_loss_function_gradient_backpropagation_1_step_velocity);
-
-
-    // RENDERING
-    // -----------------------------------------------------------------------------
-#ifdef USE_VISUALIZER
-    py::class_<MeshGPU>(m, "MeshGPU")
-        .def(py::init<const RenderMesh&>())
-        .def("updateData", &MeshGPU::updateData)
-        ;
-    py::class_<SkinnedRodGPU>(m, "SkinnedRodGPU")
-        .def(py::init<const RenderMesh&, const unsigned int>())
-        .def(py::init<const RenderMesh&, const RodHandle&>())
-        ;
-
-    py::class_<MandosViewer>(m, "MandosViewer")
-        .def(py::init<>())
-        .def("disable_render_logs", &MandosViewer::disable_render_logs)
-        .def("window_should_close", &MandosViewer::window_should_close)
-        .def("begin_drawing", &MandosViewer::begin_drawing)
-        .def("end_drawing", &MandosViewer::end_drawing)
-        .def("is_key_pressed", &MandosViewer::is_key_pressed)
-        .def("draw_particle", &MandosViewer::draw_particle)
-        .def("draw_rigid_body", &MandosViewer::draw_rigid_body)
-        .def("draw_FEM", &MandosViewer::draw_FEM)
-        .def("draw_MassSpring", &MandosViewer::draw_MassSpring)
-        .def("draw_rod", &MandosViewer::draw_rod)
-        .def("draw_mesh", &MandosViewer::draw_mesh)
-        .def("draw_springs", &MandosViewer::draw_springs)
-        .def("draw_rods", &MandosViewer::draw_rods)
-        .def("draw_particles", &MandosViewer::draw_particles)
-        .def("draw_rigid_bodies", &MandosViewer::draw_rigid_bodies)
-        .def("draw_FEM_tetrahedrons", &MandosViewer::draw_FEM_tetrahedrons_lines)
-        // .def("draw_particle_indices", &MandosViewer::draw_particle_indices)
-        .def("draw_simulation_state", &MandosViewer::draw_simulation_state)
-        .def("draw_vector", &MandosViewer::draw_vector)
-        ;
-
-#endif // USE_VISUALIZER
+    m.def("compute_loss_function_gradient_backpropagation_1_step_velocity",
+          &compute_loss_function_gradient_backpropagation_1_step_velocity);
 }

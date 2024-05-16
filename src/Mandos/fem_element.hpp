@@ -1,9 +1,12 @@
-#ifndef FEM_UNIT_H_
-#define FEM_UNIT_H_
+#ifndef MANDOS_FEM_UNIT_H_
+#define MANDOS_FEM_UNIT_H_
 
-#include "linear_algebra.hpp"
-#include "particle.hpp"
-#include "physics_state.hpp"
+#include <Mandos/linear_algebra.hpp>
+#include <Mandos/particle.hpp>
+#include <Mandos/physics_state.hpp>
+
+namespace mandos
+{
 
 /**
  * Compute the tetrahedron linear shape function derivative with respect to the tetrahedron vertices postions.
@@ -13,7 +16,10 @@
  *
  * @param x1,x2,x3,x4 The 4 tetrahedron vertices positions.
  */
-Eigen::Matrix<Scalar,4,3> compute_shape_function_derivative(const Vec3& x1, const Vec3& x2, const Vec3& x3, const Vec3& x4); // ds_dx
+Eigen::Matrix<Scalar, 4, 3> compute_shape_function_derivative(const Vec3& x1,
+                                                              const Vec3& x2,
+                                                              const Vec3& x3,
+                                                              const Vec3& x4);  // ds_dx
 
 /**
  * Compute the deformation tensor (F) of a tetrahedron.
@@ -21,8 +27,11 @@ Eigen::Matrix<Scalar,4,3> compute_shape_function_derivative(const Vec3& x1, cons
  * @param dvecF_dx Vectorized shape function derivative. dvecF_dx = block_matrix<3,4>(ds_dx.transpose())
  * @param x1,x2,x3,x4 The 4 tetrahedron vertices positions.
  */
-Mat3 compute_deformation_tensor(const Eigen::Matrix<Scalar,9,12>& dvecF_dx, const Vec3& x1, const Vec3& x2, const Vec3& x3, const Vec3& x4); // F
-
+Mat3 compute_deformation_tensor(const Eigen::Matrix<Scalar, 9, 12>& dvecF_dx,
+                                const Vec3& x1,
+                                const Vec3& x2,
+                                const Vec3& x3,
+                                const Vec3& x4);  // F
 
 // FEM Materials
 // Materials are structures that can compute their energy, energy gradient and hessian.
@@ -33,9 +42,9 @@ Mat3 compute_deformation_tensor(const Eigen::Matrix<Scalar,9,12>& dvecF_dx, cons
 // ----------------------------------------------------------------------------------------
 template <typename T>
 concept FEM_Material_Type = requires(T Object) {
-  Object.get_phi(Mat3::Identity());
-  Object.get_phi_gradient(Mat3::Identity());
-  Object.get_phi_hessian(Mat3::Identity());
+    Object.get_phi(Mat3::Identity());
+    Object.get_phi_gradient(Mat3::Identity());
+    Object.get_phi_hessian(Mat3::Identity());
 };
 
 /**
@@ -80,13 +89,18 @@ struct FEM_NeoHookeanMaterial {
 
 template <FEM_Material_Type MaterialType>
 struct FEM_Element3D {
-    FEM_Element3D(Particle p1,Particle p2, Particle p3, Particle p4, Eigen::Matrix<Scalar, 4, 3> ds_dx, MaterialType material);
+    FEM_Element3D(Particle p1,
+                  Particle p2,
+                  Particle p3,
+                  Particle p4,
+                  Eigen::Matrix<Scalar, 4, 3> ds_dx,
+                  MaterialType material);
 
     const Particle p1, p2, p3, p4;
     const MaterialType material;
 
     // Shape function derivative
-    const Eigen::Matrix<Scalar,9,12> dvecF_dx;
+    const Eigen::Matrix<Scalar, 9, 12> dvecF_dx;
 
     Scalar compute_energy(Scalar TimeStep, const PhysicsState& state) const;
 
@@ -98,5 +112,6 @@ struct FEM_Element3D {
 };
 
 bool is_tetrahedron_inverted(const Vec3& v1, const Vec3& v2, const Vec3& v3, const Vec3& v4);
+}  // namespace mandos
 
-#endif // FEM_UNIT_H_
+#endif  // MANDOS_FEM_UNIT_H_

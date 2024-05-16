@@ -1,19 +1,23 @@
-#pragma once
+#ifndef MANDOS_ENERGIES_H_
+#define MANDOS_ENERGIES_H_
 
-#include "fem_element.hpp"
-#include "gravity.hpp"
-#include "inertia_energies.hpp"
-#include "spring.hpp"
-#include "rod_segment.hpp"
-#include "utility_functions.hpp"
+#include <Mandos/fem_element.hpp>
+#include <Mandos/gravity.hpp>
+#include <Mandos/inertia_energies.hpp>
+#include <Mandos/spring.hpp>
+#include <Mandos/rod_segment.hpp>
+#include <Mandos/utility_functions.hpp>
 
+namespace mandos
+{
 struct InertialEnergies {
     std::vector<LinearInertia> linear_inertias;
     std::vector<RotationalInertia> rotational_inertias;
     std::vector<RotationalInertiaGlobal> rotational_global_inertias;
 
-    template<typename Visitor>
-    void for_each(Visitor visitor) const {
+    template <typename Visitor>
+    void for_each(Visitor visitor) const
+    {
         visitor(linear_inertias);
         visitor(rotational_inertias);
         visitor(rotational_global_inertias);
@@ -28,8 +32,9 @@ struct PotentialEnergies {
     std ::vector<FEM_Element3D<FEM_NeoHookeanMaterial>> fem_elements_neoHookMat;
     std ::vector<Gravity> gravities;
 
-    template<typename Visitor>
-    void for_each(Visitor visitor) const {
+    template <typename Visitor>
+    void for_each(Visitor visitor) const
+    {
         visitor(gravities);
         visitor(particle_springs);
         visitor(rigid_body_springs);
@@ -47,11 +52,12 @@ struct Energies {
 template <typename MaterialType>
 void add_FEM_element(Energies& energies, FEM_Element3D<MaterialType> element);
 
-template void add_FEM_element(Energies &energies, FEM_Element3D<FEM_LinearMaterial> element);
-template void add_FEM_element(Energies &energies, FEM_Element3D<FEM_NeoHookeanMaterial> element);
+template void add_FEM_element(Energies& energies, FEM_Element3D<FEM_LinearMaterial> element);
+template void add_FEM_element(Energies& energies, FEM_Element3D<FEM_NeoHookeanMaterial> element);
 
 template <typename MaterialType>
-inline void add_FEM_element(Energies& energies, FEM_Element3D<MaterialType> element) {
+inline void add_FEM_element(Energies& energies, FEM_Element3D<MaterialType> element)
+{
     if constexpr (std ::is_same<MaterialType, FEM_LinearMaterial>()) {
         energies.potential_energies.fem_elements_linearMat.push_back(element);
     }
@@ -66,14 +72,20 @@ inline void add_FEM_element(Energies& energies, FEM_Element3D<MaterialType> elem
 
 struct ComputeInertialEnergyVisitor {
     ComputeInertialEnergyVisitor(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Scalar& out)
-        : TimeStep(TimeStep), state(state), state0(state0), out(out) {}
+        : TimeStep(TimeStep)
+        , state(state)
+        , state0(state0)
+        , out(out)
+    {
+    }
     Scalar TimeStep;
     const PhysicsState& state;
     const PhysicsState& state0;
     Scalar& out;
 
     template <typename T>
-    void operator()(const std::vector<T>& energies) {
+    void operator()(const std::vector<T>& energies)
+    {
         for (unsigned int i = 0; i < energies.size(); i++) {
             out += energies[i].compute_energy(TimeStep, state, state0);
         }
@@ -82,13 +94,18 @@ struct ComputeInertialEnergyVisitor {
 
 struct ComputePotentialEnergyVisitor {
     ComputePotentialEnergyVisitor(Scalar TimeStep, const PhysicsState& state, Scalar& out)
-        : TimeStep(TimeStep), state(state), out(out) {}
+        : TimeStep(TimeStep)
+        , state(state)
+        , out(out)
+    {
+    }
     Scalar TimeStep;
     const PhysicsState& state;
     Scalar& out;
 
     template <typename T>
-    void operator()(const std::vector<T>& energies) {
+    void operator()(const std::vector<T>& energies)
+    {
         for (unsigned int i = 0; i < energies.size(); i++) {
             out += energies[i].compute_energy(TimeStep, state);
         }
@@ -96,15 +113,24 @@ struct ComputePotentialEnergyVisitor {
 };
 
 struct ComputeInertialEnergyGradientVisitor {
-    ComputeInertialEnergyGradientVisitor(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& out)
-        : TimeStep(TimeStep), state(state), state0(state0), out(out) {}
+    ComputeInertialEnergyGradientVisitor(Scalar TimeStep,
+                                         const PhysicsState& state,
+                                         const PhysicsState& state0,
+                                         Vec& out)
+        : TimeStep(TimeStep)
+        , state(state)
+        , state0(state0)
+        , out(out)
+    {
+    }
     Scalar TimeStep;
     const PhysicsState& state;
     const PhysicsState& state0;
     Vec& out;
 
     template <typename T>
-    void operator()(const std::vector<T>& energies) {
+    void operator()(const std::vector<T>& energies)
+    {
         for (unsigned int i = 0; i < energies.size(); i++) {
             energies[i].compute_energy_gradient(TimeStep, state, state0, out);
         }
@@ -113,13 +139,18 @@ struct ComputeInertialEnergyGradientVisitor {
 
 struct ComputePotentialEnergyGradientVisitor {
     ComputePotentialEnergyGradientVisitor(Scalar TimeStep, const PhysicsState& state, Vec& out)
-        : TimeStep(TimeStep), state(state), out(out) {}
+        : TimeStep(TimeStep)
+        , state(state)
+        , out(out)
+    {
+    }
     Scalar TimeStep;
     const PhysicsState& state;
     Vec& out;
 
     template <typename T>
-    void operator()(const std::vector<T>& energies) {
+    void operator()(const std::vector<T>& energies)
+    {
         for (unsigned int i = 0; i < energies.size(); i++) {
             energies[i].compute_energy_gradient(TimeStep, state, out);
         }
@@ -127,15 +158,24 @@ struct ComputePotentialEnergyGradientVisitor {
 };
 
 struct ComputeInertialEnergyAndDerivativesVisitor {
-    ComputeInertialEnergyAndDerivativesVisitor(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out)
-        : TimeStep(TimeStep), state(state), state0(state0), out(out) {}
+    ComputeInertialEnergyAndDerivativesVisitor(Scalar TimeStep,
+                                               const PhysicsState& state,
+                                               const PhysicsState& state0,
+                                               EnergyAndDerivatives& out)
+        : TimeStep(TimeStep)
+        , state(state)
+        , state0(state0)
+        , out(out)
+    {
+    }
     Scalar TimeStep;
     const PhysicsState& state;
     const PhysicsState& state0;
     EnergyAndDerivatives& out;
 
     template <typename T>
-    void operator()(const std::vector<T>& energies) {
+    void operator()(const std::vector<T>& energies)
+    {
         for (unsigned int i = 0; i < energies.size(); i++) {
             energies[i].compute_energy_and_derivatives(TimeStep, state, state0, out);
         }
@@ -144,13 +184,18 @@ struct ComputeInertialEnergyAndDerivativesVisitor {
 
 struct ComputePotentialEnergyAndDerivativesVisitor {
     ComputePotentialEnergyAndDerivativesVisitor(Scalar TimeStep, const PhysicsState& state, EnergyAndDerivatives& out)
-        : TimeStep(TimeStep), state(state), out(out) {}
+        : TimeStep(TimeStep)
+        , state(state)
+        , out(out)
+    {
+    }
     Scalar TimeStep;
     const PhysicsState& state;
     EnergyAndDerivatives& out;
 
     template <typename T>
-    void operator()(const std::vector<T>& energies) {
+    void operator()(const std::vector<T>& energies)
+    {
         for (unsigned int i = 0; i < energies.size(); i++) {
             energies[i].compute_energy_and_derivatives(TimeStep, state, out);
             // DEBUG_LOG(out.energy);
@@ -160,16 +205,26 @@ struct ComputePotentialEnergyAndDerivativesVisitor {
 
 struct UpdateSimulationStateVisitor {
     UpdateSimulationStateVisitor(Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0)
-        : TimeStep(TimeStep), dx(dx), state(state), state0(state0) {}
+        : TimeStep(TimeStep)
+        , dx(dx)
+        , state(state)
+        , state0(state0)
+    {
+    }
     Scalar TimeStep;
     const Vec& dx;
     PhysicsState& state;
     const PhysicsState& state0;
 
     template <typename T>
-    void operator()(const std::vector<T>& energies) {
+    void operator()(const std::vector<T>& energies)
+    {
         for (unsigned int i = 0; i < energies.size(); i++) {
             energies[i].update_state(TimeStep, dx, state, state0);
         }
     }
 };
+
+}  // namespace mandos
+
+#endif  //  MANDOS_ENERGIES_H_
