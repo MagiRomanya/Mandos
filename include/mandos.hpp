@@ -33,6 +33,8 @@ class RigidBodyHandle {
          * @param pos The new position of the center of mass
          */
         RigidBodyHandle set_COM_initial_position(Vec3 pos) const;
+        RigidBodyHandle set_COM_position(PhysicsState& state, Vec3 pos) const;
+        Vec3 get_COM_position(PhysicsState& state) const;
 
         /**
          * Set the Rigid Body initial orientation.
@@ -91,6 +93,9 @@ class RigidBodyHandle {
         const RigidBody rb;
         const unsigned int rb_index;
     private:
+        RigidBodyHandle(const RigidBody& rb, unsigned int rb_index, Simulation& simulation)
+            : rb(rb), rb_index(rb_index), simulation(simulation) {}
+        friend class RodHandle;
         Simulation& simulation;
 };
 
@@ -193,6 +198,7 @@ class RodHandle {
         RodHandle set_rigid_body_initial_angular_velocity(const Scalar s, const Vec3& v) const;
         RodHandle set_initial_rod_position(const Vec3& origin) const;
         RodHandle freeze_rigid_body(Scalar s) const;
+        RigidBodyHandle get_rigid_body(Scalar s);
 
         inline unsigned int get_n_rigid_bodies() const { return bounds.n_rb; }
 

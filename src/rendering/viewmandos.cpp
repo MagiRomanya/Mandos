@@ -1247,6 +1247,22 @@ void MandosViewer::draw_particle_indices(const Simulation& simulation, const Phy
         Vector2 particleScreenSpacePosition = GetWorldToScreenEx(position, renderState->camera, simulationViewerWidth, simulationViewerHeight);
         DrawText(std::to_string(index).c_str(), (int)particleScreenSpacePosition.x - MeasureText(std::to_string(index).c_str(), 20)/2, (int)particleScreenSpacePosition.y, 20, BLACK);
     }
+
+    for (size_t i = 0; i < simulation.simulables.rigid_bodies.size(); i++) {
+        const RigidBody rb = simulation.simulables.rigid_bodies[i];
+        const Vector3 position = vector3_eigen_to_raylib(rb.get_COM_position(state.x));
+
+        const unsigned int index = rb.index / 6;
+        const Matrix matView = GetCameraMatrix(renderState->camera);
+        const Vector3 particleCamPos = Vector3Transform(position, matView);
+
+        // Filter out tags that are too far away or behind the camera
+        const float thresholdDistance = 5.0f;
+        if (particleCamPos.z > 0.0f or particleCamPos.z < -thresholdDistance) continue;
+
+        Vector2 particleScreenSpacePosition = GetWorldToScreenEx(position, renderState->camera, simulationViewerWidth, simulationViewerHeight);
+        DrawText(std::to_string(index).c_str(), (int)particleScreenSpacePosition.x - MeasureText(std::to_string(index).c_str(), 20)/2, (int)particleScreenSpacePosition.y, 20, BLACK);
+    }
 }
 
 void MandosViewer::draw_simulation_state(const Simulation& simulation, const PhysicsState& state) {

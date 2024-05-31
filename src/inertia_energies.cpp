@@ -339,6 +339,41 @@ void RotationalInertiaGlobal::update_state(const Scalar TimeStep, const Vec& dx,
     state.v.segment<3>(rb.index+3) = (delta_theta) / TimeStep; // v_new
 }
 
+Scalar RotationalInertia1D::compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const {
+    const Scalar theta = rb.get_angle(state);
+    const Scalar theta_guess = theta + TimeStep * rb.get_angle_dot(state);
+    const Scalar one_over_h2 = 1.0 / (TimeStep * TimeStep);
+    const Scalar energy = 0.5 * one_over_h2 *  rb.moment_of_inertia * theta_guess * theta_guess;
+    return energy;
+}
+
+void RotationalInertia1D::compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const {
+    const Scalar theta = rb.get_angle(state);
+    const Scalar theta_guess = theta + TimeStep * rb.get_angle_dot(state);
+    const Scalar one_over_h2 = 1.0 / (TimeStep * TimeStep);
+    const Scalar gradient = one_over_h2 *  rb.moment_of_inertia * theta_guess;
+    grad[rb.index] += gradient;
+}
+
+void RotationalInertia1D::compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const {
+    const Scalar theta = rb.get_angle(state);
+    const Scalar theta_guess = theta + TimeStep * rb.get_angle_dot(state);
+    const Scalar one_over_h2 = 1.0 / (TimeStep * TimeStep);
+
+    const Scalar energy = 0.5 * one_over_h2 *  rb.moment_of_inertia * theta_guess * theta_guess;
+    const Scalar gradient = one_over_h2 *  rb.moment_of_inertia * theta_guess;
+    const Scalar hessian = one_over_h2 *  rb.moment_of_inertia;
+
+    f.energy += energy;
+    f.gradient[rb.index] += gradient;
+    f.hessian_triplets.emplace_back(rb.index, rb.index, hessian);
+}
+
+void RotationalInertia1D::update_state(const Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0) const {
+    state.x[rb.index] += dx[rb.index];
+    state.v[rb.index] = (state.x[rb.index] - state0.x[rb.index]) / TimeStep;
+}
+
 void add_particle_to_simulation(Simulation& simulation, const Particle& p) {
     simulation.simulables.particles.push_back(p);
     simulation.energies.inertial_energies.linear_inertias.emplace_back(p);

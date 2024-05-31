@@ -114,5 +114,18 @@ inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_global(const Vec3& theta) {
     return jac.transpose() * vectorized_levi_civita() * block_matrix<3,3>(R);
 }
 
+struct RigidBody1D {
+    Scalar moment_of_inertia;
+    unsigned int index;
+
+    inline Scalar get_angle(const PhysicsState& state) const {
+        return state.x[index];
+    }
+    inline Scalar get_angle_dot(const PhysicsState& state) const {
+        return state.v[index];
+    }
+};
+
+
 
 #endif // RIGID_BODY_H_
