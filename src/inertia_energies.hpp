@@ -44,7 +44,16 @@ struct RotationalInertiaGlobal final : InertialEnergy {
     void update_state(const Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0) const;
 };
 
+struct RotationalInertia1D {
+    RotationalInertia1D(RigidBody1D rb) : rb(rb) {}
 
+    RigidBody1D rb;
+
+    Scalar compute_energy(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0) const;
+    void compute_energy_gradient(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, Vec& grad) const;
+    void compute_energy_and_derivatives(Scalar TimeStep, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& f) const;
+    void update_state(const Scalar TimeStep, const Vec& dx, PhysicsState& state, const PhysicsState& state0) const;
+};
 
 struct Simulation;
 void add_particle_to_simulation(Simulation& simulation, const Particle& p);

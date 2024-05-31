@@ -39,6 +39,16 @@ RigidBodyHandle RigidBodyHandle::set_COM_initial_position(Vec3 pos) const {
     return *this;
 }
 
+RigidBodyHandle RigidBodyHandle::set_COM_position(PhysicsState& state, Vec3 pos) const {
+    const Vec3 x = rb.get_COM_position(state.x);
+    state.x.segment<3>(rb.index) = pos;
+    return *this;
+}
+
+Vec3 RigidBodyHandle::get_COM_position(PhysicsState& state) const {
+    return rb.get_COM_position(state.x);
+}
+
 RigidBodyHandle RigidBodyHandle::set_initial_orientation(Vec3 axis_angle) const {
     simulation.initial_state.x.segment<3>(rb.index + 3) = clamp_axis_angle(axis_angle);
     return *this;
@@ -311,9 +321,17 @@ RodHandle RodHandle::set_initial_rod_position(const Vec3& origin) const {
     return *this;
 }
 
+RigidBodyHandle RodHandle::get_rigid_body(Scalar s) {
+    assert(s >= 0 && s <= 1.0);
+    const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb - 1));
+    const unsigned int&& rb_index = bounds.rb_index + index;
+    const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + index];
+    return RigidBodyHandle(rb, rb_index, simulation);
+}
+
 RodHandle RodHandle::set_rigid_body_initial_position(const Scalar s, const Vec3& x) const {
     assert(s >= 0 && s <= 1.0);
-    const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb));
+    const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb - 1));
     const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + index];
     simulation.initial_state.x.segment<3>(rb.index) = x;
     return *this;
@@ -372,10 +390,14 @@ RodHandle RodHandle::set_rigid_body_initial_angular_velocity(const Scalar s, con
 
 RodHandle RodHandle::freeze_rigid_body(Scalar s) const {
     assert(s >= 0 && s <= 1.0);
-    const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb));
+    const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb - 1));
+    DEBUG_LOG(index);
+    DEBUG_LOG(bounds.rb_index + index);
+    DEBUG_LOG(bounds.n_rb);
     const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + index];
-    for (unsigned int i = 0; i < 6; i++)
-        simulation.frozen_dof.push_back(rb.index + index + i);
+    for (unsigned int i = 0; i < 6; i++) {
+        simulation.frozen_dof.push_back(rb.index + i);
+    }
 
     return *this;
 }

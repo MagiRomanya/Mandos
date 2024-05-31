@@ -88,7 +88,7 @@ void find_point_particle_contact_events(const Colliders& colliders, const Simula
 
 void compute_contact_events_energy_and_derivatives(const Scalar TimeStep, const std::vector<ContactEvent>& events, const PhysicsState state, EnergyAndDerivatives& out) {
     const Scalar contact_stiffness = 100000.0;
-    const Scalar friction_coefficient = 100.0;
+    const Scalar friction_coefficient = 0.0;
     const Scalar contact_damping_coefficient = 1000.0;
     for (unsigned int i = 0; i < events.size(); i++) {
         // Compute the energy and derivatives

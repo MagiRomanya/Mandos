@@ -118,6 +118,8 @@ PYBIND11_MODULE(pymandos, m) {
              py::arg("simulation"), py::arg("mass"), py::arg("vertices"), py::arg("global") = false)
         .def(py::init<Simulation&, Scalar, Mat3, bool>(),
              py::arg("simulation"), py::arg("mass"), py::arg("inertia_tensor"), py::arg("global") = false)
+        .def("set_com_position", &RigidBodyHandle::set_COM_position)
+        .def("get_com_position", &RigidBodyHandle::get_COM_position)
         .def("set_com_initial_position", &RigidBodyHandle::set_COM_initial_position)
         .def("set_com_initial_velocity", &RigidBodyHandle::set_COM_initial_velocity)
         .def("set_initial_orientation", &RigidBodyHandle::set_initial_orientation)
@@ -176,6 +178,7 @@ PYBIND11_MODULE(pymandos, m) {
         .def("set_rigid_body_initial_orientation", &RodHandle::set_rigid_body_initial_orientation)
         .def("set_rigid_body_initial_angular_velocity", &RodHandle::set_rigid_body_initial_angular_velocity)
         .def("set_initial_rod_position", &RodHandle::set_initial_rod_position)
+        .def("get_rigid_body", &RodHandle::get_rigid_body)
         .def("freeze_rigid_body", &RodHandle::freeze_rigid_body)
         ;
 
