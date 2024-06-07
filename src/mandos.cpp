@@ -360,40 +360,9 @@ RodHandle RodHandle::set_rigid_body_initial_angular_velocity(const Scalar s, con
     return *this;
 }
 
-// RodHandle RodHandle::set_initial_rod_direction(const Vec3& direction) const {
-//     // Changing direction means to change the postions of the rigid bodies
-//     // and also their orientation
-
-//     // Compute the orientation:
-//     Vec3 normalized_direction = direction.normalized();
-//     Vec3 axis_angle = Vec3::Zero();
-//     if (not normalized_direction.isApprox(Vec3(0.0, 0.0, 1.0), 1e-6)) {
-//         const Vec3 tangent = cross(normalized_direction, Vec3(0.0, 1.0, 0.0)).normalized();
-//         const Vec3 bitangent = cross(normalized_direction, tangent).normalized();
-//         Mat3 rotation;
-//         rotation << tangent, bitangent, normalized_direction;
-//         Eigen::AngleAxis<Scalar> angle_axis = Eigen::AngleAxis<Scalar>(rotation);
-//         axis_angle = angle_axis.axis() * angle_axis.angle();
-//     }
-
-//     const RigidBody& rbOrigin = simulation.simulables.rigid_bodies[bounds.rb_index];
-//     const Vec3 origin = rbOrigin.get_COM_position(simulation.initial_state.x);
-
-//     for (unsigned int i = 0; i < bounds.n_rb; i++) {
-//         const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + i];
-//         simulation.initial_state.x.segment<3>(rb.index) = origin + L0 * normalized_direction * i;
-//         simulation.initial_state.x.segment<3>(rb.index+3) = axis_angle;
-//     }
-
-//     return *this;
-// }
-
 RodHandle RodHandle::freeze_rigid_body(Scalar s) const {
     assert(s >= 0 && s <= 1.0);
     const unsigned int index = static_cast<unsigned int>(s * (bounds.n_rb - 1));
-    DEBUG_LOG(index);
-    DEBUG_LOG(bounds.rb_index + index);
-    DEBUG_LOG(bounds.n_rb);
     const RigidBody& rb = simulation.simulables.rigid_bodies[bounds.rb_index + index];
     for (unsigned int i = 0; i < 6; i++) {
         simulation.frozen_dof.push_back(rb.index + i);

@@ -18,6 +18,8 @@
  */
 Mat3 skew(const Vec3& v);
 
+Vec3 unskew(const Mat& m);
+
 /**
  * Compute the area of the triangle.
  *

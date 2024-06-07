@@ -51,7 +51,7 @@ PYBIND11_MODULE(pymandos, m) {
 
     py::class_<RenderMesh>(m, "RenderMesh")
         .def(py::init())
-        .def(py::init<std::string>())
+        .def(py::init<std::string, bool>(), py::arg("filename"), py::arg("center") = true)
         .def("updateFromSimulationMesh", &RenderMesh::updateFromSimulationMesh)
         .def("smoothNormals", &RenderMesh::smoothNormals)
         .def_readonly("vertices", &RenderMesh::vertices)
@@ -62,8 +62,8 @@ PYBIND11_MODULE(pymandos, m) {
 
     py::class_<SimulationMesh>(m, "SimulationMesh")
         .def(py::init())
-        .def(py::init<std::string>())
-        .def(py::init<const RenderMesh&>())
+        .def(py::init<std::string, bool>(), py::arg("filename"), py::arg("center") = true)
+        .def(py::init<const RenderMesh&, bool>(), py::arg("simMesh"), py::arg("center") = false)
         .def_readonly("vertices", &SimulationMesh::vertices)
         .def_readonly("indices", &SimulationMesh::indices)
         ;
@@ -97,6 +97,18 @@ PYBIND11_MODULE(pymandos, m) {
     m.def("get_particle", &get_particle_handle);
 
     m.def("compute_tetrahedrons", py::overload_cast<const std::vector<unsigned int>&, const std::vector<Scalar>&, TetrahedronMesh&>(&tetgen_compute_tetrahedrons));
+
+    m.def("compute_energy_and_derivatives", [](const Simulation& simulation, const PhysicsState& state, const PhysicsState& state0){
+        EnergyAndDerivatives f(state.get_nDoF());
+        compute_energy_and_derivatives(simulation.TimeStep, simulation.energies, state, state0, f);
+        return f;
+    });
+
+    m.def("compute_energy_and_derivatives_finite", [](const Simulation& simulation, const PhysicsState& state, const PhysicsState& state0){
+        EnergyAndDerivatives f(state.get_nDoF());
+        compute_energy_and_derivatives_finite(simulation.TimeStep, simulation.energies, state, state0, f);
+        return f;
+    });
 
     // ASYNC SIMULATION
     // -------------------------------------------------------------------------------------

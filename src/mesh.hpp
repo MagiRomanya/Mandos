@@ -14,8 +14,8 @@ struct SimulationMesh;
  */
 struct RenderMesh {
     RenderMesh() {};
-    RenderMesh(std::string filename);
-    RenderMesh(const SimulationMesh& simMesh);
+    RenderMesh(std::string filename, bool center = true);
+    RenderMesh(const SimulationMesh& simMesh, bool center = false);
 
     void updateFromSimulationMesh(const SimulationMesh& sim_mesh);
     void smoothNormals();
@@ -35,8 +35,8 @@ struct RenderMesh {
  */
 struct SimulationMesh {
     SimulationMesh() {};
-    SimulationMesh(std::string filename);
-    SimulationMesh(const RenderMesh& render_mesh);
+    SimulationMesh(std::string filename, bool center = true);
+    SimulationMesh(const RenderMesh& render_mesh, bool center = false);
 
     std::vector<Scalar> vertices;
     std::vector<unsigned int> indices;

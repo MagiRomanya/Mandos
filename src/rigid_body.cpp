@@ -17,6 +17,10 @@ Mat3 skew(const Vec3& v) {
     return m;
 }
 
+Vec3 unskew(const Mat& m) {
+    return Vec3(m(2,1), m(0,2), m(1,0));
+}
+
 Eigen::Matrix<Scalar,3,4> compute_axis_angle_quaternion_jacobian(const Eigen::Quaternion<Scalar>& q) {
     Eigen::Matrix<Scalar,3,4> dtheta_dq;
     const Scalar q_vec_norm = q.vec().norm();

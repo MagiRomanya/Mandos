@@ -4,11 +4,13 @@
 #include "differentiable.hpp"
 #include "energies.hpp"
 #include "inertia_energies.hpp"
+#include "integrators.hpp"
 #include "linear_algebra.hpp"
 #include "physics_state.hpp"
 #include "rigid_body.hpp"
 #include "simulation.hpp"
 #include "utility_functions.hpp"
+#include "optimization/LineSearch.hpp"
 
 Mat3 rotation_inertia_energy_hessian(const Mat3& J_inertia_tensor, const Vec3& theta, const Vec3& theta0, const Vec3& omega0, Scalar TimeStep) {
     const Mat3 R = compute_rotation_matrix_rodrigues(theta);
@@ -205,18 +207,19 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
         // Eigen::SparseLU<SparseMat> solver;
         SparseMat jac_global_to_local(nDoF, nDoF);
         compute_simulation_global_to_local_jacobian(simulation.simulables, state, jac_global_to_local);
-        const Vec equation_vector = - (loss_position_gradient + one_over_h * loss_velocity_gradient).transpose() * jac_global_to_local;
+        Vec equation_vector = - (loss_position_gradient + one_over_h * loss_velocity_gradient).transpose() * jac_global_to_local;
 #else
-        const Vec equation_vector = - (loss_position_gradient + one_over_h * loss_velocity_gradient);
+        Vec equation_vector = - (loss_position_gradient + one_over_h * loss_velocity_gradient);
         Eigen::SparseLU<SparseMat> solver;
 #endif
+        handle_frozen_dof(simulation.frozen_dof, &equation_vector, &hessian);
         solver.compute(hessian.transpose());
 
         const Vec grad0 = compute_energy_gradient(simulation.TimeStep, simulation.energies, state, state0);
 
-        Vec h_grad = equation_vector;
+        Vec h_grad = - equation_vector;
 
-        const Scalar dx = 1e-6;
+        const Scalar dx = 1e-8;
         Vec z = solver.solve(equation_vector);
         Vec dz = Vec::Zero(nDoF);
 
@@ -228,33 +231,40 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
             // DEBUG_LOG(h);
 
             // Evaluate the gradient
-            h_grad = - Hz + equation_vector;
+            h_grad = Hz - equation_vector;
             // DEBUG_LOG(h_grad.norm());
             // DEBUG_LOG(h);
 
             // Solve the system
-            dz = solver.solve(h_grad);
+            dz = solver.solve(-h_grad);
+            // DEBUG_LOG(dz.dot(h_grad)); // If this is negative, dz is a downhill direction
+
             // Line search
-            Vec z_line_search = z + dz;
-            Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z_line_search, dx);
-            Scalar h_new = 0.5 * z_line_search.transpose() * Hz - equation_vector.dot(z_line_search);
+            // ------------------------------------------------------------------
             Scalar alpha = 1.0;
-            while (h_new > h) {
-                alpha /= 2.0;
-                z_line_search = z + alpha * dz;
-                Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z_line_search, dx);
-                h_new = 0.5 * z_line_search.transpose() * Hz - equation_vector.dot(z_line_search);
-            }
-            // DEBUG_LOG(alpha);
+            Vec z_line_search = z + alpha * dz;
+            Scalar h_new;
+            Vec h_grad_new;
+
+            Optimization::LineSearchNocedal lineSearch;
+            lineSearch.search([&](const Eigen::VectorXd&   z,
+                                 double&                  funcValue,
+                                 Eigen::VectorXd&         gradient)
+            {
+                Vec Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z_line_search, dx);
+                funcValue = 0.5 * z_line_search.transpose() * Hz - equation_vector.dot(z_line_search);
+                gradient = Hz - equation_vector;
+            }, z, h_grad, dz, z_line_search, h_new, h_grad_new, alpha);
+
             z += alpha * dz;
-            // z += dz;
+
             if (h_grad.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: h_grad has NaN" << std::endl;
             if (equation_vector.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: equation_vector has NaN" << std::endl;
             if (Hz.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: Hz has NaN" << std::endl;
             if (dz.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: dz has NaN" << std::endl;
             if (z.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: z has NaN" << std::endl;
         }
-        // DEBUG_LOG("-------------");
+        // std ::cout << "-------------" << std ::endl;
 
         // Update the loss function gradients
         // -------------------------------------------------------------------------

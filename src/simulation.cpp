@@ -9,8 +9,6 @@
 #include "physics_state.hpp"
 #include "utility_functions.hpp"
 
-void compute_energy_and_derivatives_finite(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out);
-
 void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out) {
     // This function is responsible of computing the energy and derivatives for each energy in the simulation.
     // Here the energies must place the energy, gradient and Hessians to the correct place in the global energy and derivative structure

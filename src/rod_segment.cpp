@@ -12,10 +12,10 @@ inline Eigen::Matrix<Scalar,3,9> dvecR_dtheta_local_matrix(const Mat3& R) {
 
 Vec3 compute_darboux_vector(const Scalar L0, const Mat3& R1, const Mat3& R2) {
     const Mat3 dR_dx = (R2 - R1) / L0;
-    const Mat3 R = (R1 + R2) / 2.0;
-    const Mat3 skew_u = dR_dx * R.transpose();
-    const Vec3 u = 0.5 * vectorized_levi_civita() * vectorize_matrix<3>(skew_u);
-    const Vec3 rot_u = R.transpose() * u;
+    const Mat3 R = (R1 + R2) * 0.5;
+    const Mat3 skew_rot_u = R.transpose() * dR_dx;
+    const Vec3 rot_u = unskew(skew_rot_u);
+
     if (rot_u.squaredNorm() >= M_PI * M_PI) {
         const Scalar norm = rot_u.norm();
         const Scalar clamped_angle = std::fmod(norm, 2.0 * M_PI) - 2.0 * M_PI;
@@ -44,7 +44,6 @@ Mat3 compute_darboux_vector_local_derivative(const Scalar L0, const Mat3& R1, co
     const Mat3 R = (R1 + R2) / 2.0;
     const Mat3 skew_u = dR_dx * R.transpose();
 
-
     const Mat3 du_dtheta = -1.0 / L0 * Mat3::Identity() - 0.5 * skew_u;
 
     // Compute the effect of rotating the darboux with R^T
@@ -52,6 +51,12 @@ Mat3 compute_darboux_vector_local_derivative(const Scalar L0, const Mat3& R1, co
 
     // Final derivative
     Mat3 result = dRTu_dtheta + R.transpose() * du_dtheta;
+
+    // const Mat3 du_dtheta2 = -1.0 / L0 * Mat3::Identity() - 0.5 * R.transpose() * dR_dx;
+    // Mat3 result2 = du_dtheta2;
+
+    // std ::cout << "result- result2"
+    //            << "\n" << result - result2 << std ::endl;
 
     return result;
 }

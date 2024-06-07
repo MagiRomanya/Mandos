@@ -39,6 +39,8 @@ Vec compute_energy_gradient(Scalar TimeStep, const Energies& energies, const Phy
 
 void compute_energy_and_derivatives(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out);
 
+void compute_energy_and_derivatives_finite(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0, EnergyAndDerivatives& out);
+
 void simulation_step(const Simulation& simulation, PhysicsState& state);
 
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& out);

@@ -15,9 +15,10 @@
 // #define TINYOBJLOADER_USE_MAPBOX_EARCUT
 #include "tiny_obj_loader.h"
 
-SimulationMesh::SimulationMesh(std::string filename) {
+SimulationMesh::SimulationMesh(std::string filename, bool center) {
+    DEBUG_LOG(center);
     LoadVerticesAndIndicesTinyOBJ(filename, vertices, indices);
-    // recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
+    if (center) recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
 }
 
 /**
@@ -29,7 +30,7 @@ SimulationMesh::SimulationMesh(std::string filename) {
  *
  * @param render_mesh A render mesh (only necessary to have the vertices and indices vectors initialized)
  */
-SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
+SimulationMesh::SimulationMesh(const RenderMesh& render_mesh, bool center) {
     indices = render_mesh.indices;
     const unsigned int nVertices = 1 + *std::max_element(indices.begin(), indices.end());
     const unsigned int nTriangles = static_cast<unsigned int>(indices.size()) / 3;
@@ -45,7 +46,7 @@ SimulationMesh::SimulationMesh(const RenderMesh& render_mesh) {
             vertices[idx + 2] = vert.z();
         }
     }
-    // recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
+    if (center) recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
 }
 
 void LoadRenderMeshTinyOBJ(std::string inputfile,
@@ -175,13 +176,13 @@ inline void computeRenderMeshTangentVectors(RenderMesh& mesh) {
     }
 }
 
-RenderMesh::RenderMesh(std::string filename) {
+RenderMesh::RenderMesh(std::string filename, bool center) {
     LoadRenderMeshTinyOBJ(filename, vertices, normals, texcoords, indices);
     computeRenderMeshTangentVectors(*this);
-    // recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
+    if (center) recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
 }
 
-RenderMesh::RenderMesh(const SimulationMesh& simMesh) {
+RenderMesh::RenderMesh(const SimulationMesh& simMesh, bool center) {
     for (unsigned int i = 0; i < simMesh.indices.size(); i++) {
         unsigned int index = simMesh.indices[i];
         // Vertices
@@ -203,7 +204,7 @@ RenderMesh::RenderMesh(const SimulationMesh& simMesh) {
     }
     // Compute normals and tangents
     updateFromSimulationMesh(simMesh);
-    // recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
+    if (center) recenter_mesh(*this, compute_COM_position_PARTICLES(vertices));
 }
 
 void LoadVerticesAndIndicesTinyOBJ(std::string inputfile, std::vector<Scalar>& out_vertices, std::vector<unsigned int>& out_indices) {
@@ -252,6 +253,7 @@ void recenter_mesh(SimulationMesh& mesh, const Vec3& com) {
 }
 
 void recenter_mesh(RenderMesh& mesh, const Vec3& com) {
+    DEBUG_LOG("hello");
     for (unsigned int i = 0; i < mesh.vertices.size() / 3; i++) {
         mesh.vertices[3*i+0] -= com.x();
         mesh.vertices[3*i+1] -= com.y();

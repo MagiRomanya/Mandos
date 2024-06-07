@@ -46,6 +46,7 @@ find_package(OpenMP)
 file(GLOB SOURCE_FILES
   src/*.cpp
   src/simulation_generators/*.cpp
+  src/optimization/*.cpp
 )
 
 if (USE_VISUALIZER)
