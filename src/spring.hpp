@@ -25,7 +25,7 @@ struct ParticleSpring final : PotentialEnergy {
 struct RigidBodySpring final : PotentialEnergy {
     const RigidBody rbA, rbB;
     const Vec3 posA, posB;
-    const SpringParameters parameters;
+    SpringParameters parameters;
 
     RigidBodySpring(const RigidBody rbA, const RigidBody rbB, Vec3 posA, Vec3 posB, SpringParameters param)
         : rbA(rbA), rbB(rbB), posA(posA), posB(posB), parameters(param) {};

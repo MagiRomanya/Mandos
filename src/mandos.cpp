@@ -105,7 +105,14 @@ void join_rigid_body_com_with_spring(Simulation& simulation, const RigidBodyHand
     simulation.energies.potential_energies.particle_springs.emplace_back(pA, pB, SpringParameters{.k = k, .L0 = distance, .damping = damping});
 }
 
-void join_rigid_body_with_spring(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping) {
+unsigned int join_rigid_body_with_spring(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping, Scalar distance) {
+    const SpringParameters parameters = {.k = k, .L0 = distance, .damping = damping};
+    const unsigned int spring_index = simulation.energies.potential_energies.rigid_body_springs.size();
+    simulation.energies.potential_energies.rigid_body_springs.emplace_back(rbA.rb, rbB.rb, pA, pB, parameters);
+    return spring_index;
+}
+
+unsigned int join_rigid_body_with_spring(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping) {
     const Vec3 comA = rbA.rb.get_COM_position(simulation.initial_state.x);
     const Vec3 comB = rbB.rb.get_COM_position(simulation.initial_state.x);
 
@@ -116,8 +123,8 @@ void join_rigid_body_with_spring(Simulation& simulation, const RigidBodyHandle& 
     const Vec3 xB = RB * pB + comB;
 
     const Scalar distance = (xA -xB).norm();
-    const SpringParameters parameters = {.k = k, .L0 = distance, .damping = damping};
-    simulation.energies.potential_energies.rigid_body_springs.emplace_back(rbA.rb, rbB.rb, pA, pB, parameters);
+
+    return join_rigid_body_with_spring(simulation, rbA, pA, rbB, pB, k, damping, distance);
 }
 
 void join_rigid_body_with_rod_segment(Simulation& simulation, RigidBodyHandle& rbA, RigidBodyHandle& rbB, RodSegmentParameters parameters) {
@@ -220,6 +227,26 @@ ParticleHandle ParticleHandle::freeze() const {
     simulation.frozen_dof.push_back(particle.index+1);
     simulation.frozen_dof.push_back(particle.index+2);
     return *this;
+}
+
+RigidBodySpringHandle::RigidBodySpringHandle(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping, Scalar L0)
+    : simulation(simulation), rbA_index(rbA.rb_index), rbB_index(rbB.rb_index)
+{
+    spring_index = join_rigid_body_with_spring(simulation, rbA, pA, rbB, pB, k, damping, L0);
+}
+
+RigidBodySpringHandle::RigidBodySpringHandle(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping)
+    : simulation(simulation), rbA_index(rbA.rb_index), rbB_index(rbB.rb_index)
+{
+    spring_index = join_rigid_body_with_spring(simulation, rbA, pA, rbB, pB, k, damping);
+}
+
+void RigidBodySpringHandle::set_rest_length(Scalar L0){
+    simulation.energies.potential_energies.rigid_body_springs[spring_index].parameters.L0 = L0;
+}
+
+void RigidBodySpringHandle::set_stiffness(Scalar stiffness){
+    simulation.energies.potential_energies.rigid_body_springs[spring_index].parameters.k = stiffness;
 }
 
 void join_particles_with_spring(Simulation& simulation, const ParticleHandle& p1, const ParticleHandle& p2, Scalar k, Scalar damping) {

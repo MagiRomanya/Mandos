@@ -18,23 +18,25 @@ PYBIND11_MODULE(pymandos, m) {
     // -----------------------------------------------------------------------------
     py::class_<Simulation>(m, "Simulation")
         .def(py::init())
+        .def("get_nDoF", &Simulation::get_nDoF)
+        .def("copy",  [](const Simulation &self) {
+            return Simulation(self);
+        })
         .def_readwrite("initial_state", &Simulation::initial_state)
         .def_readwrite("TimeStep", &Simulation::TimeStep)
         .def_readwrite("MaxNewtonIterations", &Simulation::MaxNewtonIterations)
         .def_readwrite("enable_line_search", &Simulation::enable_line_search)
-        .def("copy",  [](const Simulation &self) {
-            return Simulation(self);
-        })
         ;
 
     py::class_<PhysicsState>(m, "PhysicsState")
         .def(py::init())
         .def("get_nDoF", &PhysicsState::get_nDoF)
-        .def_readwrite("x", &PhysicsState::x)
-        .def_readwrite("v", &PhysicsState::v)
         .def("copy",  [](const PhysicsState &self) {
             return PhysicsState(self);
         })
+        .def_readwrite("x", &PhysicsState::x)
+        .def_readwrite("v", &PhysicsState::v)
+        .def_readwrite("time", &PhysicsState::time)
         ;
 
     py::class_<EnergyAndDerivatives>(m, "EnergyAndDerivatives")
@@ -90,7 +92,9 @@ PYBIND11_MODULE(pymandos, m) {
 
     m.def("join_rigid_body_com_with_spring", &join_rigid_body_com_with_spring);
 
-    m.def("join_rigid_body_with_spring", &join_rigid_body_with_spring);
+    m.def("join_rigid_body_with_spring", py::overload_cast<Simulation&, const RigidBodyHandle&, const Vec3&, const RigidBodyHandle&, const Vec3&, Scalar, Scalar, Scalar>(&join_rigid_body_with_spring));
+
+    m.def("join_rigid_body_with_spring", py::overload_cast<Simulation&, const RigidBodyHandle&, const Vec3&, const RigidBodyHandle&, const Vec3&, Scalar, Scalar>(&join_rigid_body_with_spring));
 
     m.def("join_rigid_body_with_rod_segment", &join_rigid_body_with_rod_segment);
 
@@ -194,6 +198,13 @@ PYBIND11_MODULE(pymandos, m) {
         .def("freeze_rigid_body", &RodHandle::freeze_rigid_body)
         ;
 
+    py::class_<RigidBodySpringHandle>(m,"RigidBodySpring")
+        .def(py::init<Simulation&, const RigidBodyHandle&, const Vec3&, const RigidBodyHandle&, const Vec3&, Scalar, Scalar, Scalar>())
+        .def(py::init<Simulation&, const RigidBodyHandle&, const Vec3&, const RigidBodyHandle&, const Vec3&, Scalar, Scalar>())
+        .def("set_rest_length", &RigidBodySpringHandle::set_rest_length)
+        .def("set_stiffness", &RigidBodySpringHandle::set_stiffness)
+        ;
+
     // COLLIDERS
     // -----------------------------------------------------------------------------
     py::class_<PlaneColliderHandle>(m, "PlaneCollider")
@@ -223,6 +234,10 @@ PYBIND11_MODULE(pymandos, m) {
         ;
 
     m.def("compute_loss_function_gradient_backpropagation", &compute_loss_function_gradient_backpropagation,
+          "A function that computes the loss function gradient with respect to parameters using back propagation of gradients.",
+          py::arg("simulation"), py::arg("trajectory"), py::arg("loss"), py::arg("dx0_dp"), py::arg("dv0_dp"), py::arg("") = 0);
+
+    m.def("compute_loss_function_gradient_backpropagation_control", &compute_loss_function_gradient_backpropagation_control,
           "A function that computes the loss function gradient with respect to parameters using back propagation of gradients.",
           py::arg("simulation"), py::arg("trajectory"), py::arg("loss"), py::arg("dx0_dp"), py::arg("dv0_dp"), py::arg("") = 0);
 

@@ -987,7 +987,7 @@ void MandosViewer::draw_rigid_body(const RigidBodyHandle& rb, const PhysicsState
 }
 void MandosViewer::draw_mesh(const Mat4& transform, const MeshGPU& mesh) {
     if (!enable_draw_simulable_meshes) return;
-    draw_mesh_color(transform, mesh, mem_pool, WHITE);
+    draw_mesh_color(transform, mesh, mem_pool, GOLD);
 }
 
 void MandosViewer::draw_springs_lines(const Simulation& simulation, const PhysicsState& state) {

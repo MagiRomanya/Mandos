@@ -51,7 +51,7 @@ Vec compute_energy_gradient(Scalar TimeStep, const Energies& energies, const Phy
 
 void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAndDerivatives& f) {
     // Energy and derivatives computation
-    const unsigned int nDoF = static_cast<unsigned int>(simulation.initial_state.x.size());
+    const unsigned int nDoF = simulation.get_nDoF();
 
     // The state at the beginning of the step (x0, v0)
     const PhysicsState state0 = state;
@@ -61,6 +61,7 @@ void simulation_step(const Simulation& simulation, PhysicsState& state, EnergyAn
     const unsigned int maxIter = simulation.MaxNewtonIterations;
     // const Scalar reductionThreshold = 1e-4;
     // Scalar lastGradNorm = 1e9;
+    state.time += simulation.TimeStep;
     for (unsigned int i = 0; i < maxIter; i++) {
 
         // Compute energy and derivatives

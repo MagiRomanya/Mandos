@@ -31,6 +31,7 @@ struct Simulation {
     PhysicsState initial_state;
     std::vector<unsigned int> frozen_dof;
     Couplings couplings;
+    inline unsigned int get_nDoF() const { return initial_state.get_nDoF(); }
 };
 
 Scalar compute_energy(Scalar TimeStep, const Energies& energies, const PhysicsState& state, const PhysicsState& state0);

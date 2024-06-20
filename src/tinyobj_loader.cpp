@@ -253,7 +253,6 @@ void recenter_mesh(SimulationMesh& mesh, const Vec3& com) {
 }
 
 void recenter_mesh(RenderMesh& mesh, const Vec3& com) {
-    DEBUG_LOG("hello");
     for (unsigned int i = 0; i < mesh.vertices.size() / 3; i++) {
         mesh.vertices[3*i+0] -= com.x();
         mesh.vertices[3*i+1] -= com.y();

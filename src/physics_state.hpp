@@ -9,6 +9,7 @@ struct PhysicsState {
     PhysicsState(const Vec& x, const Vec& v) : x(x), v(v) {}
     Vec x;
     Vec v;
+    Scalar time = 0.0;
 
     inline void add_size(unsigned int increment_dof) {
         x.conservativeResize(x.size() + increment_dof);

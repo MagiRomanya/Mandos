@@ -155,7 +155,21 @@ void join_rigid_body_with_particle(Simulation& sim, RigidBodyHandle rbA, Particl
 
 void join_rigid_body_com_with_spring(Simulation& simulation, const RigidBodyHandle& rbA, const RigidBodyHandle& rbB, Scalar k, Scalar damping);
 
-void join_rigid_body_with_spring(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping);
+class RigidBodySpringHandle {
+    private:
+        Simulation& simulation;
+        unsigned int rbA_index, rbB_index, spring_index;
+
+    public:
+        RigidBodySpringHandle(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping, Scalar L0);
+        RigidBodySpringHandle(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping);
+        void set_rest_length(Scalar L0);
+        void set_stiffness(Scalar stiffness);
+};
+
+unsigned int join_rigid_body_with_spring(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping, Scalar distance);
+
+unsigned int join_rigid_body_with_spring(Simulation& simulation, const RigidBodyHandle& rbA, const Vec3& pA, const RigidBodyHandle& rbB, const Vec3& pB, Scalar k, Scalar damping);
 
 void join_rigid_body_with_rod_segment(Simulation& simulation, RigidBodyHandle& rbA, RigidBodyHandle& rbB, RodSegmentParameters parameters);
 

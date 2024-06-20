@@ -1,6 +1,7 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/SparseLU>
 #include <Eigen/Dense> // For inverse
+#include <stdexcept>
 #include "differentiable.hpp"
 #include "energies.hpp"
 #include "inertia_energies.hpp"
@@ -167,6 +168,25 @@ inline Vec approximate_Hz_finite_diff(const Simulation& simulation, const Physic
     return (diff_grad - grad0) / dx;
 }
 
+Mat compute_dgradE_dp_finite_multiple_L0(const Simulation& simulation, const PhysicsState& state) {
+    const unsigned int nDoF = simulation.initial_state.get_nDoF();
+    auto& springs = simulation.energies.potential_energies.rigid_body_springs;
+    Mat dgradE_dp = Mat::Zero(nDoF, springs.size());
+    const Scalar dx = 1e-8;
+    for (unsigned int i = 0; i < springs.size(); ++i) {
+        RigidBodySpring spring = springs[i];
+        Vec gradient = Vec::Zero(nDoF);
+        spring.compute_energy_gradient(simulation.TimeStep, state, gradient);
+        spring.parameters.L0 += dx;
+        Vec dgradient = Vec::Zero(nDoF);
+        spring.compute_energy_gradient(simulation.TimeStep, state, dgradient);
+        dgradE_dp.col(i) = (dgradient - gradient) / dx;
+    }
+
+    return dgradE_dp;
+}
+
+
 Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
                                                    const std::vector<PhysicsState>& trajectory,
                                                    const LossFunctionAndDerivatives& loss,
@@ -174,9 +194,39 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
                                                    const unsigned int maxIterations)
 {
     const unsigned int nParameters = static_cast<unsigned int>(loss.loss_parameter_partial_derivative.size());
-    const unsigned int nDoF = static_cast<unsigned int>(trajectory.at(0).x.size());
+    const unsigned int nDoF = static_cast<unsigned int>(trajectory.at(0).get_nDoF());
     const unsigned int nStates = static_cast<unsigned int>(trajectory.size());
     const unsigned int nSteps = nStates - 1;
+
+    ///////////////////////////////////////////////////////
+    ///////////////  Ensure valid arguments ///////////////
+    ///////////////////////////////////////////////////////
+
+    if (dx0_dp.rows() != nDoF) {
+        std::ostringstream oss;
+        oss << "nDoF = " <<  nDoF << ", dx0_dp.rows() = " << dx0_dp.rows();
+        throw std::invalid_argument("Dimension missmatch: dx0_dp has wrong dof dimensions:\n\t" + oss.str());
+    }
+
+    if (dv0_dp.rows() != nDoF) {
+        std::ostringstream oss;
+        oss << "nDoF = " <<  nDoF << ", dv0_dp.rows() = " << dv0_dp.rows();
+        throw std::invalid_argument("Dimension missmatch: dv0_dp has wrong dof dimensions:\n\t" + oss.str());
+    }
+
+    if (dx0_dp.cols() != nParameters) {
+        std::ostringstream oss;
+        oss << "nParameters = " <<  nParameters << ", dx0_dp.cols() = " << dx0_dp.cols();
+        throw std::invalid_argument("Dimension missmatch: dx0_dp has wrong parameter dimensions:\n\t" + oss.str());
+    }
+
+    if (dv0_dp.cols() != nParameters) {
+        std::ostringstream oss;
+        oss << "nParameters = " <<  nParameters << ", dv0_dp.cols() = " << dv0_dp.cols();
+        throw std::invalid_argument("Dimension missmatch: dv0_dp has wrong parameter dimensions:\n\t" + oss.str());
+    }
+
+    ///////////////////////////////////////////////////////
 
     // Initialize the loss function gradients dg_dp, dg_dx and dg_dv
     // -------------------------------------------------------------------------
@@ -197,8 +247,9 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
         SparseMat hessian(nDoF,nDoF), dgradE_dx0(nDoF,nDoF), dgradE_dv0(nDoF,nDoF);
         compute_gradient_partial_derivatives(simulation.TimeStep, simulation.energies, state, state0, hessian, dgradE_dx0, dgradE_dv0);
 
-        // NOTE: This is not always zero
-        Mat dgradE_dp = Mat::Zero(nDoF, nParameters);
+        // TODO Handle gradients with respect to paramters!
+        // Mat dgradE_dp = Mat::Zero(nDoF, nParameters);
+        Mat dgradE_dp = compute_dgradE_dp_finite_multiple_L0(simulation, state);
 
         // Solve the linear system
         // -------------------------------------------------------------------------
@@ -228,7 +279,6 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
 
             Vec Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z, dx);
             Scalar h = 0.5 * z.transpose() * Hz - equation_vector.dot(z);
-            // DEBUG_LOG(h);
 
             // Evaluate the gradient
             h_grad = Hz - equation_vector;
@@ -242,19 +292,19 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
             // Line search
             // ------------------------------------------------------------------
             Scalar alpha = 1.0;
-            Vec z_line_search = z + alpha * dz;
-            Scalar h_new;
-            Vec h_grad_new;
 
-            Optimization::LineSearchNocedal lineSearch;
-            lineSearch.search([&](const Eigen::VectorXd&   z,
-                                 double&                  funcValue,
-                                 Eigen::VectorXd&         gradient)
-            {
-                Vec Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z_line_search, dx);
-                funcValue = 0.5 * z_line_search.transpose() * Hz - equation_vector.dot(z_line_search);
-                gradient = Hz - equation_vector;
-            }, z, h_grad, dz, z_line_search, h_new, h_grad_new, alpha);
+            // Vec z_line_search = z + alpha * dz;
+            // Scalar h_new;
+            // Vec h_grad_new;
+            // Optimization::LineSearchNocedal lineSearch;
+            // lineSearch.search([&](const Eigen::VectorXd&   z,
+            //                      double&                  funcValue,
+            //                      Eigen::VectorXd&         gradient)
+            // {
+            //     Vec Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z_line_search, dx);
+            //     funcValue = 0.5 * z_line_search.transpose() * Hz - equation_vector.dot(z_line_search);
+            //     gradient = Hz - equation_vector;
+            // }, z, h_grad, dz, z_line_search, h_new, h_grad_new, alpha);
 
             z += alpha * dz;
 
@@ -280,6 +330,140 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
 
     return loss_gradient;
 }
+
+Vec compute_loss_function_gradient_backpropagation_control(const Simulation& simulation,
+                                                           const std::vector<PhysicsState>& trajectory,
+                                                           const LossFunctionAndDerivatives& loss,
+                                                           const Mat& dx0_dp, const Mat& dv0_dp,
+                                                           const unsigned int maxIterations)
+{
+    const unsigned int nParameters = static_cast<unsigned int>(loss.loss_parameter_partial_derivative.size());
+    const unsigned int nDoF = static_cast<unsigned int>(trajectory.at(0).get_nDoF());
+    const unsigned int nStates = static_cast<unsigned int>(trajectory.size());
+    const unsigned int nSteps = nStates - 1;
+    const unsigned int nStepParameters = nParameters / nSteps;
+
+    ///////////////////////////////////////////////////////
+    ///////////////  Ensure valid arguments ///////////////
+    ///////////////////////////////////////////////////////
+
+    if (dx0_dp.rows() != nDoF) {
+        std::ostringstream oss;
+        oss << "nDoF = " <<  nDoF << ", dx0_dp.rows() = " << dx0_dp.rows();
+        throw std::invalid_argument("Dimension missmatch: dx0_dp has wrong dof dimensions:\n\t" + oss.str());
+    }
+
+    if (dv0_dp.rows() != nDoF) {
+        std::ostringstream oss;
+        oss << "nDoF = " <<  nDoF << ", dv0_dp.rows() = " << dv0_dp.rows();
+        throw std::invalid_argument("Dimension missmatch: dv0_dp has wrong dof dimensions:\n\t" + oss.str());
+    }
+
+    if (dx0_dp.cols() != nParameters) {
+        std::ostringstream oss;
+        oss << "nParameters = " <<  nParameters << ", dx0_dp.cols() = " << dx0_dp.cols();
+        throw std::invalid_argument("Dimension missmatch: dx0_dp has wrong parameter dimensions:\n\t" + oss.str());
+    }
+
+    if (dv0_dp.cols() != nParameters) {
+        std::ostringstream oss;
+        oss << "nParameters = " <<  nParameters << ", dv0_dp.cols() = " << dv0_dp.cols();
+        throw std::invalid_argument("Dimension missmatch: dv0_dp has wrong parameter dimensions:\n\t" + oss.str());
+    }
+
+    ///////////////////////////////////////////////////////
+
+    // Initialize the loss function gradients dg_dp, dg_dx and dg_dv
+    // -------------------------------------------------------------------------
+    Vec loss_gradient = loss.loss_parameter_partial_derivative;
+    Vec loss_position_gradient = loss.loss_position_partial_derivative[nSteps];
+    Vec loss_velocity_gradient = loss.loss_velocity_partial_derivative[nSteps];
+
+    // Backward loop
+    // -------------------------------------------------------------------------
+    const Scalar one_over_h = 1.0f / simulation.TimeStep;
+    for (int i = nSteps - 1; i >= 0; i--) {
+        const PhysicsState& state = trajectory[i+1];
+        const PhysicsState& state0 = trajectory[i];
+
+        // Compute the hessian matrix and other sparse matrices
+        // -------------------------------------------------------------------------
+
+        SparseMat hessian(nDoF,nDoF), dgradE_dx0(nDoF,nDoF), dgradE_dv0(nDoF,nDoF);
+        compute_gradient_partial_derivatives(simulation.TimeStep, simulation.energies, state, state0, hessian, dgradE_dx0, dgradE_dv0);
+
+        Mat dgradE_dp = compute_dgradE_dp_finite_multiple_L0(simulation, state);
+
+        // Solve the linear system
+        // -------------------------------------------------------------------------
+#ifdef DIFF_LOCAL_RB
+        Eigen::ConjugateGradient<SparseMat> solver;
+        // Eigen::SparseLU<SparseMat> solver;
+        SparseMat jac_global_to_local(nDoF, nDoF);
+        compute_simulation_global_to_local_jacobian(simulation.simulables, state, jac_global_to_local);
+        Vec equation_vector = - (loss_position_gradient + one_over_h * loss_velocity_gradient).transpose() * jac_global_to_local;
+#else
+        Vec equation_vector = - (loss_position_gradient + one_over_h * loss_velocity_gradient);
+        Eigen::SparseLU<SparseMat> solver;
+#endif
+        handle_frozen_dof(simulation.frozen_dof, &equation_vector, &hessian);
+        solver.compute(hessian.transpose());
+
+        const Vec grad0 = compute_energy_gradient(simulation.TimeStep, simulation.energies, state, state0);
+
+        Vec h_grad = - equation_vector;
+
+        const Scalar dx = 1e-8;
+        Vec z = solver.solve(equation_vector);
+        Vec dz = Vec::Zero(nDoF);
+
+        for (unsigned int j = 0; j < maxIterations; j++) {
+            // Compute Hz with finite differences
+
+            Vec Hz = approximate_Hz_finite_diff(simulation, state, state0, grad0, z, dx);
+            Scalar h = 0.5 * z.transpose() * Hz - equation_vector.dot(z);
+
+            // Evaluate the gradient
+            h_grad = Hz - equation_vector;
+            // DEBUG_LOG(h_grad.norm());
+            // DEBUG_LOG(h);
+
+            // Solve the system
+            dz = solver.solve(-h_grad);
+            // DEBUG_LOG(dz.dot(h_grad)); // If this is negative, dz is a downhill direction
+
+            // Line search
+            // ------------------------------------------------------------------
+            Scalar alpha = 1.0;
+            Vec z_line_search = z + alpha * dz;
+            Scalar h_new;
+            Vec h_grad_new;
+
+            z += alpha * dz;
+
+            if (h_grad.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: h_grad has NaN" << std::endl;
+            if (equation_vector.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: equation_vector has NaN" << std::endl;
+            if (Hz.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: Hz has NaN" << std::endl;
+            if (dz.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: dz has NaN" << std::endl;
+            if (z.hasNaN()) std::cout << "WARNING::DIFFERENTIABLE: z has NaN" << std::endl;
+        }
+        // std ::cout << "-------------" << std ::endl;
+
+        // Update the loss function gradients
+        // -------------------------------------------------------------------------
+        loss_position_gradient = (loss.loss_position_partial_derivative[i].transpose() - one_over_h * loss_velocity_gradient.transpose() + z.transpose() * dgradE_dx0);
+        loss_velocity_gradient = (loss.loss_velocity_partial_derivative[i].transpose() + z.transpose() * dgradE_dv0);
+
+        loss_gradient.segment(nStepParameters * i, nStepParameters) += z.transpose() * dgradE_dp;
+    }
+
+    // No initial conditions term for control problems
+    // -------------------------------------------------------------------------
+    // loss_gradient += loss_position_gradient.transpose() * dx0_dp + loss_velocity_gradient.transpose() * dv0_dp;
+
+    return loss_gradient;
+}
+
 
 Vec compute_loss_function_gradient_backpropagation_1_step_velocity(const Simulation& simulation,
                                                                    const PhysicsState state0,
