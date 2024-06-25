@@ -239,7 +239,7 @@ PYBIND11_MODULE(pymandos, m) {
 
     m.def("compute_loss_function_gradient_backpropagation_control", &compute_loss_function_gradient_backpropagation_control,
           "A function that computes the loss function gradient with respect to parameters using back propagation of gradients.",
-          py::arg("simulation"), py::arg("trajectory"), py::arg("loss"), py::arg("dx0_dp"), py::arg("dv0_dp"), py::arg("") = 0);
+          py::arg("simulation"), py::arg("trajectory"), py::arg("loss"), py::arg("") = 0);
 
     m.def("compute_loss_function_gradient_backpropagation_1_step_position", &compute_loss_function_gradient_backpropagation_1_step_position);
 

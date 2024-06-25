@@ -334,7 +334,6 @@ Vec compute_loss_function_gradient_backpropagation(const Simulation& simulation,
 Vec compute_loss_function_gradient_backpropagation_control(const Simulation& simulation,
                                                            const std::vector<PhysicsState>& trajectory,
                                                            const LossFunctionAndDerivatives& loss,
-                                                           const Mat& dx0_dp, const Mat& dv0_dp,
                                                            const unsigned int maxIterations)
 {
     const unsigned int nParameters = static_cast<unsigned int>(loss.loss_parameter_partial_derivative.size());
@@ -342,36 +341,6 @@ Vec compute_loss_function_gradient_backpropagation_control(const Simulation& sim
     const unsigned int nStates = static_cast<unsigned int>(trajectory.size());
     const unsigned int nSteps = nStates - 1;
     const unsigned int nStepParameters = nParameters / nSteps;
-
-    ///////////////////////////////////////////////////////
-    ///////////////  Ensure valid arguments ///////////////
-    ///////////////////////////////////////////////////////
-
-    if (dx0_dp.rows() != nDoF) {
-        std::ostringstream oss;
-        oss << "nDoF = " <<  nDoF << ", dx0_dp.rows() = " << dx0_dp.rows();
-        throw std::invalid_argument("Dimension missmatch: dx0_dp has wrong dof dimensions:\n\t" + oss.str());
-    }
-
-    if (dv0_dp.rows() != nDoF) {
-        std::ostringstream oss;
-        oss << "nDoF = " <<  nDoF << ", dv0_dp.rows() = " << dv0_dp.rows();
-        throw std::invalid_argument("Dimension missmatch: dv0_dp has wrong dof dimensions:\n\t" + oss.str());
-    }
-
-    if (dx0_dp.cols() != nParameters) {
-        std::ostringstream oss;
-        oss << "nParameters = " <<  nParameters << ", dx0_dp.cols() = " << dx0_dp.cols();
-        throw std::invalid_argument("Dimension missmatch: dx0_dp has wrong parameter dimensions:\n\t" + oss.str());
-    }
-
-    if (dv0_dp.cols() != nParameters) {
-        std::ostringstream oss;
-        oss << "nParameters = " <<  nParameters << ", dv0_dp.cols() = " << dv0_dp.cols();
-        throw std::invalid_argument("Dimension missmatch: dv0_dp has wrong parameter dimensions:\n\t" + oss.str());
-    }
-
-    ///////////////////////////////////////////////////////
 
     // Initialize the loss function gradients dg_dp, dg_dx and dg_dv
     // -------------------------------------------------------------------------
@@ -454,12 +423,8 @@ Vec compute_loss_function_gradient_backpropagation_control(const Simulation& sim
         loss_position_gradient = (loss.loss_position_partial_derivative[i].transpose() - one_over_h * loss_velocity_gradient.transpose() + z.transpose() * dgradE_dx0);
         loss_velocity_gradient = (loss.loss_velocity_partial_derivative[i].transpose() + z.transpose() * dgradE_dv0);
 
-        loss_gradient.segment(nStepParameters * i, nStepParameters) += z.transpose() * dgradE_dp;
+        loss_gradient.segment(nParameters - 1 - nStepParameters * i, nStepParameters) += z.transpose() * dgradE_dp;
     }
-
-    // No initial conditions term for control problems
-    // -------------------------------------------------------------------------
-    // loss_gradient += loss_position_gradient.transpose() * dx0_dp + loss_velocity_gradient.transpose() * dv0_dp;
 
     return loss_gradient;
 }
