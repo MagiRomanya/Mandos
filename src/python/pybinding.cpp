@@ -18,7 +18,7 @@ PYBIND11_MODULE(pymandos, m) {
     // -----------------------------------------------------------------------------
     py::class_<Simulation>(m, "Simulation")
         .def(py::init())
-        .def("get_nDoF", &Simulation::get_nDoF)
+        .def_property_readonly("nDoF", &Simulation::get_nDoF)
         .def("copy",  [](const Simulation &self) {
             return Simulation(self);
         })
@@ -30,7 +30,7 @@ PYBIND11_MODULE(pymandos, m) {
 
     py::class_<PhysicsState>(m, "PhysicsState")
         .def(py::init())
-        .def("get_nDoF", &PhysicsState::get_nDoF)
+        .def_property_readonly("nDoF", &PhysicsState::get_nDoF)
         .def("copy",  [](const PhysicsState &self) {
             return PhysicsState(self);
         })
