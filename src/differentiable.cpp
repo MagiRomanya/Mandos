@@ -423,7 +423,7 @@ Vec compute_loss_function_gradient_backpropagation_control(const Simulation& sim
         loss_position_gradient = (loss.loss_position_partial_derivative[i].transpose() - one_over_h * loss_velocity_gradient.transpose() + z.transpose() * dgradE_dx0);
         loss_velocity_gradient = (loss.loss_velocity_partial_derivative[i].transpose() + z.transpose() * dgradE_dv0);
 
-        loss_gradient.segment(nParameters - nStepParameters * (i+1), nStepParameters) += z.transpose() * dgradE_dp;
+        loss_gradient.segment(nStepParameters * i, nStepParameters) += z.transpose() * dgradE_dp;
     }
 
     return loss_gradient;
